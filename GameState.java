@@ -2,7 +2,7 @@ package dev.main;
 
 import java.util.ArrayList;
 import java.util.List;
-//"/sprite/enemy2_64x64.png"
+//"/sprites/enemy2_64x64.png"
 public class GameState {
 	
 	private TileMap map;
@@ -38,10 +38,13 @@ public class GameState {
         Entity player = new Entity("Player");
         
         player.addComponent(new Position(x, y));
-        player.addComponent(new Sprite("/sprite/enemy2_64x64.png", 64, 64, 13, 0.15f));
-        player.addComponent(new Movement(100f));//150
-        player.addComponent(new Stats(100, 100, 10, 5));  // 100/100 HP
-        player.addComponent(new HealthBar(40, 4, 40));    // 40px wide, 4px tall, 40px below sprite
+        
+        // New Sprite constructor - no longer needs totalFrames parameter
+        player.addComponent(new Sprite("/sprites/hero.png", 64, 64, 0.15f));
+        
+        player.addComponent(new Movement(150f));
+        player.addComponent(new Stats(100, 100, 10, 5));
+        player.addComponent(new HealthBar(40, 4, 40));
         
         entities.add(player);
         return player;
@@ -67,7 +70,7 @@ public class GameState {
 
 ## Sprite Sheet Format Expected
 
-Your sprite sheet should look like this:
+Your sprites sheet should look like this:
 ```
 [Frame 0][Frame 1][Frame 2][Frame 3]  ← Row 0 (idle)
 [Frame 0][Frame 1][Frame 2][Frame 3]  ← Row 1 (walk down)
@@ -80,7 +83,7 @@ Your sprite sheet should look like this:
 src/
   ├── resources/
   │   └── sprites/
-  │       └── hero_idle.png  (your animated sprite sheet)
+  │       └── hero_idle.png  (your animated sprites sheet)
   └── dev/main/
       ├── Engine.java
       ├── GameState.java

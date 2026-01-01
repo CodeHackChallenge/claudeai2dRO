@@ -20,7 +20,7 @@ public class Renderer {
             map.render(g, cameraX, cameraY);
         }
         
-        // Render entities - sprite and health bar together
+        // Render entities - sprites and health bar together
         for (Entity entity : gameState.getEntities()) {
             Position pos = entity.getComponent(Position.class);
             Sprite sprite = entity.getComponent(Sprite.class);
@@ -30,7 +30,7 @@ public class Renderer {
                 int spriteScreenX = (int)Math.round(pos.x - cameraX);
                 int spriteScreenY = (int)Math.round(pos.y - cameraY);
                 
-                // Render sprite at this position
+                // Render sprites at this position
                 sprite.renderAtPixel(g, spriteScreenX, spriteScreenY);
                 
                 // Render health bar using the SAME pixel position
@@ -45,7 +45,7 @@ public class Renderer {
     }
     
     private void drawHealthBarAtPixel(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
-        // Calculate bar position relative to sprite's pixel position
+        // Calculate bar position relative to sprites's pixel position
         int barX = spriteX - bar.width / 2;
         int barY = spriteY + bar.offsetY;
         

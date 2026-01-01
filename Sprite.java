@@ -2,67 +2,143 @@ package dev.main;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Sprite implements Component {
+	// Idle animation constants
+	public static final String ANIM_IDLE_DOWN = "idle_down";
+	public static final String ANIM_IDLE_UP = "idle_up";
+	public static final String ANIM_IDLE_LEFT = "idle_left";
+	public static final String ANIM_IDLE_RIGHT = "idle_right";
+	public static final String ANIM_IDLE_DOWN_LEFT = "idle_down_left";
+	public static final String ANIM_IDLE_DOWN_RIGHT = "idle_down_right";
+	public static final String ANIM_IDLE_UP_LEFT = "idle_up_left";
+	public static final String ANIM_IDLE_UP_RIGHT = "idle_up_right";
+	
     private BufferedImage spriteSheet;
     private int frameWidth;
     private int frameHeight;
     
     // Animation state
     private int currentFrame;
-    private int totalFrames;
     private float animationTimer;
     private float frameDuration;  // seconds per frame
     
-    // Current animation row (for different animations on same sheet)
-    private int currentRow;
+    // Current animation
+    private String currentAnimation;
     
-    public Sprite(String spriteSheetPath, int frameWidth, int frameHeight, int totalFrames, float frameDuration) {
+    // Animation definitions
+    private Map<String, Animation> animations;
+    
+    // Animation names (constants for easy reference)
+    public static final String ANIM_IDLE = "idle";
+    public static final String ANIM_WALK_DOWN = "walk_down";
+    public static final String ANIM_WALK_UP = "walk_up";
+    public static final String ANIM_WALK_LEFT = "walk_left";
+    public static final String ANIM_WALK_RIGHT = "walk_right";
+    public static final String ANIM_WALK_DOWN_LEFT = "walk_down_left";
+    public static final String ANIM_WALK_DOWN_RIGHT = "walk_down_right";
+    public static final String ANIM_WALK_UP_LEFT = "walk_up_left";
+    public static final String ANIM_WALK_UP_RIGHT = "walk_up_right";
+    public static final String ANIM_ATTACK = "attack";
+    
+    // Inner class to hold animation data
+    private static class Animation {
+        int row;
+        int frameCount;
+        
+        Animation(int row, int frameCount) {
+            this.row = row;
+            this.frameCount = frameCount;
+        }
+    }
+    
+    public Sprite(String spriteSheetPath, int frameWidth, int frameHeight, float frameDuration) {
         this.spriteSheet = TextureManager.load(spriteSheetPath);
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
-        this.totalFrames = totalFrames;
         this.frameDuration = frameDuration;
         this.currentFrame = 0;
-        this.currentRow = 0;
         this.animationTimer = 0;
+        this.animations = new HashMap<>();
+        
+        // Setup animations - ADJUST THESE TO MATCH YOUR SPRITE SHEET
+        setupAnimations();
+        
+        // Start with idle animation
+        this.currentAnimation = ANIM_IDLE;
+    }
+    
+    private void setupAnimations() {
+        // Define your animations: (row, frameCount)
+        // ADJUST THESE NUMBERS TO MATCH YOUR SPRITE SHEET LAYOUT
+        
+        // Idle animations - 2 frames each, 8 directions (rows 0-7)      
+        animations.put("idle_down", new Animation(24, 2));   // Row 0, 2 frames
+        animations.put("idle_up", new Animation(22, 2));     // Row 1, 2 frames
+        animations.put("idle_left", new Animation(23, 2));   // Row 2, 2 frames
+        animations.put("idle_right", new Animation(25, 2));  // Row 3, 2 frames
+        animations.put("idle_down_left", new Animation(23, 2));      // Southwest
+        animations.put("idle_down_right", new Animation(25, 2));     // Southeast
+        animations.put("idle_up_left", new Animation(23, 2));        // Northwest
+        animations.put("idle_up_right", new Animation(25, 2));       // Northeas
+        // Walk animations - 5 frames each, 8 directions (rows 8-15)
+        animations.put(ANIM_WALK_DOWN, new Animation(40, 8));
+        animations.put(ANIM_WALK_UP, new Animation(38, 8));
+        animations.put(ANIM_WALK_LEFT, new Animation(39, 8));
+        animations.put(ANIM_WALK_RIGHT, new Animation(41, 8));
+        animations.put(ANIM_WALK_DOWN_LEFT, new Animation(39, 8));
+        animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(41, 8));
+        animations.put(ANIM_WALK_UP_LEFT, new Animation(39, 8));
+        animations.put(ANIM_WALK_UP_RIGHT, new Animation(41, 8));
+        
+        // Attack animation - different frame count (example: 6 frames, row 16)
+        animations.put(ANIM_ATTACK, new Animation(16, 6));
+        
+        // Add more animations as needed...
     }
     
     public void update(float delta) {
+        Animation anim = animations.get(currentAnimation);
+        if (anim == null) return;
+        
         animationTimer += delta;
         
         if (animationTimer >= frameDuration) {
             animationTimer -= frameDuration;
-            currentFrame = (currentFrame + 1) % totalFrames;
+            currentFrame = (currentFrame + 1) % anim.frameCount;  // Loop based on this animation's frame count
         }
     }
     
-    // NEW: Render at exact pixel position (no float calculations)
     public void renderAtPixel(Graphics2D g, int screenX, int screenY) {
         if (spriteSheet == null) return;
         
-        // Calculate source rectangle (which frame to draw from spritesheet)
-        int srcX = currentFrame * frameWidth;
-        int srcY = currentRow * frameHeight;
+        Animation anim = animations.get(currentAnimation);
+        if (anim == null) return;
         
-        // Calculate destination centered on the given pixel
+        int srcX = currentFrame * frameWidth;
+        int srcY = anim.row * frameHeight;
+        
         int destX = screenX - frameWidth / 2;
         int destY = screenY - frameHeight / 2;
         
         g.drawImage(
             spriteSheet,
-            destX, destY, destX + frameWidth, destY + frameHeight,  // destination
-            srcX, srcY, srcX + frameWidth, srcY + frameHeight,      // source
+            destX, destY, destX + frameWidth, destY + frameHeight,
+            srcX, srcY, srcX + frameWidth, srcY + frameHeight,
             null
         );
     }
     
-    // OLD: Keep this for backward compatibility or remove if not used elsewhere
     public void render(Graphics2D g, float x, float y, float cameraX, float cameraY) {
         if (spriteSheet == null) return;
         
+        Animation anim = animations.get(currentAnimation);
+        if (anim == null) return;
+        
         int srcX = currentFrame * frameWidth;
-        int srcY = currentRow * frameHeight;
+        int srcY = anim.row * frameHeight;
         
         int destX = (int)Math.round(x - cameraX - frameWidth / 2f);
         int destY = (int)Math.round(y - cameraY - frameHeight / 2f);
@@ -75,20 +151,20 @@ public class Sprite implements Component {
         );
     }
     
-    // Change animation row (for walk, attack, etc.)
-    public void setAnimationRow(int row) {
-        if (this.currentRow != row) {
-            this.currentRow = row;
+    // Set animation by name
+    public void setAnimation(String animationName) {
+        if (!animationName.equals(currentAnimation)) {
+            this.currentAnimation = animationName;
             this.currentFrame = 0;
             this.animationTimer = 0;
         }
     }
     
-    public int getCurrentFrame() {
-        return currentFrame;
+    public String getCurrentAnimation() {
+        return currentAnimation;
     }
     
-    public int getCurrentRow() {
-        return currentRow;
+    public int getCurrentFrame() {
+        return currentFrame;
     }
 }

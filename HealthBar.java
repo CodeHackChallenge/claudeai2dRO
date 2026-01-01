@@ -5,7 +5,7 @@ import java.awt.Color;
 public class HealthBar implements Component {
     public int width;
     public int height;
-    public int offsetY;  // How far below the sprite to draw
+    public int offsetY;  // How far below the sprites to draw
     
     // Colors
     public static final Color HP_GREEN = new Color(50, 205, 50);
