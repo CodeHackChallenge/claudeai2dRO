@@ -44,13 +44,14 @@ public class GameState {
         Entity player = new Entity("Player");
         
         player.addComponent(new Position(x, y));
-        
-        // New Sprite constructor - no longer needs totalFrames parameter
         player.addComponent(new Sprite("/sprites/hero.png", 64, 64, 0.15f));
-        
-        player.addComponent(new Movement(150f));
-        player.addComponent(new Stats(100, 100, 10, 5));
+        player.addComponent(new Movement(100f, 200f));
+        player.addComponent(new Stats(100, 100f, 10, 5));
         player.addComponent(new HealthBar(40, 4, 40));
+        player.addComponent(new StaminaBar(40, 4, 46));
+        
+        // Add collision box: offsetX, offsetY (from entity center), width, height
+        player.addComponent(new CollisionBox(-10, 3, 22, 28));
         
         entities.add(player);
         return player;

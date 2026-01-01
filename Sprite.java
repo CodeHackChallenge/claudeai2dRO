@@ -15,6 +15,15 @@ public class Sprite implements Component {
 	public static final String ANIM_IDLE_DOWN_RIGHT = "idle_down_right";
 	public static final String ANIM_IDLE_UP_LEFT = "idle_up_left";
 	public static final String ANIM_IDLE_UP_RIGHT = "idle_up_right";
+	//run
+	public static final String ANIM_RUN_DOWN = "run_down";
+	public static final String ANIM_RUN_UP = "run_up";
+	public static final String ANIM_RUN_LEFT = "run_left";
+	public static final String ANIM_RUN_RIGHT = "run_right";
+	public static final String ANIM_RUN_DOWN_LEFT = "run_down_left";
+	public static final String ANIM_RUN_DOWN_RIGHT = "run_down_right";
+	public static final String ANIM_RUN_UP_LEFT = "run_up_left";
+	public static final String ANIM_RUN_UP_RIGHT = "run_up_right";
 	
     private BufferedImage spriteSheet;
     private int frameWidth;
@@ -83,16 +92,29 @@ public class Sprite implements Component {
         animations.put("idle_down_right", new Animation(25, 2));     // Southeast
         animations.put("idle_up_left", new Animation(23, 2));        // Northwest
         animations.put("idle_up_right", new Animation(25, 2));       // Northeas
-        // Walk animations - 5 frames each, 8 directions (rows 8-15)
-        animations.put(ANIM_WALK_DOWN, new Animation(40, 8));
-        animations.put(ANIM_WALK_UP, new Animation(38, 8));
-        animations.put(ANIM_WALK_LEFT, new Animation(39, 8));
-        animations.put(ANIM_WALK_RIGHT, new Animation(41, 8));
-        animations.put(ANIM_WALK_DOWN_LEFT, new Animation(39, 8));
-        animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(41, 8));
-        animations.put(ANIM_WALK_UP_LEFT, new Animation(39, 8));
-        animations.put(ANIM_WALK_UP_RIGHT, new Animation(41, 8));
         
+        
+        // Walk animations - 5 frames each, 8 directions (rows 8-15)
+        animations.put(ANIM_WALK_DOWN, new Animation(10, 9));
+        animations.put(ANIM_WALK_UP, new Animation(8, 9));
+        animations.put(ANIM_WALK_LEFT, new Animation(9, 9));
+        animations.put(ANIM_WALK_RIGHT, new Animation(11, 9));
+        animations.put(ANIM_WALK_DOWN_LEFT, new Animation(9, 9));
+        animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(11, 9));
+        animations.put(ANIM_WALK_UP_LEFT, new Animation(9, 9));
+        animations.put(ANIM_WALK_UP_RIGHT, new Animation(11, 9));
+        
+        
+        
+        // Run animations - 8 directions, adjust frame count to your sheet
+        animations.put("run_down", new Animation(40, 8));
+        animations.put("run_up", new Animation(38, 8));
+        animations.put("run_left", new Animation(39, 8));
+        animations.put("run_right", new Animation(41, 8));
+        animations.put("run_down_left", new Animation(39, 8));
+        animations.put("run_down_right", new Animation(41, 8));
+        animations.put("run_up_left", new Animation(39, 8));
+        animations.put("run_up_right", new Animation(41, 8));
         // Attack animation - different frame count (example: 6 frames, row 16)
         animations.put(ANIM_ATTACK, new Animation(16, 6));
         

@@ -5,12 +5,14 @@ import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy; 
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-public class Engine extends Canvas implements Runnable {
+public class Engine extends Canvas implements Runnable, KeyListener {
 
     // Display constants
     public static final int SPRITE_SIZE = 64;
@@ -36,6 +38,9 @@ public class Engine extends Canvas implements Runnable {
     private GameLogic gameLogic;
     private Renderer renderer;  // NEW: Separate rendering logic
     
+    private boolean shiftPressed = false; //what is this for?
+    private boolean debugMode = false;  // NEW: Debug visualization toggle
+    
     public Engine() {
         // Window setup
         JFrame window = new JFrame("RO-Style 2D Game v.1");
@@ -57,6 +62,9 @@ public class Engine extends Canvas implements Runnable {
         mouse = new MouseInput();
         addMouseListener(mouse);
         addMouseMotionListener(mouse);
+        addMouseListener(mouse);
+        addMouseMotionListener(mouse);
+        addKeyListener(this);  // Add key listener
         
         requestFocus();
 
@@ -72,11 +80,11 @@ public class Engine extends Canvas implements Runnable {
         // Initialize game systems
         gameState = new GameState();
         gameLogic = new GameLogic(gameState);
-        renderer = new Renderer(gameState);  // Renderer reads GameState
+        renderer = new Renderer(gameState, this);  // Pass 'this' (Engine) reference
         
         System.out.println("Game initialized!");
     }
-
+    
     public void update(float delta) {
     	/*// TEMPORARY: Test HP colors
         Entity player = gameState.getPlayer();
@@ -96,20 +104,66 @@ public class Engine extends Canvas implements Runnable {
     }
     
     private void handleInput() {
-        if (mouse.isPressed()) { 
-            // Convert screen coordinates to world coordinates
+        if (mouse.isPressed()) {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
             float worldX = screenX + gameState.getCameraX();
             float worldY = screenY + gameState.getCameraY();
             
-            // Tell game logic to move player
-            gameLogic.movePlayerTo(worldX, worldY);
+            // Move player - run if shift is held
+            gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             
-            mouse.resetPressed();  // Clear the click
+            mouse.resetPressed();
         }
     }
+    // KeyListener implementation
+    @Override
+    public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            shiftPressed = true;
+        }
+        
+        // Toggle debug mode with F3
+        if (e.getKeyCode() == KeyEvent.VK_F3) {
+            debugMode = !debugMode;
+            System.out.println("Debug mode: " + (debugMode ? "ON" : "OFF"));
+        }
+        
+        // Debug keys
+        if (e.getKeyCode() == KeyEvent.VK_D) {
+            Entity player = gameState.getPlayer();
+            Stats stats = player.getComponent(Stats.class);
+            if (stats != null) {
+                stats.hp -= 10;
+                if (stats.hp < 0) stats.hp = 0;
+                System.out.println("HP: " + stats.hp + "/" + stats.maxHp);
+            }
+        }
+        
+        if (e.getKeyCode() == KeyEvent.VK_H) {
+            Entity player = gameState.getPlayer();
+            Stats stats = player.getComponent(Stats.class);
+            if (stats != null) {
+                stats.hp = stats.maxHp;
+                System.out.println("HP: " + stats.hp + "/" + stats.maxHp + " (HEALED)");
+            }
+        }
+    }
+    
+    public boolean isDebugMode() {
+        return debugMode;
+    }
+    
+    @Override
+    public void keyReleased(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            shiftPressed = false;
+        }
+    }
+    
+    @Override
+    public void keyTyped(KeyEvent e) {}
 
     public void render() {
         Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
@@ -121,6 +175,8 @@ public class Engine extends Canvas implements Runnable {
         // Render game world
         renderer.render(g);
         
+        // 
+  
         g.dispose();
         bufferStrategy.show();
     }

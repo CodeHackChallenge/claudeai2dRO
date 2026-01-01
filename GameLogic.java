@@ -16,19 +16,46 @@ public class GameLogic {
             Movement movement = entity.getComponent(Movement.class);
             Position position = entity.getComponent(Position.class);
             Sprite sprite = entity.getComponent(Sprite.class);
+            Stats stats = entity.getComponent(Stats.class);
             
-            if (movement != null && position != null && sprite != null) {
+            if (movement != null && position != null && sprite != null && stats != null) {
                 if (movement.isMoving) {
-                    // Moving - update position and play walk animation
+                    // Check if running and has stamina
+                    if (movement.isRunning) {
+                        // Try to consume stamina
+                        boolean hasStamina = stats.consumeStamina(movement.staminaCostPerSecond * delta);
+                        
+                        if (!hasStamina) {
+                            // Out of stamina, switch to walking
+                            movement.stopRunning();
+                        }
+                    }
+                    
+                    // Move the entity
                     moveTowardsTarget(entity, movement, position, delta);
                     
-                    String walkAnim = getWalkAnimationForDirection(movement.direction);
-                    sprite.setAnimation(walkAnim);
+                    // Set animation based on movement state
+                    String moveAnim;
+                    if (movement.isRunning) {
+                        moveAnim = getRunAnimationForDirection(movement.direction);
+                    } else {
+                        moveAnim = getWalkAnimationForDirection(movement.direction);
+                    }
+                    sprite.setAnimation(moveAnim);
+                    
                 } else {
-                    // Not moving - play idle animation based on last facing direction (8-way)
+                    // Not moving - idle animation and regenerate stamina
                     String idleAnim = getIdleAnimationForDirection(movement.lastDirection);
                     sprite.setAnimation(idleAnim);
+                    
+                    // Regenerate stamina when not running
+                    stats.regenerateStamina(delta);
                 }
+            }
+            
+            // Always regenerate stamina when walking (not running)
+            if (stats != null && movement != null && movement.isMoving && !movement.isRunning) {
+                stats.regenerateStamina(delta);
             }
             
             if (sprite != null) {
@@ -74,16 +101,62 @@ public class GameLogic {
             return;
         }
         
-        float moveAmount = movement.speed * delta;
+        float moveAmount = movement.currentSpeed * delta;
         
         if (moveAmount >= distance) {
+            // Would reach destination - check if destination is valid
+            CollisionBox collisionBox = entity.getComponent(CollisionBox.class);
+            TileMap map = state.getMap();
+            
+            if (collisionBox != null && map != null) {
+                if (map.collidesWithTiles(collisionBox, movement.targetX, movement.targetY)) {
+                    // Destination is blocked, stop here
+                    movement.stopMoving();
+                    return;
+                }
+            }
+            
             position.x = movement.targetX;
             position.y = movement.targetY;
             movement.stopMoving();
         } else {
+            // Moving partial distance
             float ratio = moveAmount / distance;
-            position.x += dx * ratio;
-            position.y += dy * ratio;
+            float newX = position.x + dx * ratio;
+            float newY = position.y + dy * ratio;
+            
+            // Check collision at new position
+            CollisionBox collisionBox = entity.getComponent(CollisionBox.class);
+            TileMap map = state.getMap();
+            
+            if (collisionBox != null && map != null) {
+                // Try moving on both axes
+                if (!map.collidesWithTiles(collisionBox, newX, newY)) {
+                    // No collision, move normally
+                    position.x = newX;
+                    position.y = newY;
+                } else {
+                    // Collision detected - try sliding along walls
+                    
+                    // Try X axis only
+                    if (!map.collidesWithTiles(collisionBox, newX, position.y)) {
+                        position.x = newX;
+                    }
+                    // Try Y axis only
+                    else if (!map.collidesWithTiles(collisionBox, position.x, newY)) {
+                        position.y = newY;
+                    }
+                    // Completely blocked
+                    else {
+                        movement.stopMoving();
+                        return;
+                    }
+                }
+            } else {
+                // No collision box, move freely
+                position.x = newX;
+                position.y = newY;
+            }
             
             movement.direction = calculateDirection(dx, dy);
         }
@@ -120,6 +193,28 @@ public class GameLogic {
         }
     }
     
+    private String getRunAnimationForDirection(int direction) {
+        switch(direction) {
+            case Movement.DIR_EAST:
+                return Sprite.ANIM_RUN_RIGHT;
+            case Movement.DIR_SOUTH_EAST:
+                return Sprite.ANIM_RUN_DOWN_RIGHT;
+            case Movement.DIR_SOUTH:
+                return Sprite.ANIM_RUN_DOWN;
+            case Movement.DIR_SOUTH_WEST:
+                return Sprite.ANIM_RUN_DOWN_LEFT;
+            case Movement.DIR_WEST:
+                return Sprite.ANIM_RUN_LEFT;
+            case Movement.DIR_NORTH_WEST:
+                return Sprite.ANIM_RUN_UP_LEFT;
+            case Movement.DIR_NORTH:
+                return Sprite.ANIM_RUN_UP;
+            case Movement.DIR_NORTH_EAST:
+                return Sprite.ANIM_RUN_UP_RIGHT;
+            default:
+                return Sprite.ANIM_RUN_DOWN;
+        }
+    }
     private void updateCamera(float delta) {
         Entity player = state.getPlayer();
         Position playerPos = player.getComponent(Position.class);
@@ -147,12 +242,12 @@ public class GameLogic {
         }
     }
     
-    public void movePlayerTo(float worldX, float worldY) {
+    public void movePlayerTo(float worldX, float worldY, boolean run) {
         Entity player = state.getPlayer();
         Movement movement = player.getComponent(Movement.class);
         
         if (movement != null) {
-            movement.setTarget(worldX, worldY);
+            movement.setTarget(worldX, worldY, run);
         }
     }
     
