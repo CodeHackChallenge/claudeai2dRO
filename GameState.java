@@ -20,15 +20,21 @@ public class GameState {
         cameraY = 0f;
         
         // Load map first
-        map = new TileMap("/maps/map01.txt");
+        //map = new TileMap("/maps/map01.txt");
+        map = new TileMap("/maps/map_96x96.txt");
+        
         
         initializeWorld();
     }
     
     private void initializeWorld() {
     	// Spawn player in center of map
-        float centerX = (map.getWidthInPixels()) / 2f;
-        float centerY = (map.getHeightInPixels()) / 2f;
+        //float centerX = (map.getWidthInPixels()) / 2f;
+        //float centerY = (map.getHeightInPixels()) / 2f;
+    	//float centerX = (map.getWidthInPixels()) / 8f;
+        //float centerY = (map.getHeightInPixels()) - 200f;
+        float centerX =  65f;
+        float centerY =  65f;
         
         // Create player with idle animation
         player = createPlayer(centerX, centerY);

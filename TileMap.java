@@ -19,6 +19,10 @@ public class TileMap {
     // Tile textures
     private BufferedImage dirtTexture;
     private BufferedImage grassTexture;
+    //me
+    private BufferedImage rockTexture;
+    private BufferedImage waterTexture;
+    
     
     public TileMap(String mapFilePath) {
         loadTileTextures();
@@ -38,12 +42,19 @@ public class TileMap {
         // Try to load real textures, fallback to placeholders
         dirtTexture = TextureManager.load("/tiles/dirt.png");
         grassTexture = TextureManager.load("/tiles/grass.png");
-        
+        rockTexture = TextureManager.load("/tiles/rock.png");
+        waterTexture = TextureManager.load("/tiles/water.png");
         if (dirtTexture == null) {
             dirtTexture = createPlaceholderTile(new Color(139, 90, 43));  // Brown
         }
         if (grassTexture == null) {
             grassTexture = createPlaceholderTile(new Color(34, 139, 34));  // Green
+        }
+        if (rockTexture == null) {
+        	rockTexture = createPlaceholderTile(Color.DARK_GRAY);  // Brown
+        }
+        if (waterTexture == null) {
+        	waterTexture = createPlaceholderTile(Color.BLUE);  // Green
         }
     }
     
@@ -107,6 +118,9 @@ public class TileMap {
         switch(tileID) {
             case 0: return dirtTexture;
             case 1: return grassTexture;
+            //me
+            case 2: return rockTexture;
+            case 3: return waterTexture;
             default: return dirtTexture;
         }
     }

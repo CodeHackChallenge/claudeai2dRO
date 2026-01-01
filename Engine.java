@@ -16,7 +16,7 @@ public class Engine extends Canvas implements Runnable {
     public static final int SPRITE_SIZE = 64;
     private static final int SCALE = 2;
     
-    public static final int WIDTH = 320 * SCALE;
+    public static final int WIDTH = 640 * SCALE;
     public static final int HEIGHT = 320 * SCALE;
     
     // Game loop constants
