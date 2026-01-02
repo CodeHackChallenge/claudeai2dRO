@@ -80,6 +80,12 @@ public class Renderer {
             for (Entity entity : gameState.getEntities()) {
                 drawDebugPath(g, entity, cameraX, cameraY);
             }
+            
+            for (Entity entity : gameState.getEntities()) {
+                if (entity.getType() == EntityType.MONSTER) {
+                    drawDebugAI(g, entity, cameraX, cameraY);
+                }
+            }
         }
     }
     
@@ -222,5 +228,43 @@ public class Renderer {
                 }
             }
         }
+    }
+    
+    private void drawDebugAI(Graphics2D g, Entity entity, float cameraX, float cameraY) {
+        AI ai = entity.getComponent(AI.class);
+        Position pos = entity.getComponent(Position.class);
+        
+        if (ai == null || pos == null) return;
+        
+        Stroke originalStroke = g.getStroke();
+        
+        // Draw home position
+        int homeScreenX = (int)(ai.homeX - cameraX);
+        int homeScreenY = (int)(ai.homeY - cameraY);
+        g.setColor(new Color(0, 255, 0, 100));
+        g.fillOval(homeScreenX - 5, homeScreenY - 5, 10, 10);
+        
+        // Draw roam radius
+        int roamRadius = (int)ai.roamRadius;
+        g.setColor(new Color(255, 255, 0, 80));
+        g.setStroke(new BasicStroke(2));
+        g.drawOval(homeScreenX - roamRadius, homeScreenY - roamRadius, roamRadius * 2, roamRadius * 2);
+        
+        // Draw detection range
+        int detectionRadius = (int)(ai.detectionRange * TileMap.TILE_SIZE);
+        int screenX = (int)(pos.x - cameraX);
+        int screenY = (int)(pos.y - cameraY);
+        
+        Color detectionColor = ai.currentState == AI.State.CHASING 
+            ? new Color(255, 0, 0, 100)
+            : new Color(100, 100, 255, 80);
+        g.setColor(detectionColor);
+        g.drawOval(screenX - detectionRadius, screenY - detectionRadius, detectionRadius * 2, detectionRadius * 2);
+        
+        // Draw state text
+        g.setColor(Color.WHITE);
+        g.drawString(ai.currentState.toString(), screenX - 20, screenY - 40);
+        
+        g.setStroke(originalStroke);
     }
 }

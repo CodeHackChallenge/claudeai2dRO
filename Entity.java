@@ -5,38 +5,42 @@ import java.util.Map;
 
 public class Entity {
 
-    private static int nextID = 0;  // Auto-incrementing ID generator
+    private static int nextID = 0;
     
     public final int ID;
     private String name;
+    private EntityType type;  // NEW
     
-    // Stores components by their type
     private final Map<Class<? extends Component>, Component> components = new HashMap<>();
 
-    // Constructor with auto-generated ID
     public Entity() {
         this.ID = nextID++;
         this.name = "Entity_" + ID;
+        this.type = EntityType.PLAYER;
     }
     
-    // Constructor with auto-generated ID and custom name
     public Entity(String name) {
         this.ID = nextID++;
         this.name = name;
+        this.type = EntityType.PLAYER;
+    }
+    
+    public Entity(String name, EntityType type) {
+        this.ID = nextID++;
+        this.name = name;
+        this.type = type;
     }
 
-    // Constructor with specific ID (useful for network sync later)
     public Entity(int id, String name) {
         this.ID = id;
         this.name = name;
+        this.type = EntityType.PLAYER;
         
-        // Update nextID if this ID is higher (for MMO sync)
         if (id >= nextID) {
             nextID = id + 1;
         }
     }
 
-    // Component management
     public <T extends Component> void addComponent(T component) {
         components.put(component.getClass(), component);
     }
@@ -53,7 +57,6 @@ public class Entity {
         return components.containsKey(type);
     }
 
-    // Getters
     public int getID() {
         return ID;
     }
@@ -66,9 +69,16 @@ public class Entity {
         this.name = name;
     }
     
-    // Useful for debugging
+    public EntityType getType() {
+        return type;
+    }
+    
+    public void setType(EntityType type) {
+        this.type = type;
+    }
+    
     @Override
     public String toString() {
-        return name + " (ID: " + ID + ")";
+        return name + " (ID: " + ID + ", Type: " + type + ")";
     }
 }

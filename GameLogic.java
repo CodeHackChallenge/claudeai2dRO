@@ -1,6 +1,7 @@
 package dev.main;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class GameLogic {
     
@@ -14,73 +15,396 @@ public class GameLogic {
     public void update(float delta) {
         state.incrementGameTime(delta);
         
+        Entity player = state.getPlayer();
+        Position playerPos = player.getComponent(Position.class);
+        
         for (Entity entity : state.getEntities()) {
-            Movement movement = entity.getComponent(Movement.class);
-            Position position = entity.getComponent(Position.class);
+            EntityType entityType = entity.getType();
+            
+            // Update based on entity type
+            if (entityType == EntityType.PLAYER) {
+                updatePlayer(entity, delta);
+            } else if (entityType == EntityType.MONSTER) {
+                updateMonster(entity, playerPos, delta);
+            }
+            
+            // Update sprite animations (all entities)
             Sprite sprite = entity.getComponent(Sprite.class);
-            Stats stats = entity.getComponent(Stats.class);
-            Path path = entity.getComponent(Path.class);
-            TargetIndicator indicator = entity.getComponent(TargetIndicator.class);  // NEW
-            
-            if (movement != null && position != null && sprite != null && stats != null) {
-                
-                // Follow path if one exists
-                if (path != null && path.isFollowing) {
-                    followPath(entity, path, movement, position);
-                }
-                
-                if (movement.isMoving) {
-                    // Handle stamina
-                    if (movement.isRunning) {
-                        boolean hasStamina = stats.consumeStamina(movement.staminaCostPerSecond * delta);
-                        if (!hasStamina) {
-                            movement.stopRunning();
-                        }
-                    }
-                    
-                    moveTowardsTarget(entity, movement, position, delta);
-                    
-                    String moveAnim;
-                    if (movement.isRunning) {
-                        moveAnim = getRunAnimationForDirection(movement.direction);
-                    } else {
-                        moveAnim = getWalkAnimationForDirection(movement.direction);
-                    }
-                    sprite.setAnimation(moveAnim);
-                    
-                } else {
-                    // Idle - clear target indicator
-                    if (indicator != null) {
-                        indicator.clear();
-                    }
-                    
-                    String idleAnim = getIdleAnimationForDirection(movement.lastDirection);
-                    sprite.setAnimation(idleAnim);
-                    stats.regenerateStamina(delta);
-                }
-            }
-            
-            if (stats != null && movement != null && movement.isMoving && !movement.isRunning) {
-                stats.regenerateStamina(delta);
-            }
-            
             if (sprite != null) {
                 sprite.update(delta);
             }
             
-            // Update target indicator animation
+            // Update target indicator
+            TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
             if (indicator != null) {
                 indicator.update(delta);
             }
         }
         
+        // Remove dead entities
+        state.removeMarkedEntities();
+        
         updateCamera(delta);
     }
-
+    
+    private void updatePlayer(Entity player, float delta) {
+        Movement movement = player.getComponent(Movement.class);
+        Position position = player.getComponent(Position.class);
+        Sprite sprite = player.getComponent(Sprite.class);
+        Stats stats = player.getComponent(Stats.class);
+        Path path = player.getComponent(Path.class);
+        TargetIndicator indicator = player.getComponent(TargetIndicator.class);
+        
+        if (movement == null || position == null || sprite == null || stats == null) return;
+        
+        // Follow path
+        if (path != null && path.isFollowing) {
+            followPath(player, path, movement, position, delta);
+        }
+        
+        if (movement.isMoving) {
+            // Handle stamina
+            if (movement.isRunning) {
+                boolean hasStamina = stats.consumeStamina(movement.staminaCostPerSecond * delta);
+                if (!hasStamina) {
+                    movement.stopRunning();
+                }
+            }
+            
+            moveTowardsTarget(player, movement, position, delta);
+            
+            String moveAnim = movement.isRunning 
+                ? getRunAnimationForDirection(movement.direction)
+                : getWalkAnimationForDirection(movement.direction);
+            sprite.setAnimation(moveAnim);
+            
+        } else {
+            if (indicator != null) {
+                indicator.clear();
+            }
+            
+            sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
+            stats.regenerateStamina(delta);
+        }
+        
+        if (movement != null && movement.isMoving && !movement.isRunning) {
+            stats.regenerateStamina(delta);
+        }
+    }
+    private void updateMonster(Entity monster, Position playerPos, float delta) {
+        AI ai = monster.getComponent(AI.class);
+        Position position = monster.getComponent(Position.class);
+        Movement movement = monster.getComponent(Movement.class);
+        Sprite sprite = monster.getComponent(Sprite.class);
+        Stats stats = monster.getComponent(Stats.class);
+        Path path = monster.getComponent(Path.class);
+        Dead dead = monster.getComponent(Dead.class);
+        
+        if (position == null || ai == null) return;
+        
+        // Update dead state
+        if (dead != null) {
+            dead.update(delta);
+            if (dead.shouldRemove()) {
+                state.markForRemoval(monster);
+            }
+            return;  // Dead monsters don't do anything
+        }
+        
+        // Check if dead
+        if (stats != null && stats.hp <= 0) {
+            handleMonsterDeath(monster, sprite);
+            return;
+        }
+        
+        // Update AI
+        ai.update(delta);
+        
+        // AI State Machine
+        switch (ai.currentState) {
+            case IDLE:
+                handleIdleState(monster, ai, movement, sprite, playerPos, delta);
+                break;
+                
+            case ROAMING:
+                handleRoamingState(monster, ai, movement, position, path, sprite, playerPos, delta);
+                break;
+                
+            case CHASING:
+                handleChasingState(monster, ai, movement, position, path, sprite, playerPos, delta);
+                break;
+                
+            case RETURNING:
+                handleReturningState(monster, ai, movement, position, path, sprite, delta);
+                break;
+                
+            case ATTACKING:
+                handleAttackingState(monster, ai, movement, sprite, playerPos, stats, delta);
+                break;
+        }
+        
+        // Move if has target
+        if (movement != null && movement.isMoving) {
+            moveTowardsTarget(monster, movement, position, delta);
+        }
+        
+        // Follow path
+        if (path != null && path.isFollowing) {
+            followPath(monster, path, movement, position, delta);
+        }
+    }
+    
+    private void handleIdleState(Entity monster, AI ai, Movement movement, Sprite sprite, Position playerPos, float delta) {
+        // Detect player
+        if (ai.behaviorType.equals("aggressive") && playerPos != null) {
+            Position monsterPos = monster.getComponent(Position.class);
+            if (canDetectPlayer(monsterPos, playerPos, ai.detectionRange)) {
+                ai.currentState = AI.State.CHASING;
+                ai.target = state.getPlayer();
+                return;
+            }
+        }
+        
+        // Transition to roaming after timer
+        if (ai.roamTimer >= ai.roamInterval) {
+            ai.roamTimer = 0;
+            ai.roamInterval = ThreadLocalRandom.current().nextFloat(3f, 6f);
+            ai.currentState = AI.State.ROAMING;
+        }
+        
+        // Play idle animation
+        if (sprite != null && movement != null) {
+            sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
+        }
+    }
+    
+    private void handleRoamingState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, Position playerPos, float delta) {
+        // Detect player
+        if (ai.behaviorType.equals("aggressive") && playerPos != null) {
+            if (canDetectPlayer(position, playerPos, ai.detectionRange)) {
+                ai.currentState = AI.State.CHASING;
+                ai.target = state.getPlayer();
+                if (path != null) path.clear();
+                return;
+            }
+        }
+        
+        // Pick random point within roam radius
+        if (movement != null && !movement.isMoving) {
+            float angle = (float)(ThreadLocalRandom.current().nextDouble() * Math.PI * 2);
+            float distance = ThreadLocalRandom.current().nextFloat(0.5f, 1f) * ai.roamRadius;
+            
+            float targetX = ai.homeX + (float)Math.cos(angle) * distance;
+            float targetY = ai.homeY + (float)Math.sin(angle) * distance;
+            
+            // Pathfind to roam target
+            int startTileX = (int)(position.x / TileMap.TILE_SIZE);
+            int startTileY = (int)(position.y / TileMap.TILE_SIZE);
+            int goalTileX = (int)(targetX / TileMap.TILE_SIZE);
+            int goalTileY = (int)(targetY / TileMap.TILE_SIZE);
+            
+            List<int[]> foundPath = state.getPathfinder().findPath(startTileX, startTileY, goalTileX, goalTileY);
+            
+            if (foundPath != null && path != null) {
+                path.setPath(foundPath);
+                movement.isRunning = false;
+            } else {
+                ai.currentState = AI.State.IDLE;
+            }
+        }
+        
+        // Reached destination, go back to idle
+        if (movement != null && !movement.isMoving && (path == null || !path.isFollowing)) {
+            ai.currentState = AI.State.IDLE;
+            ai.roamTimer = 0;
+        }
+        
+        // Animation
+        if (sprite != null && movement != null) {
+            if (movement.isMoving) {
+                sprite.setAnimation(getWalkAnimationForDirection(movement.direction));
+            } else {
+                sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
+            }
+        }
+    }
+    
+    private void handleChasingState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, Position playerPos, float delta) {
+        if (playerPos == null || movement == null || position == null) {
+            ai.currentState = AI.State.RETURNING;
+            return;
+        }
+        
+        // Check if too far from home
+        float distFromHome = distance(position.x, position.y, ai.homeX, ai.homeY);
+        if (distFromHome > ai.returnThreshold) {
+            ai.currentState = AI.State.RETURNING;
+            ai.target = null;
+            if (path != null) path.clear();
+            return;
+        }
+        
+        // Check if player still in detection range
+        float distToPlayer = distance(position.x, position.y, playerPos.x, playerPos.y);
+        if (distToPlayer > ai.detectionRange * TileMap.TILE_SIZE * 1.5f) {  // 1.5x leash
+            ai.currentState = AI.State.RETURNING;
+            ai.target = null;
+            if (path != null) path.clear();
+            return;
+        }
+        
+        // Check if in attack range
+        if (distToPlayer <= ai.attackRange) {
+            ai.currentState = AI.State.ATTACKING;
+            if (movement != null) movement.stopMoving();
+            if (path != null) path.clear();
+            return;
+        }
+        
+        // Chase player - update path periodically
+        if (!movement.isMoving || (path != null && !path.isFollowing)) {
+            int startTileX = (int)(position.x / TileMap.TILE_SIZE);
+            int startTileY = (int)(position.y / TileMap.TILE_SIZE);
+            int goalTileX = (int)(playerPos.x / TileMap.TILE_SIZE);
+            int goalTileY = (int)(playerPos.y / TileMap.TILE_SIZE);
+            
+            List<int[]> foundPath = state.getPathfinder().findPath(startTileX, startTileY, goalTileX, goalTileY);
+            
+            if (foundPath != null && path != null) {
+                path.setPath(foundPath);
+                movement.isRunning = true;  // Run when chasing
+            }
+        }
+        
+        // Animation
+        if (sprite != null && movement.isMoving) {
+            sprite.setAnimation(getRunAnimationForDirection(movement.direction));
+        }
+    }
+    
+    private void handleReturningState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, float delta) {
+        if (movement == null || position == null) return;
+        
+        // Check if back home
+        float distFromHome = distance(position.x, position.y, ai.homeX, ai.homeY);
+        if (distFromHome < 32f) {  // Within half tile
+            ai.currentState = AI.State.IDLE;
+            if (movement != null) movement.stopMoving();
+            if (path != null) path.clear();
+            return;
+        }
+        
+        // Path back home
+        if (!movement.isMoving || (path != null && !path.isFollowing)) {
+            int startTileX = (int)(position.x / TileMap.TILE_SIZE);
+            int startTileY = (int)(position.y / TileMap.TILE_SIZE);
+            int goalTileX = (int)(ai.homeX / TileMap.TILE_SIZE);
+            int goalTileY = (int)(ai.homeY / TileMap.TILE_SIZE);
+            
+            List<int[]> foundPath = state.getPathfinder().findPath(startTileX, startTileY, goalTileX, goalTileY);
+            
+            if (foundPath != null && path != null) {
+                path.setPath(foundPath);
+                movement.isRunning = false;
+            }
+        }
+        
+        // Animation
+        if (sprite != null && movement != null) {
+            if (movement.isMoving) {
+                sprite.setAnimation(getWalkAnimationForDirection(movement.direction));
+            } else {
+                sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
+            }
+        }
+    }
+    
+    private void handleAttackingState(Entity monster, AI ai, Movement movement, Sprite sprite, Position playerPos, Stats stats, float delta) {
+        Position monsterPos = monster.getComponent(Position.class);
+        
+        if (playerPos == null || monsterPos == null) {
+            ai.currentState = AI.State.IDLE;
+            return;
+        }
+        
+        float distToPlayer = distance(monsterPos.x, monsterPos.y, playerPos.x, playerPos.y);
+        
+        // Player moved away
+        if (distToPlayer > ai.attackRange * 1.5f) {
+            ai.currentState = AI.State.CHASING;
+            return;
+        }
+        
+        // Attack if cooldown ready
+        if (ai.canAttack()) {
+            tryAttack(monster, state.getPlayer());
+            ai.resetAttackCooldown();
+            
+            // Play attack animation (for now use idle, add attack animation later)
+            if (sprite != null && movement != null) {
+                sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
+                // TODO: sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
+            }
+        }
+    }
+    
+    private void handleMonsterDeath(Entity monster, Sprite sprite) {
+        System.out.println(monster.getName() + " has died!");
+        
+        // Add dead component
+        monster.addComponent(new Dead(5f));  // Corpse lasts 5 seconds
+        
+        // Stop movement
+        Movement movement = monster.getComponent(Movement.class);
+        if (movement != null) {
+            movement.stopMoving();
+        }
+        
+        Path path = monster.getComponent(Path.class);
+        if (path != null) {
+            path.clear();
+        }
+        
+        // Change to dead sprite/animation
+        if (sprite != null) {
+            // TODO: sprite.setAnimation("dead");
+            // For now, just stop animating
+        }
+    }
+    /**
+     * Detect player using distance check (can add dot product later for FOV)
+     */
+    private boolean canDetectPlayer(Position monsterPos, Position playerPos, float detectionTiles) {
+        float detectionDistance = detectionTiles * TileMap.TILE_SIZE;
+        float dist = distance(monsterPos.x, monsterPos.y, playerPos.x, playerPos.y);
+        return dist <= detectionDistance;
+    }
+    
+    private float distance(float x1, float y1, float x2, float y2) {
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        return (float)Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    public void tryAttack(Entity attacker, Entity target) {
+        Stats attackerStats = attacker.getComponent(Stats.class);
+        Stats targetStats = target.getComponent(Stats.class);
+        
+        if (attackerStats != null && targetStats != null) {
+            int damage = Math.max(1, (int)(attackerStats.attack - targetStats.defense));
+            targetStats.hp -= damage;
+            
+            System.out.println(attacker.getName() + " attacks " + target.getName() + " for " + damage + " damage!");
+            
+            if (targetStats.hp <= 0) {
+                targetStats.hp = 0;
+            }
+        }
+    }
     /**
      * Follow the current path waypoint by waypoint
      */
-    private void followPath(Entity entity, Path path, Movement movement, Position position) {
+    private void followPath(Entity entity, Path path, Movement movement, Position position, float delta ) {//TODO: no delta in the argument!
         int[] waypoint = path.getCurrentWaypoint();
         
         if (waypoint == null) {
