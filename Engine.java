@@ -3,6 +3,7 @@ package dev.main;
 
 import java.awt.Canvas;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
@@ -41,6 +42,9 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     private boolean shiftPressed = false; //what is this for?
     private boolean debugMode = false;  // NEW: Debug visualization toggle
     
+    private Cursor defaultCursor;
+    private Cursor attackCursor;
+    
     public Engine() {
         // Window setup
         JFrame window = new JFrame("RO-Style 2D Game v.1");
@@ -58,6 +62,21 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        // Setup cursors
+        defaultCursor = Cursor.getDefaultCursor();
+        // Create attack cursor (you can replace with custom image)
+        try {
+            // Placeholder: Use built-in crosshair cursor
+            attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
+            
+            // To use custom cursor image:
+            // Toolkit toolkit = Toolkit.getDefaultToolkit();
+            // Image cursorImage = toolkit.getImage("resources/cursors/attack.png");
+            // attackCursor = toolkit.createCustomCursor(cursorImage, new Point(16, 16), "attack");
+        } catch (Exception e) {
+            attackCursor = defaultCursor;
+        }
+        
         // Input
         mouse = new MouseInput();
         addMouseListener(mouse);
@@ -74,6 +93,8 @@ public class Engine extends Canvas implements Runnable, KeyListener {
 
         // Initialize game
         gameSetup();
+        
+        
     }
 
     private void gameSetup() { 
@@ -86,34 +107,95 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     }
     
     public void update(float delta) {
-    	/*// TEMPORARY: Test HP colors
-        Entity player = gameState.getPlayer();
-        Stats stats = player.getComponent(Stats.class);
-        if (stats != null && mouse.isPressed()) {
-            stats.hp -= 10;  // Lose 10 HP per click
-            if (stats.hp < 0) stats.hp = stats.maxHp;  // Reset when dead
-        }
-        */
-        // Process input first
+        // Check mouse hover
+        handleMouseHover();
+        
+        // Handle input
         handleInput();
         
-        // Then update game logic
+        // Update game logic
         gameLogic.update(delta);
+    }
+    
+    private void handleMouseHover() {
+        int screenX = mouse.getX();
+        int screenY = mouse.getY();
         
+        float worldX = screenX + gameState.getCameraX();
+        float worldY = screenY + gameState.getCameraY();
         
+        // Check if hovering over any monster
+        Entity hoveredMonster = null;
+        
+        for (Entity entity : gameState.getEntities()) {
+            if (entity.getType() != EntityType.MONSTER) continue;
+            
+            Position pos = entity.getComponent(Position.class);
+            CollisionBox box = entity.getComponent(CollisionBox.class);
+            
+            if (pos != null && box != null) {
+                // Check if mouse is within collision box
+                float left = box.getLeft(pos.x);
+                float right = box.getRight(pos.x);
+                float top = box.getTop(pos.y);
+                float bottom = box.getBottom(pos.y);
+                
+                if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
+                    hoveredMonster = entity;
+                    break;
+                }
+            }
+        }
+        
+        // Update hover state
+        gameState.setHoveredEntity(hoveredMonster);
+        
+        // Change cursor
+        if (hoveredMonster != null) {
+            setCursor(attackCursor);
+        } else {
+            setCursor(defaultCursor);
+        }
     }
     
     private void handleInput() {
-        if (mouse.isPressed()) {
+        if (mouse.isLeftClick()) {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
             float worldX = screenX + gameState.getCameraX();
             float worldY = screenY + gameState.getCameraY();
             
-            // Move player - run if shift is held
-            gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
+            Entity hoveredEntity = gameState.getHoveredEntity();
             
+            if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
+                // Check if target is alive
+                Stats stats = hoveredEntity.getComponent(Stats.class);
+                if (stats != null && stats.hp > 0) {
+                    // Attack monster (sets as auto-attack target)
+                    gameState.setTargetedEntity(hoveredEntity);
+                    gameLogic.playerAttack(hoveredEntity);
+                    System.out.println("Auto-attacking " + hoveredEntity.getName());
+                }
+            } else {
+                // Clicked ground - stop auto-attack and move
+                gameLogic.stopAutoAttack();
+                gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
+            }
+            
+            mouse.resetPressed();
+        }
+        
+        if (mouse.isRightClick()) {
+            // Right-click always stops auto-attack and moves
+            int screenX = mouse.getX();
+            int screenY = mouse.getY();
+            
+            float worldX = screenX + gameState.getCameraX();
+            float worldY = screenY + gameState.getCameraY();
+            
+            gameLogic.stopAutoAttack();
+            gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             mouse.resetPressed();
         }
     }

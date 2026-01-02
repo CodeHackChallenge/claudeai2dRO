@@ -21,30 +21,128 @@ public class GameLogic {
         for (Entity entity : state.getEntities()) {
             EntityType entityType = entity.getType();
             
-            // Update based on entity type
+            Combat combat = entity.getComponent(Combat.class);
+            if (combat != null) {
+                combat.update(delta);
+            }
+            
             if (entityType == EntityType.PLAYER) {
                 updatePlayer(entity, delta);
             } else if (entityType == EntityType.MONSTER) {
                 updateMonster(entity, playerPos, delta);
             }
             
-            // Update sprite animations (all entities)
             Sprite sprite = entity.getComponent(Sprite.class);
             if (sprite != null) {
                 sprite.update(delta);
             }
             
-            // Update target indicator
             TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
             if (indicator != null) {
                 indicator.update(delta);
             }
         }
         
-        // Remove dead entities
+        state.updateDamageTexts(delta);
         state.removeMarkedEntities();
-        
         updateCamera(delta);
+    }
+    /**
+     * Player attacks target entity (called from click or auto-attack)
+     */
+    public void playerAttack(Entity target) {
+        Entity player = state.getPlayer();
+        Combat playerCombat = player.getComponent(Combat.class);
+        Position playerPos = player.getComponent(Position.class);
+        Position targetPos = target.getComponent(Position.class);
+        Movement playerMovement = player.getComponent(Movement.class);
+        
+        if (playerCombat == null) return;
+        if (playerPos == null || targetPos == null) return;
+        
+        // Set as auto-attack target
+        state.setAutoAttackTarget(target);
+        
+        // Check distance
+        float distance = distance(playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+        
+        if (distance <= 80f && playerCombat.canAttack()) {
+            // In range and can attack - do it now
+            playerMovement.direction = calculateDirection(targetPos.x - playerPos.x, targetPos.y - playerPos.y);
+            playerMovement.lastDirection = playerMovement.direction;
+            
+            playerCombat.startAttack();
+            performAttack(player, target, playerPos, targetPos);
+        } else {
+            // Out of range - will path to target in update loop
+            System.out.println("Moving to attack range...");
+        }
+    }
+    /**
+     * Stop auto-attacking (called when moving to new location)
+     */
+    public void stopAutoAttack() {
+        state.clearAutoAttackTarget();
+    }
+    /**
+     * Perform attack calculation with crit/evasion
+     */
+    private void performAttack(Entity attacker, Entity target, Position attackerPos, Position targetPos) {
+        Stats attackerStats = attacker.getComponent(Stats.class);
+        Stats targetStats = target.getComponent(Stats.class);
+        Combat attackerCombat = attacker.getComponent(Combat.class);
+        Combat targetCombat = target.getComponent(Combat.class);
+        
+        if (attackerStats == null || targetStats == null) return;
+        
+        // Check evasion
+        float evasionRoll = ThreadLocalRandom.current().nextFloat();
+        float evasionChance = targetCombat != null ? targetCombat.evasionChance : 0f;
+        
+        if (evasionRoll < evasionChance) {
+            // Miss!
+            System.out.println(attacker.getName() + " attacks " + target.getName() + " - MISS!");
+            
+            // Spawn miss text
+            DamageText missText = new DamageText("MISS", DamageText.Type.MISS, targetPos.x, targetPos.y - 20);
+            state.addDamageText(missText);
+            return;
+        }
+        
+        // Check critical hit
+        boolean isCrit = false;
+        float critRoll = ThreadLocalRandom.current().nextFloat();
+        float critChance = attackerCombat != null ? attackerCombat.critChance : 0f;
+        
+        if (critRoll < critChance) {
+            isCrit = true;
+        }
+        
+        // Calculate damage
+        int baseDamage = attackerStats.attack - targetStats.defense;
+        baseDamage = Math.max(1, baseDamage);  // Minimum 1 damage
+        
+        if (isCrit && attackerCombat != null) {
+            baseDamage = (int)(baseDamage * attackerCombat.critMultiplier);
+        }
+        
+        // Apply damage
+        targetStats.hp -= baseDamage;
+        if (targetStats.hp < 0) targetStats.hp = 0;
+        
+        // Log
+        String hitType = isCrit ? " - CRITICAL HIT!" : "";
+        System.out.println(attacker.getName() + " attacks " + target.getName() + " for " + baseDamage + " damage" + hitType);
+        
+        // Spawn damage text
+        DamageText.Type textType = isCrit ? DamageText.Type.CRITICAL : DamageText.Type.NORMAL;
+        DamageText damageText = new DamageText(String.valueOf(baseDamage), textType, targetPos.x, targetPos.y - 20);
+        state.addDamageText(damageText);
+        
+        // Check death
+        if (targetStats.hp <= 0 && target.getType() == EntityType.MONSTER) {
+            handleMonsterDeath(target, target.getComponent(Sprite.class));
+        }
     }
     
     private void updatePlayer(Entity player, float delta) {
@@ -53,9 +151,70 @@ public class GameLogic {
         Sprite sprite = player.getComponent(Sprite.class);
         Stats stats = player.getComponent(Stats.class);
         Path path = player.getComponent(Path.class);
+        Combat combat = player.getComponent(Combat.class);
         TargetIndicator indicator = player.getComponent(TargetIndicator.class);
         
         if (movement == null || position == null || sprite == null || stats == null) return;
+        
+        // Auto-attack logic
+        Entity autoAttackTarget = state.getAutoAttackTarget();
+        if (autoAttackTarget != null) {
+            // Check if target is still valid
+            Stats targetStats = autoAttackTarget.getComponent(Stats.class);
+            if (targetStats == null || targetStats.hp <= 0) {
+                // Target is dead, clear auto-attack
+                state.clearAutoAttackTarget();
+                autoAttackTarget = null;
+            } else {
+                // Target is alive, try to attack
+                Position targetPos = autoAttackTarget.getComponent(Position.class);
+                if (targetPos != null) {
+                    float distance = distance(position.x, position.y, targetPos.x, targetPos.y);
+                    
+                    if (distance <= 80f) {
+                        // In range - attack
+                        if (combat != null && combat.canAttack() && !combat.isAttacking) {
+                            // Face target
+                            float dx = targetPos.x - position.x;
+                            float dy = targetPos.y - position.y;
+                            movement.direction = calculateDirection(dx, dy);
+                            movement.lastDirection = movement.direction;
+                            
+                            // Stop moving
+                            movement.stopMoving();
+                            if (path != null) path.clear();
+                            if (indicator != null) indicator.clear();
+                            
+                            // Attack
+                            combat.startAttack();
+                            performAttack(player, autoAttackTarget, position, targetPos);
+                        }
+                    } else {
+                        // Out of range - path to target if not already moving
+                        if (!movement.isMoving || (path != null && !path.isFollowing)) {
+                            // Path closer to target
+                            int startTileX = (int)(position.x / TileMap.TILE_SIZE);
+                            int startTileY = (int)(position.y / TileMap.TILE_SIZE);
+                            int goalTileX = (int)(targetPos.x / TileMap.TILE_SIZE);
+                            int goalTileY = (int)(targetPos.y / TileMap.TILE_SIZE);
+                            
+                            List<int[]> foundPath = state.getPathfinder().findPath(startTileX, startTileY, goalTileX, goalTileY);
+                            
+                            if (foundPath != null && path != null) {
+                                path.setPath(foundPath);
+                                movement.isRunning = false;  // Walk to target
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Handle attack animation
+        if (combat != null && combat.isAttacking) {
+            sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
+            return;
+        }
         
         // Follow path
         if (path != null && path.isFollowing) {
@@ -63,7 +222,6 @@ public class GameLogic {
         }
         
         if (movement.isMoving) {
-            // Handle stamina
             if (movement.isRunning) {
                 boolean hasStamina = stats.consumeStamina(movement.staminaCostPerSecond * delta);
                 if (!hasStamina) {
@@ -79,7 +237,7 @@ public class GameLogic {
             sprite.setAnimation(moveAnim);
             
         } else {
-            if (indicator != null) {
+            if (indicator != null && autoAttackTarget == null) {
                 indicator.clear();
             }
             
@@ -87,10 +245,12 @@ public class GameLogic {
             stats.regenerateStamina(delta);
         }
         
-        if (movement != null && movement.isMoving && !movement.isRunning) {
+        if (movement.isMoving && !movement.isRunning) {
             stats.regenerateStamina(delta);
         }
     }
+    
+    
     private void updateMonster(Entity monster, Position playerPos, float delta) {
         AI ai = monster.getComponent(AI.class);
         Position position = monster.getComponent(Position.class);
@@ -151,6 +311,32 @@ public class GameLogic {
         // Follow path
         if (path != null && path.isFollowing) {
             followPath(monster, path, movement, position, delta);
+        }
+    }
+    
+    // Add attack animation helper (8 directions)
+    private String getAttackAnimationForDirection(int direction) {
+        // TODO: Map to actual attack animation rows in sprite sheet
+        // For now, return walk animation as placeholder
+        switch(direction) {
+            case Movement.DIR_EAST:
+                return "attack_right";  // or Sprite.ANIM_ATTACK_RIGHT
+            case Movement.DIR_SOUTH_EAST:
+                return "attack_down_right";
+            case Movement.DIR_SOUTH:
+                return "attack_down";
+            case Movement.DIR_SOUTH_WEST:
+                return "attack_down_left";
+            case Movement.DIR_WEST:
+                return "attack_left";
+            case Movement.DIR_NORTH_WEST:
+                return "attack_up_left";
+            case Movement.DIR_NORTH:
+                return "attack_up";
+            case Movement.DIR_NORTH_EAST:
+                return "attack_up_right";
+            default:
+                return "attack_down";
         }
     }
     
@@ -351,6 +537,16 @@ public class GameLogic {
     private void handleMonsterDeath(Entity monster, Sprite sprite) {
         System.out.println(monster.getName() + " has died!");
         
+        // Clear as auto-attack target
+        if (state.getAutoAttackTarget() == monster) {
+            state.clearAutoAttackTarget();
+        }
+        
+        // Clear as targeted entity
+        if (state.getTargetedEntity() == monster) {
+            state.setTargetedEntity(null);
+        }
+        
         // Add dead component
         monster.addComponent(new Dead(5f));  // Corpse lasts 5 seconds
         
@@ -365,10 +561,15 @@ public class GameLogic {
             path.clear();
         }
         
-        // Change to dead sprite/animation
+        // Set AI to dead state
+        AI ai = monster.getComponent(AI.class);
+        if (ai != null) {
+            ai.currentState = AI.State.DEAD;
+        }
+        
+        // Play death animation
         if (sprite != null) {
-            // TODO: sprite.setAnimation("dead");
-            // For now, just stop animating
+            sprite.setAnimation(Sprite.ANIM_DEAD);
         }
     }
     /**

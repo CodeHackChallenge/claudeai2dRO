@@ -36,7 +36,7 @@ public class Sprite implements Component {
     
     // Current animation
     private String currentAnimation;
-    
+    private boolean loopAnimation;  // NEW: Control looping
     // Animation definitions
     private Map<String, Animation> animations;
     
@@ -51,7 +51,8 @@ public class Sprite implements Component {
     public static final String ANIM_WALK_UP_LEFT = "walk_up_left";
     public static final String ANIM_WALK_UP_RIGHT = "walk_up_right";
     public static final String ANIM_ATTACK = "attack";
-    
+    public static final String ANIM_DEAD = "dead";
+        
     // Inner class to hold animation data
     private static class Animation {
         int row;
@@ -71,12 +72,13 @@ public class Sprite implements Component {
         this.currentFrame = 0;
         this.animationTimer = 0;
         this.animations = new HashMap<>();
+        this.loopAnimation = true;  // Most animations loop
         
         // Setup animations - ADJUST THESE TO MATCH YOUR SPRITE SHEET
         setupAnimations();
         
         // Start with idle animation
-        this.currentAnimation = ANIM_IDLE;
+        this.currentAnimation = "idle_down";
     }
     
     private void setupAnimations() {
@@ -118,7 +120,19 @@ public class Sprite implements Component {
         // Attack animation - different frame count (example: 6 frames, row 16)
         animations.put(ANIM_ATTACK, new Animation(16, 6));
         
-        // Add more animations as needed...
+     // Attack animations - 8 directions (adjust row numbers to your sheet)
+        animations.put("attack_down", new Animation(24, 6));      // Row 24, 6 frames
+        animations.put("attack_up", new Animation(25, 6));
+        animations.put("attack_left", new Animation(26, 6));
+        animations.put("attack_right", new Animation(27, 6));
+        animations.put("attack_down_left", new Animation(28, 6));
+        animations.put("attack_down_right", new Animation(29, 6));
+        animations.put("attack_up_left", new Animation(30, 6));
+        animations.put("attack_up_right", new Animation(31, 6));
+        // Death animation - single animation (adjust row and frame count)
+        animations.put("dead", new Animation(32, 8));  // Row 32, 8 frames death animation
+        
+        
     }
     
     public void update(float delta) {
@@ -129,7 +143,15 @@ public class Sprite implements Component {
         
         if (animationTimer >= frameDuration) {
             animationTimer -= frameDuration;
-            currentFrame = (currentFrame + 1) % anim.frameCount;  // Loop based on this animation's frame count
+            
+            if (loopAnimation) {
+                currentFrame = (currentFrame + 1) % anim.frameCount;
+            } else {
+                // Don't loop - stop at last frame
+                if (currentFrame < anim.frameCount - 1) {
+                    currentFrame++;
+                }
+            }
         }
     }
     
@@ -179,7 +201,17 @@ public class Sprite implements Component {
             this.currentAnimation = animationName;
             this.currentFrame = 0;
             this.animationTimer = 0;
+            
+            // Death animation doesn't loop
+            this.loopAnimation = !animationName.equals("dead");
         }
+    }
+    
+    public boolean isAnimationFinished() {
+        Animation anim = animations.get(currentAnimation);
+        if (anim == null) return true;
+        
+        return !loopAnimation && currentFrame >= anim.frameCount - 1;
     }
     
     public String getCurrentAnimation() {

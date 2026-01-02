@@ -2,6 +2,8 @@ package dev.main;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 
@@ -24,13 +26,12 @@ public class Renderer {
             map.render(g, cameraX, cameraY);
         }
         
-        // Render target indicators BEFORE entities (ground layer)
+        // Render target indicators
         for (Entity entity : gameState.getEntities()) {
             TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
             if (indicator != null && indicator.active) {
                 int screenX = (int)Math.round(indicator.worldX - cameraX);
                 int screenY = (int)Math.round(indicator.worldY - cameraY);
-                
                 DiamondRenderer.renderDiamond(g, screenX, screenY, indicator.pulseScale, 1.0f);
             }
         }
@@ -46,22 +47,35 @@ public class Renderer {
                 
                 sprite.renderAtPixel(g, spriteScreenX, spriteScreenY);
                 
-                // Draw health bar
-                Stats stats = entity.getComponent(Stats.class);
-                HealthBar hpBar = entity.getComponent(HealthBar.class);
+                // Don't show UI for dead entities
+                Dead dead = entity.getComponent(Dead.class);
+                boolean isDead = dead != null;
                 
-                if (stats != null && hpBar != null) {
-                    drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
+                if (!isDead) {
+                    // Draw name tag
+                    NameTag nameTag = entity.getComponent(NameTag.class);
+                    if (nameTag != null && nameTag.visible) {
+                        drawNameTag(g, spriteScreenX, spriteScreenY, nameTag);
+                    }
+                    
+                    // Draw health bar
+                    Stats stats = entity.getComponent(Stats.class);
+                    HealthBar hpBar = entity.getComponent(HealthBar.class);
+                    
+                    if (stats != null && hpBar != null) {
+                        drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
+                    }
+                    
+                    // Draw stamina bar (player only)
+                    if (entity.getType() == EntityType.PLAYER) {
+                        StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
+                        if (stats != null && staminaBar != null) {
+                            drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
+                        }
+                    }
                 }
                 
-                // Draw stamina bar
-                StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
-                
-                if (stats != null && staminaBar != null) {
-                    drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
-                }
-                
-                // DEBUG: Draw collision box
+                // DEBUG
                 if (engine.isDebugMode()) {
                     CollisionBox box = entity.getComponent(CollisionBox.class);
                     if (box != null) {
@@ -70,8 +84,10 @@ public class Renderer {
                 }
             }
         }
+        // Render floating damage texts
+        drawDamageTexts(g, cameraX, cameraY);
         
-        // DEBUG: Draw tile grid and path
+        // DEBUG
         if (engine.isDebugMode()) {
             if (map != null) {
                 drawTileGrid(g, map, cameraX, cameraY);
@@ -79,9 +95,6 @@ public class Renderer {
             
             for (Entity entity : gameState.getEntities()) {
                 drawDebugPath(g, entity, cameraX, cameraY);
-            }
-            
-            for (Entity entity : gameState.getEntities()) {
                 if (entity.getType() == EntityType.MONSTER) {
                     drawDebugAI(g, entity, cameraX, cameraY);
                 }
@@ -89,6 +102,66 @@ public class Renderer {
         }
     }
     
+    private void drawNameTag(Graphics2D g, int spriteX, int spriteY, NameTag tag) {
+        Font originalFont = g.getFont();
+        Font nameFont = new Font("Arial", Font.BOLD, 12);
+        g.setFont(nameFont);
+        
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(tag.displayName);
+        
+        int textX = spriteX - textWidth / 2;
+        int textY = (int)(spriteY + tag.offsetY);
+        
+        // Draw shadow
+        g.setColor(Color.BLACK);
+        g.drawString(tag.displayName, textX + 1, textY + 1);
+        
+        // Draw text
+        g.setColor(Color.WHITE);
+        g.drawString(tag.displayName, textX, textY);
+        
+        g.setFont(originalFont);
+    }
+    
+    private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
+        Font originalFont = g.getFont();
+        for (DamageText dt : gameState.getDamageTexts()) {
+            int screenX = (int)(dt.worldX - cameraX);
+            int screenY = (int)(dt.worldY - cameraY);
+            
+            // Choose font size based on type
+            int fontSize = dt.type == DamageText.Type.CRITICAL ? 20 : 16;
+            Font damageFont = new Font("Arial", Font.BOLD, fontSize);
+            g.setFont(damageFont);
+            
+            FontMetrics fm = g.getFontMetrics();
+            int textWidth = fm.stringWidth(dt.text);
+            
+            int textX = screenX - textWidth / 2;
+            int textY = screenY;
+            
+            // Calculate alpha
+            int alpha = (int)(dt.getAlpha() * 255);
+            
+            // Draw shadow
+            g.setColor(new Color(0, 0, 0, alpha));
+            g.drawString(dt.text, textX + 2, textY + 2);
+            
+            // Draw text with color
+            Color textColor = new Color(
+                dt.color.getRed(),
+                dt.color.getGreen(),
+                dt.color.getBlue(),
+                alpha
+            );
+            g.setColor(textColor);
+            g.drawString(dt.text, textX, textY);
+        }
+        
+        g.setFont(originalFont);
+    } 
+     
     private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
         Stroke originalStroke = g.getStroke();
         

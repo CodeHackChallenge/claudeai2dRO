@@ -11,7 +11,11 @@ public class GameState {
     private TileMap map;
     private List<Entity> entities;
     private List<Entity> entitiesToRemove;  // NEW: For safe removal
+    private List<DamageText> damageTexts;  // NEW
     private Entity player;
+    private Entity hoveredEntity;  // NEW
+    private Entity targetedEntity;  // NEW
+    private Entity autoAttackTarget;  // NEW: Auto-attack target
     private Pathfinder pathfinder;
     
     private float gameTime;
@@ -21,14 +25,86 @@ public class GameState {
     public GameState() {
         entities = new ArrayList<>();
         entitiesToRemove = new ArrayList<>();
+        damageTexts = new ArrayList<>();  // NEW
         gameTime = 0f;
         cameraX = 0f;
         cameraY = 0f;
         
-        map = new TileMap("/maps/map_96x96.txt");
+        map = new TileMap("/maps/map01.txt");
         pathfinder = new Pathfinder(map);
         
         initializeWorld();
+    }
+    
+    public Entity getAutoAttackTarget() {
+        return autoAttackTarget;
+    }
+    
+    public void setAutoAttackTarget(Entity target) {
+        this.autoAttackTarget = target;
+    }
+    
+    public void clearAutoAttackTarget() {
+        this.autoAttackTarget = null;
+    }
+    
+    public void addDamageText(DamageText text) {
+        damageTexts.add(text);
+    }
+    
+    public List<DamageText> getDamageTexts() {
+        return damageTexts;
+    }
+    
+    public void updateDamageTexts(float delta) {
+        Iterator<DamageText> it = damageTexts.iterator();
+        while (it.hasNext()) {
+            DamageText dt = it.next();
+            dt.update(delta);
+            if (dt.shouldRemove()) {
+                it.remove();
+            }
+        }
+    }
+    
+    public Entity getHoveredEntity() {
+        return hoveredEntity;
+    }
+    
+    public void setHoveredEntity(Entity entity) {
+        // Hide previous hover
+        if (hoveredEntity != null && hoveredEntity != targetedEntity) {
+            NameTag tag = hoveredEntity.getComponent(NameTag.class);
+            if (tag != null) tag.hide();
+        }
+        
+        this.hoveredEntity = entity;
+        
+        // Show new hover
+        if (hoveredEntity != null) {
+            NameTag tag = hoveredEntity.getComponent(NameTag.class);
+            if (tag != null) tag.show();
+        }
+    }
+    
+    public Entity getTargetedEntity() {
+        return targetedEntity;
+    }
+    
+    public void setTargetedEntity(Entity entity) {
+        // Hide previous target
+        if (targetedEntity != null && targetedEntity != hoveredEntity) {
+            NameTag tag = targetedEntity.getComponent(NameTag.class);
+            if (tag != null) tag.hide();
+        }
+        
+        this.targetedEntity = entity;
+        
+        // Show new target
+        if (targetedEntity != null) {
+            NameTag tag = targetedEntity.getComponent(NameTag.class);
+            if (tag != null) tag.show();
+        }
     }
     
     private void initializeWorld() {
