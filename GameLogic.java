@@ -1,5 +1,7 @@
 package dev.main;
 
+import java.util.List;
+
 public class GameLogic {
     
     private GameState state;
@@ -17,24 +19,27 @@ public class GameLogic {
             Position position = entity.getComponent(Position.class);
             Sprite sprite = entity.getComponent(Sprite.class);
             Stats stats = entity.getComponent(Stats.class);
+            Path path = entity.getComponent(Path.class);
+            TargetIndicator indicator = entity.getComponent(TargetIndicator.class);  // NEW
             
             if (movement != null && position != null && sprite != null && stats != null) {
+                
+                // Follow path if one exists
+                if (path != null && path.isFollowing) {
+                    followPath(entity, path, movement, position);
+                }
+                
                 if (movement.isMoving) {
-                    // Check if running and has stamina
+                    // Handle stamina
                     if (movement.isRunning) {
-                        // Try to consume stamina
                         boolean hasStamina = stats.consumeStamina(movement.staminaCostPerSecond * delta);
-                        
                         if (!hasStamina) {
-                            // Out of stamina, switch to walking
                             movement.stopRunning();
                         }
                     }
                     
-                    // Move the entity
                     moveTowardsTarget(entity, movement, position, delta);
                     
-                    // Set animation based on movement state
                     String moveAnim;
                     if (movement.isRunning) {
                         moveAnim = getRunAnimationForDirection(movement.direction);
@@ -44,16 +49,17 @@ public class GameLogic {
                     sprite.setAnimation(moveAnim);
                     
                 } else {
-                    // Not moving - idle animation and regenerate stamina
+                    // Idle - clear target indicator
+                    if (indicator != null) {
+                        indicator.clear();
+                    }
+                    
                     String idleAnim = getIdleAnimationForDirection(movement.lastDirection);
                     sprite.setAnimation(idleAnim);
-                    
-                    // Regenerate stamina when not running
                     stats.regenerateStamina(delta);
                 }
             }
             
-            // Always regenerate stamina when walking (not running)
             if (stats != null && movement != null && movement.isMoving && !movement.isRunning) {
                 stats.regenerateStamina(delta);
             }
@@ -61,9 +67,59 @@ public class GameLogic {
             if (sprite != null) {
                 sprite.update(delta);
             }
+            
+            // Update target indicator animation
+            if (indicator != null) {
+                indicator.update(delta);
+            }
         }
         
         updateCamera(delta);
+    }
+
+    /**
+     * Follow the current path waypoint by waypoint
+     */
+    private void followPath(Entity entity, Path path, Movement movement, Position position) {
+        int[] waypoint = path.getCurrentWaypoint();
+        
+        if (waypoint == null) {
+            path.clear();
+            movement.stopMoving();
+            return;
+        }
+        
+        // Convert tile coordinates to world coordinates (center of tile)
+        float waypointWorldX = waypoint[0] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
+        float waypointWorldY = waypoint[1] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
+        
+        // Check if we're close to the waypoint
+        float dx = waypointWorldX - position.x;
+        float dy = waypointWorldY - position.y;
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < 5f) {
+            // Reached waypoint, move to next
+            path.advanceWaypoint();
+            
+            if (!path.isFollowing) {
+                // Reached final destination
+                movement.stopMoving();
+            } else {
+                // Set target to next waypoint
+                int[] nextWaypoint = path.getCurrentWaypoint();
+                if (nextWaypoint != null) {
+                    float nextX = nextWaypoint[0] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
+                    float nextY = nextWaypoint[1] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
+                    movement.setTarget(nextX, nextY, movement.isRunning);
+                }
+            }
+        } else {
+            // Still moving to current waypoint
+            if (!movement.isMoving) {
+                movement.setTarget(waypointWorldX, waypointWorldY, movement.isRunning);
+            }
+        }
     }
     
     private String getIdleAnimationForDirection(int direction) {
@@ -240,17 +296,125 @@ public class GameLogic {
             
             state.setCameraPosition(newX, newY);
         }
-    }
-    
+    } 
+    /**
+     * Request pathfinding to a world position
+     
     public void movePlayerTo(float worldX, float worldY, boolean run) {
         Entity player = state.getPlayer();
+        Position position = player.getComponent(Position.class);
         Movement movement = player.getComponent(Movement.class);
+        Path path = player.getComponent(Path.class);
         
-        if (movement != null) {
-            movement.setTarget(worldX, worldY, run);
+        if (position == null || movement == null || path == null) {
+            return;
+        }
+        
+        // Determine smart starting point for pathfinding
+        int startTileX, startTileY;
+        
+        if (path.isFollowing && path.waypoints != null && path.currentWaypoint < path.waypoints.size()) {
+            // Hero is already following a path - start from current/next waypoint
+            int[] currentWaypoint = path.waypoints.get(path.currentWaypoint);
+            startTileX = currentWaypoint[0];
+            startTileY = currentWaypoint[1];
+            
+            System.out.println("Recalculating path from current waypoint (" + startTileX + ", " + startTileY + ")");
+        } else {
+            // Not following a path - start from hero's current position
+            startTileX = (int)(position.x / TileMap.TILE_SIZE);
+            startTileY = (int)(position.y / TileMap.TILE_SIZE);
+            
+            System.out.println("New path from hero position (" + startTileX + ", " + startTileY + ")");
+        }
+        
+        int goalTileX = (int)(worldX / TileMap.TILE_SIZE);
+        int goalTileY = (int)(worldY / TileMap.TILE_SIZE);
+        
+        // Check if clicking the same tile we're already heading to
+        if (path.isFollowing && path.waypoints != null && !path.waypoints.isEmpty()) {
+            int[] lastWaypoint = path.waypoints.get(path.waypoints.size() - 1);
+            if (lastWaypoint[0] == goalTileX && lastWaypoint[1] == goalTileY) {
+                // Same destination, just update run state
+                movement.isRunning = run;
+                return;
+            }
+        }
+        
+        // Find new path
+        Pathfinder pathfinder = state.getPathfinder();
+        List<int[]> foundPath = pathfinder.findPath(startTileX, startTileY, goalTileX, goalTileY);
+        
+        if (foundPath != null) {
+            path.setPath(foundPath);
+            movement.isRunning = run;
+            System.out.println("Path found with " + foundPath.size() + " waypoints");
+        } else {
+            System.out.println("No path to destination!");
+            path.clear();
+            movement.stopMoving();
         }
     }
-    
+    */
+    public void movePlayerTo(float worldX, float worldY, boolean run) {
+        Entity player = state.getPlayer();
+        Position position = player.getComponent(Position.class);
+        Movement movement = player.getComponent(Movement.class);
+        Path path = player.getComponent(Path.class);
+        TargetIndicator indicator = player.getComponent(TargetIndicator.class);  // NEW
+        
+        if (position == null || movement == null || path == null) {
+            return;
+        }
+        
+        // Determine smart starting point for pathfinding
+        int startTileX, startTileY;
+        
+        if (path.isFollowing && path.waypoints != null && path.currentWaypoint < path.waypoints.size()) {
+            int[] currentWaypoint = path.waypoints.get(path.currentWaypoint);
+            startTileX = currentWaypoint[0];
+            startTileY = currentWaypoint[1];
+        } else {
+            startTileX = (int)(position.x / TileMap.TILE_SIZE);
+            startTileY = (int)(position.y / TileMap.TILE_SIZE);
+        }
+        
+        int goalTileX = (int)(worldX / TileMap.TILE_SIZE);
+        int goalTileY = (int)(worldY / TileMap.TILE_SIZE);
+        
+        // Check if clicking the same tile
+        if (path.isFollowing && path.waypoints != null && !path.waypoints.isEmpty()) {
+            int[] lastWaypoint = path.waypoints.get(path.waypoints.size() - 1);
+            if (lastWaypoint[0] == goalTileX && lastWaypoint[1] == goalTileY) {
+                movement.isRunning = run;
+                return;
+            }
+        }
+        
+        // Find new path
+        Pathfinder pathfinder = state.getPathfinder();
+        List<int[]> foundPath = pathfinder.findPath(startTileX, startTileY, goalTileX, goalTileY);
+        
+        if (foundPath != null) {
+            path.setPath(foundPath);
+            movement.isRunning = run;
+            
+            // Set target indicator at final destination
+            if (indicator != null) {
+                indicator.setTarget(worldX, worldY);
+            }
+            
+            System.out.println("Path found with " + foundPath.size() + " waypoints");
+        } else {
+            System.out.println("No path to destination!");
+            path.clear();
+            movement.stopMoving();
+            
+            if (indicator != null) {
+                indicator.clear();
+            }
+        }
+    }
     public void setCameraLerpSpeed(float speed) {
         this.cameraLerpSpeed = speed;
     }

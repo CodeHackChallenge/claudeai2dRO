@@ -3,11 +3,11 @@ package dev.main;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Stroke;
 
 public class Renderer {
-	
     private GameState gameState;
-    private Engine engine;  // NEW: Reference to engine for debug mode
+    private Engine engine;
     
     public Renderer(GameState gameState, Engine engine) {
         this.gameState = gameState;
@@ -22,6 +22,17 @@ public class Renderer {
         TileMap map = gameState.getMap();
         if (map != null) {
             map.render(g, cameraX, cameraY);
+        }
+        
+        // Render target indicators BEFORE entities (ground layer)
+        for (Entity entity : gameState.getEntities()) {
+            TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
+            if (indicator != null && indicator.active) {
+                int screenX = (int)Math.round(indicator.worldX - cameraX);
+                int screenY = (int)Math.round(indicator.worldY - cameraY);
+                
+                DiamondRenderer.renderDiamond(g, screenX, screenY, indicator.pulseScale, 1.0f);
+            }
         }
         
         // Render entities
@@ -60,24 +71,85 @@ public class Renderer {
             }
         }
         
-        // DEBUG: Draw tile grid
-        if (engine.isDebugMode() && map != null) {
-            drawTileGrid(g, map, cameraX, cameraY);
+        // DEBUG: Draw tile grid and path
+        if (engine.isDebugMode()) {
+            if (map != null) {
+                drawTileGrid(g, map, cameraX, cameraY);
+            }
+            
+            for (Entity entity : gameState.getEntities()) {
+                drawDebugPath(g, entity, cameraX, cameraY);
+            }
         }
     }
-
+    
+    private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
+        Stroke originalStroke = g.getStroke();
+        
+        int barX = spriteX - bar.width / 2;
+        int barY = spriteY + bar.offsetY;
+        
+        float pct = (float) hp.hp / hp.maxHp;
+        pct = Math.max(0f, Math.min(1f, pct));
+        
+        if (hp.hp > 0 && pct < 0.10f) {
+            pct = 0.10f;
+        }
+        
+        int filledWidth = (int)(bar.width * pct);
+        
+        Color hpColor =
+            pct > 0.50f ? HealthBar.HP_GREEN :
+            pct > 0.25f ? HealthBar.HP_ORANGE :
+                          HealthBar.HP_RED;
+        
+        g.setColor(HealthBar.BG_COLOR);
+        g.fillRect(barX, barY, bar.width, bar.height);
+        
+        g.setColor(hpColor);
+        g.fillRect(barX, barY, filledWidth, bar.height);
+        
+        g.setColor(Color.BLACK);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barX, barY, bar.width, bar.height);
+        
+        g.setStroke(originalStroke);
+    }
+    
+    private void drawStaminaBar(Graphics2D g, int spriteX, int spriteY, Stats stats, StaminaBar bar) {
+        Stroke originalStroke = g.getStroke();
+        
+        int barX = spriteX - bar.width / 2;
+        int barY = spriteY + bar.offsetY;
+        
+        float pct = stats.stamina / stats.maxStamina;
+        pct = Math.max(0f, Math.min(1f, pct));
+        
+        int filledWidth = (int)(bar.width * pct);
+        
+        g.setColor(StaminaBar.BG_COLOR);
+        g.fillRect(barX, barY, bar.width, bar.height);
+        
+        g.setColor(StaminaBar.STAMINA_COLOR);
+        g.fillRect(barX, barY, filledWidth, bar.height);
+        
+        g.setColor(Color.BLACK);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barX, barY, bar.width, bar.height);
+        
+        g.setStroke(originalStroke);
+    }
+    
     private void drawCollisionBox(Graphics2D g, Position pos, CollisionBox box, float cameraX, float cameraY) {
         int boxX = (int)Math.round(box.getLeft(pos.x) - cameraX);
         int boxY = (int)Math.round(box.getTop(pos.y) - cameraY);
         int boxW = (int)box.width;
         int boxH = (int)box.height;
         
-        // Draw red rectangle for collision box
         g.setColor(new Color(255, 0, 0, 150));
         g.setStroke(new BasicStroke(2));
         g.drawRect(boxX, boxY, boxW, boxH);
         
-        // Draw center point
         int centerX = (int)Math.round(pos.x - cameraX);
         int centerY = (int)Math.round(pos.y - cameraY);
         g.setColor(Color.YELLOW);
@@ -85,7 +157,6 @@ public class Renderer {
     }
     
     private void drawTileGrid(Graphics2D g, TileMap map, float cameraX, float cameraY) {
-        // Calculate visible tile range
         int startCol = Math.max(0, (int)(cameraX / TileMap.TILE_SIZE));
         int endCol = Math.min(map.getWidth(), (int)((cameraX + Engine.WIDTH) / TileMap.TILE_SIZE) + 1);
         
@@ -95,19 +166,16 @@ public class Renderer {
         g.setColor(new Color(255, 255, 255, 100));
         g.setStroke(new BasicStroke(1));
         
-        // Draw vertical lines
         for (int col = startCol; col <= endCol; col++) {
             int x = (int)(col * TileMap.TILE_SIZE - cameraX);
             g.drawLine(x, 0, x, Engine.HEIGHT);
         }
         
-        // Draw horizontal lines
         for (int row = startRow; row <= endRow; row++) {
             int y = (int)(row * TileMap.TILE_SIZE - cameraY);
             g.drawLine(0, y, Engine.WIDTH, y);
         }
         
-        // Highlight solid tiles
         g.setColor(new Color(255, 0, 0, 80));
         for (int row = startRow; row < endRow; row++) {
             for (int col = startCol; col < endCol; col++) {
@@ -120,88 +188,39 @@ public class Renderer {
         }
     }
     
-    private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
-        int barX = spriteX - bar.width / 2;
-        int barY = spriteY + bar.offsetY;
+    private void drawDebugPath(Graphics2D g, Entity entity, float cameraX, float cameraY) {
+        Path path = entity.getComponent(Path.class);
         
-        float pct = (float) hp.hp / hp.maxHp;
-        pct = Math.max(0f, Math.min(1f, pct));
-        
-        if (hp.hp > 0 && pct < 0.10f) {
-            pct = 0.10f;
+        if (path != null && path.waypoints != null) {
+            g.setColor(new Color(0, 255, 255, 200));
+            g.setStroke(new BasicStroke(3));
+            
+            for (int i = 0; i < path.waypoints.size() - 1; i++) {
+                int[] current = path.waypoints.get(i);
+                int[] next = path.waypoints.get(i + 1);
+                
+                int x1 = (int)((current[0] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f) - cameraX);
+                int y1 = (int)((current[1] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f) - cameraY);
+                int x2 = (int)((next[0] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f) - cameraX);
+                int y2 = (int)((next[1] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f) - cameraY);
+                
+                g.drawLine(x1, y1, x2, y2);
+            }
+            
+            g.setColor(Color.CYAN);
+            for (int i = 0; i < path.waypoints.size(); i++) {
+                int[] waypoint = path.waypoints.get(i);
+                int x = (int)((waypoint[0] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f) - cameraX);
+                int y = (int)((waypoint[1] * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f) - cameraY);
+                
+                if (i == path.currentWaypoint) {
+                    g.setColor(Color.YELLOW);
+                    g.fillOval(x - 5, y - 5, 10, 10);
+                    g.setColor(Color.CYAN);
+                } else {
+                    g.fillOval(x - 3, y - 3, 6, 6);
+                }
+            }
         }
-        
-        int filledWidth = (int)(bar.width * pct);
-        
-        Color hpColor =
-            pct > 0.50f ? HealthBar.HP_GREEN :
-            pct > 0.25f ? HealthBar.HP_ORANGE :
-                          HealthBar.HP_RED;
-        
-        g.setColor(HealthBar.BG_COLOR);
-        g.fillRect(barX, barY, bar.width, bar.height);
-        
-        g.setColor(hpColor);
-        g.fillRect(barX, barY, filledWidth, bar.height);
-        
-        g.setColor(Color.BLACK);
-        g.drawRect(barX, barY, bar.width, bar.height);
-    }
-
-    private void drawStaminaBar(Graphics2D g, int spriteX, int spriteY, Stats stats, StaminaBar bar) {
-        int barX = spriteX - bar.width / 2;
-        int barY = spriteY + bar.offsetY;
-        
-        float pct = stats.stamina / stats.maxStamina;
-        pct = Math.max(0f, Math.min(1f, pct));
-        
-        int filledWidth = (int)(bar.width * pct);
-        
-        // Background
-        g.setColor(StaminaBar.BG_COLOR);
-        g.fillRect(barX, barY, bar.width, bar.height);
-        
-        // Fill
-        g.setColor(StaminaBar.STAMINA_COLOR);
-        g.fillRect(barX, barY, filledWidth, bar.height);
-        
-        // Border
-        g.setColor(Color.BLACK);
-        g.drawRect(barX, barY, bar.width, bar.height);
-    }
-    
-    private void drawHealthBarAtPixel(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
-        // Calculate bar position relative to sprites's pixel position
-        int barX = spriteX - bar.width / 2;
-        int barY = spriteY + bar.offsetY;
-        
-        // HP percentage
-        float pct = (float) hp.hp / hp.maxHp;
-        pct = Math.max(0f, Math.min(1f, pct));
-        
-        // ⭐ Minimum visible sliver if alive
-        if (hp.hp > 0 && pct < 0.10f) {
-            pct = 0.10f;
-        }
-        
-        int filledWidth = (int)(bar.width * pct);
-        
-        // Color thresholds
-        Color hpColor =
-            pct > 0.50f ? HealthBar.HP_GREEN :
-            pct > 0.25f ? HealthBar.HP_ORANGE :
-                          HealthBar.HP_RED;
-        
-        // Background
-        g.setColor(HealthBar.BG_COLOR);
-        g.fillRect(barX, barY, bar.width, bar.height);
-        
-        // Fill
-        g.setColor(hpColor);
-        g.fillRect(barX, barY, filledWidth, bar.height);
-        
-        // Border
-        g.setColor(Color.BLACK);
-        g.drawRect(barX, barY, bar.width, bar.height);
     }
 }

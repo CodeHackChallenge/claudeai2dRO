@@ -1,13 +1,15 @@
 package dev.main;
 
 import java.util.ArrayList;
-import java.util.List;
-//"/sprites/enemy2_64x64.png"
+import java.util.List; 
+//player.addComponent(new CollisionBox(-10, 3, 22, 28));
+//map = new TileMap("/maps/map_96x96.txt");
 public class GameState {
 	
 	private TileMap map;
     private List<Entity> entities;
     private Entity player;
+    private Pathfinder pathfinder;  // NEW
     
     private float gameTime;
     private float cameraX;
@@ -22,7 +24,7 @@ public class GameState {
         // Load map first
         //map = new TileMap("/maps/map01.txt");
         map = new TileMap("/maps/map_96x96.txt");
-        
+        pathfinder = new Pathfinder(map);  // NEW
         
         initializeWorld();
     }
@@ -49,9 +51,9 @@ public class GameState {
         player.addComponent(new Stats(100, 100f, 10, 5));
         player.addComponent(new HealthBar(40, 4, 40));
         player.addComponent(new StaminaBar(40, 4, 46));
-        
-        // Add collision box: offsetX, offsetY (from entity center), width, height
-        player.addComponent(new CollisionBox(-10, 3, 22, 28));
+        player.addComponent(new CollisionBox(-10, 3, 22, 26));
+        player.addComponent(new Path());  // NEW
+        player.addComponent(new TargetIndicator());  // NEW
         
         entities.add(player);
         return player;
@@ -69,7 +71,9 @@ public class GameState {
         this.cameraX = x;
         this.cameraY = y;
     }
-    
+    public Pathfinder getPathfinder() {
+        return pathfinder;
+    }
     
     
 }

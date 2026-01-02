@@ -33,6 +33,7 @@ public class TileMap {
     private void loadTileSheet() {
         tileSheet = TextureManager.load("/tiles/tilesheet_64x64.png");
         
+        //tileSheet = TextureManager.load("/tiles/boat_1920x1080.png");
         if (tileSheet != null) {
             tilesPerRow = tileSheet.getWidth() / TILE_SIZE;
             System.out.println("Tile sheet loaded: " + tilesPerRow + " tiles per row");
