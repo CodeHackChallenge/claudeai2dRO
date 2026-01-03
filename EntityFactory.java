@@ -48,7 +48,7 @@ public class EntityFactory {
                 break;
                 
             case "Goblin":
-                monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f));
+                monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.2f)); //0.15
                 monster.addComponent(new Stats(80, 80f, 8, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 

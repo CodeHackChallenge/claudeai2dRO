@@ -36,6 +36,26 @@ public class GameState {
         initializeWorld();
     }
     
+    private void initializeWorld() {
+        // Create player
+        //float centerX = (map.getWidthInPixels()) / 2f;
+        //float centerY = (map.getHeightInPixels()) / 2f;
+        
+        player = EntityFactory.createPlayer(64, 64);
+        entities.add(player);
+        
+        // Spawn some monsters
+        //spawnMonster("Slime", 400, 400);
+        //spawnMonster("Slime", 600, 300);
+        spawnMonster("Goblin", 800, 500);
+        spawnMonster("Goblin", 864, 500);
+        spawnMonster("Goblin", 900, 500);
+        spawnMonster("Goblin", 964, 500);
+        spawnMonster("Goblin", 700, 500);
+        spawnMonster("Goblin", 764, 500);
+        //spawnMonster("Goblin", 300, 700);
+        //spawnMonster("Poring", 500, 600);
+    }
     public Entity getAutoAttackTarget() {
         return autoAttackTarget;
     }
@@ -106,23 +126,7 @@ public class GameState {
             if (tag != null) tag.show();
         }
     }
-    
-    private void initializeWorld() {
-        // Create player
-        //float centerX = (map.getWidthInPixels()) / 2f;
-        //float centerY = (map.getHeightInPixels()) / 2f;
-        
-        player = EntityFactory.createPlayer(64, 64);
-        entities.add(player);
-        
-        // Spawn some monsters
-        //spawnMonster("Slime", 400, 400);
-        //spawnMonster("Slime", 600, 300);
-        spawnMonster("Goblin", 800, 500);
-        //spawnMonster("Goblin", 300, 700);
-        //spawnMonster("Poring", 500, 600);
-    }
-    
+            
     public void spawnMonster(String type, float x, float y) {
         Entity monster = EntityFactory.createMonster(type, x, y);
         entities.add(monster);

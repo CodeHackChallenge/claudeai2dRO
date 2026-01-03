@@ -126,6 +126,11 @@ public class Renderer {
     
     private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
         Font originalFont = g.getFont();
+        
+        if (gameState.getDamageTexts().isEmpty()) {
+            return;  // No texts to draw
+        }
+        
         for (DamageText dt : gameState.getDamageTexts()) {
             int screenX = (int)(dt.worldX - cameraX);
             int screenY = (int)(dt.worldY - cameraY);
@@ -160,7 +165,7 @@ public class Renderer {
         }
         
         g.setFont(originalFont);
-    } 
+    }
      
     private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
         Stroke originalStroke = g.getStroke();

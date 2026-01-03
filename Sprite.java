@@ -105,7 +105,8 @@ public class Sprite implements Component {
         animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(11, 9));
         animations.put(ANIM_WALK_UP_LEFT, new Animation(9, 9));
         animations.put(ANIM_WALK_UP_RIGHT, new Animation(11, 9));
-        
+        // Attack animation - different frame count (example: 6 frames, row 16)
+        animations.put(ANIM_ATTACK, new Animation(16, 6));//TODO: does this do anything
         
         
         // Run animations - 8 directions, adjust frame count to your sheet
@@ -117,20 +118,19 @@ public class Sprite implements Component {
         animations.put("run_down_right", new Animation(41, 8));
         animations.put("run_up_left", new Animation(39, 8));
         animations.put("run_up_right", new Animation(41, 8));
-        // Attack animation - different frame count (example: 6 frames, row 16)
-        animations.put(ANIM_ATTACK, new Animation(16, 6));
         
-     // Attack animations - 8 directions (adjust row numbers to your sheet)
-        animations.put("attack_down", new Animation(24, 6));      // Row 24, 6 frames
-        animations.put("attack_up", new Animation(25, 6));
-        animations.put("attack_left", new Animation(26, 6));
-        animations.put("attack_right", new Animation(27, 6));
-        animations.put("attack_down_left", new Animation(28, 6));
-        animations.put("attack_down_right", new Animation(29, 6));
-        animations.put("attack_up_left", new Animation(30, 6));
-        animations.put("attack_up_right", new Animation(31, 6));
+        
+        // Attack animations - 8 directions (adjust row numbers to your sheet)
+        animations.put("attack_down", new Animation(14, 6));      
+        animations.put("attack_up", new Animation(12, 6));
+        animations.put("attack_left", new Animation(13, 6));
+        animations.put("attack_right", new Animation(15, 6));
+        animations.put("attack_down_left", new Animation(13, 6));
+        animations.put("attack_down_right", new Animation(15, 6));
+        animations.put("attack_up_left", new Animation(13, 6));
+        animations.put("attack_up_right", new Animation(15, 6));
         // Death animation - single animation (adjust row and frame count)
-        animations.put("dead", new Animation(32, 8));  // Row 32, 8 frames death animation
+        animations.put("dead", new Animation(20, 6));   
         
         
     }

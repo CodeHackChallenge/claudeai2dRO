@@ -231,6 +231,41 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 System.out.println("HP: " + stats.hp + "/" + stats.maxHp + " (HEALED)");
             }
         }
+     // NEW: F4 to print all monster states
+        if (e.getKeyCode() == KeyEvent.VK_F4) {
+            System.out.println("\n=== MONSTER STATES ===");
+            for (Entity entity : gameState.getEntities()) {
+                if (entity.getType() == EntityType.MONSTER) {
+                    AI ai = entity.getComponent(AI.class);
+                    Position pos = entity.getComponent(Position.class);
+                    Movement move = entity.getComponent(Movement.class);
+                    
+                    if (ai != null && pos != null) {
+                        float distHome = (float)Math.sqrt(
+                            Math.pow(pos.x - ai.homeX, 2) + 
+                            Math.pow(pos.y - ai.homeY, 2)
+                        );
+                        
+                        String movingStatus = (move != null && move.isMoving) ? "MOVING" : "STOPPED";
+                        
+                        System.out.println(entity.getName() + " [ID:" + entity.getID() + "]:");
+                        System.out.println("  State: " + ai.currentState);
+                        System.out.println("  Position: (" + (int)pos.x + ", " + (int)pos.y + ")");
+                        System.out.println("  Home: (" + (int)ai.homeX + ", " + (int)ai.homeY + ")");
+                        System.out.println("  Dist from home: " + (int)distHome);
+                        System.out.println("  Movement: " + movingStatus);
+                        
+                        Path path = entity.getComponent(Path.class);
+                        if (path != null && path.isFollowing) {
+                            System.out.println("  Path: " + path.waypoints.size() + " waypoints, at #" + path.currentWaypoint);
+                        } else {
+                            System.out.println("  Path: NONE");
+                        }
+                    }
+                }
+            }
+            System.out.println("======================\n");
+        }
     }
     
     public boolean isDebugMode() {

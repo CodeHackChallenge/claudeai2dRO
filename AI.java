@@ -4,39 +4,37 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class AI implements Component {
     
-    // AI State
     public enum State {
         IDLE,
         ROAMING,
         CHASING,
         RETURNING,
         ATTACKING,
-        DEAD
+        DEAD,
+        VICTORY_IDLE  // NEW: Idle after player dies
     }
     
     public State currentState;
-    public String behaviorType;  // "passive", "aggressive", "neutral"
+    public String behaviorType;
     
-    // Home position (spawn point)
     public float homeX;
     public float homeY;
-    public float roamRadius;  // How far can roam from home
+    public float roamRadius;
     
-    // Detection
-    public float detectionRange;  // Tiles away to detect player
+    public float detectionRange;
     public Entity target;
     
-    // Roaming
     public float roamTimer;
-    public float roamInterval;  // Time between roam movements
+    public float roamInterval;
     
-    // Returning
-    public float returnThreshold;  // Distance from home before returning
+    public float returnThreshold;
     
-    // Attack
     public float attackRange;
     public float attackCooldown;
     public float attackTimer;
+    
+    public float victoryIdleTimer;  // NEW
+    public float victoryIdleDuration;  // NEW
     
     public AI(String behaviorType, float homeX, float homeY, float roamRadius, float detectionRange) {
         this.behaviorType = behaviorType;
@@ -50,13 +48,16 @@ public class AI implements Component {
         this.target = null;
         
         this.roamTimer = 0;
-        this.roamInterval = ThreadLocalRandom.current().nextFloat(3f, 6f);  // 3-6 seconds
+        this.roamInterval = ThreadLocalRandom.current().nextFloat(3f, 6f);
         
-        this.returnThreshold = roamRadius + 64f;  // Slightly beyond roam radius
+        this.returnThreshold = roamRadius + 64f;
         
-        this.attackRange = 32f;  // ~half a tile
-        this.attackCooldown = 1.5f;  // 1.5 seconds between attacks
+        this.attackRange = 32f;
+        this.attackCooldown = 1.5f;
         this.attackTimer = 0;
+        
+        this.victoryIdleTimer = 0;
+        this.victoryIdleDuration = 3f;  // Idle for 3 seconds after victory
     }
     
     public void update(float delta) {
@@ -64,6 +65,10 @@ public class AI implements Component {
         
         if (attackTimer > 0) {
             attackTimer -= delta;
+        }
+        
+        if (currentState == State.VICTORY_IDLE) {
+            victoryIdleTimer += delta;
         }
     }
     
