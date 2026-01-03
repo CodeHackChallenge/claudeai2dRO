@@ -47,7 +47,7 @@ public class GameState {
         // Spawn some monsters
         //spawnMonster("Slime", 400, 400);
         //spawnMonster("Slime", 600, 300);
-        spawnMonster("Goblin", 800, 500);
+        spawnMonster("Goblin_Boss", 800, 500);
         spawnMonster("Goblin", 864, 500);
         spawnMonster("Goblin", 900, 500);
         spawnMonster("Goblin", 964, 500);

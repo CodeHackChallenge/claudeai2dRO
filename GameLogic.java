@@ -95,6 +95,9 @@ public class GameLogic {
         
         if (attackerStats == null || targetStats == null) return;
         
+        // ⭐ REMOVED: Don't auto-face target here
+        // Only face target when initiating the attack, not during damage calculation
+        
         // Check evasion
         float evasionRoll = ThreadLocalRandom.current().nextFloat();
         float evasionChance = targetCombat != null ? targetCombat.evasionChance : 0f;
@@ -136,10 +139,10 @@ public class GameLogic {
         DamageText damageText = new DamageText(String.valueOf(baseDamage), textType, targetPos.x, targetPos.y - 30);
         state.addDamageText(damageText);
         
-        // Check death - only call if not already dead
+        // Check death
         if (targetStats.hp <= 0) {
             Dead alreadyDead = target.getComponent(Dead.class);
-            if (alreadyDead == null) {  // ⭐ Only handle death once
+            if (alreadyDead == null) {
                 if (target.getType() == EntityType.MONSTER) {
                     handleMonsterDeath(target, target.getComponent(Sprite.class));
                 } else if (target.getType() == EntityType.PLAYER) {
@@ -153,7 +156,6 @@ public class GameLogic {
             AI targetAI = target.getComponent(AI.class);
             Stats monsterStats = target.getComponent(Stats.class);
             
-            // Only aggro if monster is alive
             if (targetAI != null && monsterStats != null && monsterStats.hp > 0 && 
                 targetAI.currentState != AI.State.DEAD) {
                 if (targetAI.currentState == AI.State.IDLE || 
@@ -196,33 +198,33 @@ public class GameLogic {
         // TODO: Show respawn UI, game over screen, etc.
     }
 
-	private void updatePlayer(Entity player, float delta) {
-		Movement movement = player.getComponent(Movement.class);
-	    Position position = player.getComponent(Position.class);
-	    Sprite sprite = player.getComponent(Sprite.class);
-	    Stats stats = player.getComponent(Stats.class);
-	    Path path = player.getComponent(Path.class);
-	    Combat combat = player.getComponent(Combat.class);
-	    TargetIndicator indicator = player.getComponent(TargetIndicator.class);
-	    Dead dead = player.getComponent(Dead.class);  // NEW: Check if already dead
-	    
-	    if (movement == null || position == null || sprite == null || stats == null) return;
-	    
-	    // If already has Dead component, just play death animation and return
-	    if (dead != null) {
-	        if (sprite != null) {
-	            sprite.setAnimation(Sprite.ANIM_DEAD);
-	        }
-	        dead.update(delta);
-	        // TODO: Show respawn button after corpse timer
-	        return;
-	    }
-	    
-	    // Check if player just died (hp <= 0 but no Dead component yet)
-	    if (stats.hp <= 0) {
-	        handlePlayerDeath(player, sprite);
-	        return;
-	    }
+    private void updatePlayer(Entity player, float delta) {
+        Movement movement = player.getComponent(Movement.class);
+        Position position = player.getComponent(Position.class);
+        Sprite sprite = player.getComponent(Sprite.class);
+        Stats stats = player.getComponent(Stats.class);
+        Path path = player.getComponent(Path.class);
+        Combat combat = player.getComponent(Combat.class);
+        TargetIndicator indicator = player.getComponent(TargetIndicator.class);
+        Dead dead = player.getComponent(Dead.class);
+        
+        if (movement == null || position == null || sprite == null || stats == null) return;
+        
+        // If already dead, just play death animation
+        if (dead != null) {
+            if (sprite != null) {
+                sprite.setAnimation(Sprite.ANIM_DEAD);
+            }
+            dead.update(delta);
+            return;
+        }
+        
+        // Check if player just died
+        if (stats.hp <= 0) {
+            handlePlayerDeath(player, sprite);
+            return;
+        }
+        
         // Auto-attack logic
         Entity autoAttackTarget = state.getAutoAttackTarget();
         if (autoAttackTarget != null) {
@@ -238,8 +240,11 @@ public class GameLogic {
                     if (distance <= 80f) {
                         // In range - attack
                         if (combat != null && combat.canAttack() && !combat.isAttacking) {
-                            // Make both face each other
-                            makeFaceEachOther(player, autoAttackTarget);
+                            // ⭐ Only face the TARGET we're attacking (not whoever hits us)
+                            float dx = targetPos.x - position.x;
+                            float dy = targetPos.y - position.y;
+                            movement.direction = calculateDirection(dx, dy);
+                            movement.lastDirection = movement.direction;
                             
                             // Stop moving
                             movement.stopMoving();
@@ -274,7 +279,7 @@ public class GameLogic {
         if (combat != null && combat.isAttacking) {
             sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
             
-            // Keep facing target while attacking
+            // ⭐ Keep facing the TARGET while attacking (update if target moves)
             if (autoAttackTarget != null) {
                 Position targetPos = autoAttackTarget.getComponent(Position.class);
                 if (targetPos != null) {
@@ -764,7 +769,7 @@ public class GameLogic {
     }
     /**
      * Make two entities face each other
-     */
+     
     private void makeFaceEachOther(Entity entity1, Entity entity2) {
         Position pos1 = entity1.getComponent(Position.class);
         Position pos2 = entity2.getComponent(Position.class);
@@ -789,7 +794,7 @@ public class GameLogic {
             move2.lastDirection = move2.direction;
         }
     }
-    
+    */
     private void handleAttackingState(Entity monster, AI ai, Movement movement, Sprite sprite, Position playerPos, Stats stats, float delta) {
         Position monsterPos = monster.getComponent(Position.class);
         Entity player = state.getPlayer();
@@ -816,11 +821,16 @@ public class GameLogic {
             return;
         }
         
-        // Make monster face player
-        makeFaceEachOther(monster, player);
-        
-        // Attack if cooldown ready
+        // ⭐ Face player only when actually attacking
         if (ai.canAttack()) {
+            // Face player before attacking
+            if (movement != null) {
+                float dx = playerPos.x - monsterPos.x;
+                float dy = playerPos.y - monsterPos.y;
+                movement.direction = calculateDirection(dx, dy);
+                movement.lastDirection = movement.direction;
+            }
+            
             Combat monsterCombat = monster.getComponent(Combat.class);
             if (monsterCombat != null) {
                 monsterCombat.startAttack();
@@ -833,6 +843,7 @@ public class GameLogic {
                 sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
             }
         } else {
+            // Waiting for cooldown - keep current facing direction
             Combat monsterCombat = monster.getComponent(Combat.class);
             if (sprite != null && movement != null) {
                 if (monsterCombat != null && monsterCombat.isAttacking) {

@@ -13,11 +13,11 @@ public class EntityFactory {
         player.addComponent(new Position(x, y));
         player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
         player.addComponent(new Movement(100f, 200f));
-        player.addComponent(new Stats(100, 100f, 15, 5));
+        player.addComponent(new Stats(1000, 100f, 15, 5));
         player.addComponent(new Combat(0.8f, 0.15f, 0.05f));  // 0.8s cooldown, 15% crit, 5% evasion 
         player.addComponent(new HealthBar(40, 4, 40));
         player.addComponent(new StaminaBar(40, 4, 46));
-        player.addComponent(new CollisionBox(-10, 3, 22, 28));
+        player.addComponent(new CollisionBox(-10, -14, 22, 44));
         player.addComponent(new Path());
         player.addComponent(new TargetIndicator()); 
         
@@ -53,7 +53,7 @@ public class EntityFactory {
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 
                 monster.addComponent(new Movement(80f, 160f));
-                monster.addComponent(new CollisionBox(-10, -14, 20, 28));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));//-10, -14, 22, 44
                 monster.addComponent(new AI("aggressive", x, y, 600f, 4f));  // 4 tiles detection
                 monster.addComponent(new NameTag("Goblin", -45));
                 
@@ -67,6 +67,18 @@ public class EntityFactory {
                 monster.addComponent(new CollisionBox(-12, -12, 24, 24));
                 monster.addComponent(new AI("passive", x, y, 96f, 0f));  // Doesn't detect/chase
                 monster.addComponent(new NameTag("Poring", -45));
+                
+                break;
+                //me
+            case "Goblin_Boss":
+                monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.2f)); //0.15
+                monster.addComponent(new Stats(150, 80f, 16, 4));
+                monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
+                
+                monster.addComponent(new Movement(80f, 160f));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));//-10, -14, 22, 44
+                monster.addComponent(new AI("aggressive", x, y, 600f, 4f));  // 4 tiles detection
+                monster.addComponent(new NameTag("Goblin Boss", -45));
                 
                 break;
                 
