@@ -11,7 +11,7 @@ public class EntityFactory {
         Entity player = new Entity("Player", EntityType.PLAYER);
         
         player.addComponent(new Position(x, y));
-        player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.15f));
+        player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
         player.addComponent(new Movement(100f, 200f));
         player.addComponent(new Stats(100, 100f, 15, 5));
         player.addComponent(new Combat(0.8f, 0.15f, 0.05f));  // 0.8s cooldown, 15% crit, 5% evasion 

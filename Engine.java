@@ -6,6 +6,9 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferStrategy; 
@@ -67,12 +70,12 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         // Create attack cursor (you can replace with custom image)
         try {
             // Placeholder: Use built-in crosshair cursor
-            attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
+           // attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
             
             // To use custom cursor image:
-            // Toolkit toolkit = Toolkit.getDefaultToolkit();
-            // Image cursorImage = toolkit.getImage("resources/cursors/attack.png");
-            // attackCursor = toolkit.createCustomCursor(cursorImage, new Point(16, 16), "attack");
+            Toolkit toolkit = Toolkit.getDefaultToolkit();
+            Image cursorImage = toolkit.getImage("resources/icon/sword.png"); // /sprites/hero2.png
+             attackCursor = toolkit.createCustomCursor(cursorImage, new Point(16, 16), "attack");
         } catch (Exception e) {
             attackCursor = defaultCursor;
         }

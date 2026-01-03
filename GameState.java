@@ -52,7 +52,7 @@ public class GameState {
         spawnMonster("Goblin", 900, 500);
         spawnMonster("Goblin", 964, 500);
         spawnMonster("Goblin", 700, 500);
-        spawnMonster("Goblin", 764, 500);
+        spawnMonster("Goblin", 764, 500); 
         //spawnMonster("Goblin", 300, 700);
         //spawnMonster("Poring", 500, 600);
     }

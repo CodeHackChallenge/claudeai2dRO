@@ -8,13 +8,13 @@ public class Movement implements Component {
     public float targetX;
     public float targetY;
     public boolean isMoving;
-    public boolean isRunning;  // NEW: Track running state
+    public boolean isRunning;
+    public boolean isHasted;  // NEW: Haste effect (3x speed)
     
     public int direction;
     public int lastDirection;
     
-    // Stamina cost
-    public float staminaCostPerSecond = 15f;  // Running drains 15 stamina/sec
+    public float staminaCostPerSecond = 15f;
     
     // Direction constants
     public static final int DIR_EAST = 0;
@@ -32,6 +32,7 @@ public class Movement implements Component {
         this.currentSpeed = walkSpeed;
         this.isMoving = false;
         this.isRunning = false;
+        this.isHasted = false;  // NEW
         this.direction = DIR_SOUTH;
         this.lastDirection = DIR_SOUTH;
     }
@@ -41,18 +42,35 @@ public class Movement implements Component {
         this.targetY = y;
         this.isMoving = true;
         this.isRunning = run;
-        this.currentSpeed = run ? runSpeed : walkSpeed;
+        updateSpeed();
     }
     
     public void stopMoving() {
         this.isMoving = false;
         this.isRunning = false;
+        this.isHasted = false;  // Clear haste when stopping
         this.currentSpeed = walkSpeed;
         this.lastDirection = this.direction;
     }
     
     public void stopRunning() {
         this.isRunning = false;
-        this.currentSpeed = walkSpeed;
+        updateSpeed();
+    }
+    
+    public void setHaste(boolean hasted) {
+        this.isHasted = hasted;
+        updateSpeed();
+    }
+    
+    private void updateSpeed() {
+        if (isHasted) {
+            // Haste gives 3x speed
+            currentSpeed = walkSpeed * 3f;
+        } else if (isRunning) {
+            currentSpeed = runSpeed;
+        } else {
+            currentSpeed = walkSpeed;
+        }
     }
 }

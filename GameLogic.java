@@ -100,10 +100,7 @@ public class GameLogic {
         float evasionChance = targetCombat != null ? targetCombat.evasionChance : 0f;
         
         if (evasionRoll < evasionChance) {
-            // Miss!
             System.out.println(attacker.getName() + " attacks " + target.getName() + " - MISS!");
-            
-            // Spawn miss text above target's head
             DamageText missText = new DamageText("MISS", DamageText.Type.MISS, targetPos.x, targetPos.y - 30);
             state.addDamageText(missText);
             return;
@@ -134,36 +131,36 @@ public class GameLogic {
         String hitType = isCrit ? " - CRITICAL HIT!" : "";
         System.out.println(attacker.getName() + " attacks " + target.getName() + " for " + baseDamage + " damage" + hitType);
         
-        // Spawn damage text above target's head
+        // Spawn damage text
         DamageText.Type textType = isCrit ? DamageText.Type.CRITICAL : DamageText.Type.NORMAL;
         DamageText damageText = new DamageText(String.valueOf(baseDamage), textType, targetPos.x, targetPos.y - 30);
         state.addDamageText(damageText);
         
-        System.out.println("  -> Damage text spawned at (" + targetPos.x + ", " + (targetPos.y - 30) + ")");
-        
-        // Check death
+        // Check death - only call if not already dead
         if (targetStats.hp <= 0) {
-            if (target.getType() == EntityType.MONSTER) {
-                handleMonsterDeath(target, target.getComponent(Sprite.class));
-            } else if (target.getType() == EntityType.PLAYER) {
-                handlePlayerDeath(target, target.getComponent(Sprite.class));
+            Dead alreadyDead = target.getComponent(Dead.class);
+            if (alreadyDead == null) {  // ⭐ Only handle death once
+                if (target.getType() == EntityType.MONSTER) {
+                    handleMonsterDeath(target, target.getComponent(Sprite.class));
+                } else if (target.getType() == EntityType.PLAYER) {
+                    handlePlayerDeath(target, target.getComponent(Sprite.class));
+                }
             }
         }
         
         // If monster was hit by player, aggro it
         if (attacker.getType() == EntityType.PLAYER && target.getType() == EntityType.MONSTER) {
             AI targetAI = target.getComponent(AI.class);
-            if (targetAI != null && targetAI.currentState != AI.State.DEAD) {
+            Stats monsterStats = target.getComponent(Stats.class);
+            
+            // Only aggro if monster is alive
+            if (targetAI != null && monsterStats != null && monsterStats.hp > 0 && 
+                targetAI.currentState != AI.State.DEAD) {
                 if (targetAI.currentState == AI.State.IDLE || 
                     targetAI.currentState == AI.State.ROAMING || 
                     targetAI.currentState == AI.State.RETURNING) {
-                    targetAI.currentState = AI.State.CHASING;
+                    transitionAIState(target, targetAI, AI.State.CHASING);
                     targetAI.target = attacker;
-                    
-                    Path targetPath = target.getComponent(Path.class);
-                    if (targetPath != null) {
-                        targetPath.clear();
-                    }
                 }
             }
         }
@@ -200,22 +197,32 @@ public class GameLogic {
     }
 
 	private void updatePlayer(Entity player, float delta) {
-        Movement movement = player.getComponent(Movement.class);
-        Position position = player.getComponent(Position.class);
-        Sprite sprite = player.getComponent(Sprite.class);
-        Stats stats = player.getComponent(Stats.class);
-        Path path = player.getComponent(Path.class);
-        Combat combat = player.getComponent(Combat.class);
-        TargetIndicator indicator = player.getComponent(TargetIndicator.class);
-        
-        if (movement == null || position == null || sprite == null || stats == null) return;
-        
-        // Check if player is dead
-        if (stats.hp <= 0) {
-            handlePlayerDeath(player, sprite);
-            return;
-        }
-        
+		Movement movement = player.getComponent(Movement.class);
+	    Position position = player.getComponent(Position.class);
+	    Sprite sprite = player.getComponent(Sprite.class);
+	    Stats stats = player.getComponent(Stats.class);
+	    Path path = player.getComponent(Path.class);
+	    Combat combat = player.getComponent(Combat.class);
+	    TargetIndicator indicator = player.getComponent(TargetIndicator.class);
+	    Dead dead = player.getComponent(Dead.class);  // NEW: Check if already dead
+	    
+	    if (movement == null || position == null || sprite == null || stats == null) return;
+	    
+	    // If already has Dead component, just play death animation and return
+	    if (dead != null) {
+	        if (sprite != null) {
+	            sprite.setAnimation(Sprite.ANIM_DEAD);
+	        }
+	        dead.update(delta);
+	        // TODO: Show respawn button after corpse timer
+	        return;
+	    }
+	    
+	    // Check if player just died (hp <= 0 but no Dead component yet)
+	    if (stats.hp <= 0) {
+	        handlePlayerDeath(player, sprite);
+	        return;
+	    }
         // Auto-attack logic
         Entity autoAttackTarget = state.getAutoAttackTarget();
         if (autoAttackTarget != null) {
@@ -344,7 +351,7 @@ public class GameLogic {
 	        return;
 	    }
 	    
-	    // Update AI
+	    // ⭐ IMPORTANT: Update AI (this increments timers)
 	    ai.update(delta);
 	    
 	    // Update combat animations
@@ -400,28 +407,75 @@ public class GameLogic {
 	        sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
 	    }
 	    
-	    // After timer expires, check if far from home
+	    // Debug output
+	    System.out.println(monster.getName() + " victory idle: " + ai.victoryIdleTimer + "/" + ai.victoryIdleDuration);
+	    
+	    // After timer expires, return to patrolling
 	    if (ai.victoryIdleTimer >= ai.victoryIdleDuration) {
-	        ai.victoryIdleTimer = 0;
-	        ai.target = null;
+	        System.out.println(monster.getName() + " victory timer complete! Transitioning...");
 	        
 	        Position monsterPos = monster.getComponent(Position.class);
 	        if (monsterPos != null) {
 	            float distFromHome = distance(monsterPos.x, monsterPos.y, ai.homeX, ai.homeY);
 	            
-	            // If close to home, resume roaming/idle
-	            if (distFromHome < ai.roamRadius) {
-	                ai.currentState = AI.State.IDLE;
-	                ai.roamTimer = 0;
-	                System.out.println(monster.getName() + " resuming patrol after victory");
+	            System.out.println("  Distance from home: " + distFromHome + " (roam radius: " + ai.roamRadius + ")");
+	            
+	            if (distFromHome <= ai.roamRadius * 1.2f) {
+	                System.out.println("  -> Transitioning to IDLE");
+	                transitionAIState(monster, ai, AI.State.IDLE);
 	            } else {
-	                // Far from home, return first
-	                ai.currentState = AI.State.RETURNING;
-	                System.out.println(monster.getName() + " returning home after victory");
+	                System.out.println("  -> Transitioning to RETURNING");
+	                transitionAIState(monster, ai, AI.State.RETURNING);
 	            }
 	        } else {
-	            ai.currentState = AI.State.IDLE;
+	            System.out.println("  -> No position, transitioning to IDLE");
+	            transitionAIState(monster, ai, AI.State.IDLE);
 	        }
+	    }
+	}
+	/**
+	 * Helper to cleanly transition AI state and clear movement
+	 */
+	private void transitionAIState(Entity entity, AI ai, AI.State newState) {
+	    if (ai.currentState == newState) return;
+	    
+	    System.out.println(entity.getName() + " transitioning: " + ai.currentState + " -> " + newState);
+	    
+	    AI.State oldState = ai.currentState;
+	    ai.currentState = newState;
+	    
+	    // Clear movement/path when transitioning
+	    Movement movement = entity.getComponent(Movement.class);
+	    Path path = entity.getComponent(Path.class);
+	    
+	    if (movement != null) {
+	        movement.stopMoving();
+	        
+	        // ⭐ Clear haste when leaving RETURNING state
+	        if (oldState == AI.State.RETURNING && newState != AI.State.RETURNING) {
+	            movement.setHaste(false);
+	            System.out.println("  Haste removed");
+	        }
+	    }
+	    if (path != null) {
+	        path.clear();
+	    }
+	    
+	    // Reset timers based on new state
+	    switch(newState) {
+	        case IDLE:
+	            ai.roamTimer = 0;
+	            ai.roamInterval = ThreadLocalRandom.current().nextFloat(3f, 6f);
+	            break;
+	        case VICTORY_IDLE:
+	            ai.victoryIdleTimer = 0;
+	            ai.target = null;
+	            System.out.println("  Victory idle timer reset to 0");
+	            break;
+	        case RETURNING:
+	            ai.target = null;
+	            // Haste will be applied in handleReturningState
+	            break;
 	    }
 	}
     // Add attack animation helper (8 directions)
@@ -451,21 +505,29 @@ public class GameLogic {
     }
     
     private void handleIdleState(Entity monster, AI ai, Movement movement, Sprite sprite, Position playerPos, float delta) {
-        // Detect player
-        if (ai.behaviorType.equals("aggressive") && playerPos != null) {
-            Position monsterPos = monster.getComponent(Position.class);
-            if (canDetectPlayer(monsterPos, playerPos, ai.detectionRange)) {
-                ai.currentState = AI.State.CHASING;
-                ai.target = state.getPlayer();
-                return;
+        Position monsterPos = monster.getComponent(Position.class);
+        
+        // Detect player (only if alive and we're within our territory)
+        if (ai.behaviorType.equals("aggressive") && playerPos != null && monsterPos != null) {
+            Entity player = state.getPlayer();
+            Stats playerStats = player.getComponent(Stats.class);
+            
+            // Check if we're within safe territory before engaging
+            float distFromHome = distance(monsterPos.x, monsterPos.y, ai.homeX, ai.homeY);
+            
+            // Only detect if player is alive AND we're not too far from home
+            if (playerStats != null && playerStats.hp > 0 && distFromHome <= ai.roamRadius * 1.5f) {
+                if (canDetectPlayer(monsterPos, playerPos, ai.detectionRange)) {
+                    transitionAIState(monster, ai, AI.State.CHASING);
+                    ai.target = state.getPlayer();
+                    return;
+                }
             }
         }
         
         // Transition to roaming after timer
         if (ai.roamTimer >= ai.roamInterval) {
-            ai.roamTimer = 0;
-            ai.roamInterval = ThreadLocalRandom.current().nextFloat(3f, 6f);
-            ai.currentState = AI.State.ROAMING;
+            transitionAIState(monster, ai, AI.State.ROAMING);
         }
         
         // Play idle animation
@@ -473,15 +535,23 @@ public class GameLogic {
             sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
         }
     }
-    
+
     private void handleRoamingState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, Position playerPos, float delta) {
-        // Detect player
-        if (ai.behaviorType.equals("aggressive") && playerPos != null) {
-            if (canDetectPlayer(position, playerPos, ai.detectionRange)) {
-                ai.currentState = AI.State.CHASING;
-                ai.target = state.getPlayer();
-                if (path != null) path.clear();
-                return;
+        // Detect player (only if alive and within territory)
+        if (ai.behaviorType.equals("aggressive") && playerPos != null && position != null) {
+            Entity player = state.getPlayer();
+            Stats playerStats = player.getComponent(Stats.class);
+            
+            // Check territory
+            float distFromHome = distance(position.x, position.y, ai.homeX, ai.homeY);
+            
+            // Only detect if player is alive AND we're not too far from home
+            if (playerStats != null && playerStats.hp > 0 && distFromHome <= ai.roamRadius * 1.5f) {
+                if (canDetectPlayer(position, playerPos, ai.detectionRange)) {
+                    transitionAIState(monster, ai, AI.State.CHASING);
+                    ai.target = state.getPlayer();
+                    return;
+                }
             }
         }
         
@@ -493,7 +563,6 @@ public class GameLogic {
             float targetX = ai.homeX + (float)Math.cos(angle) * distance;
             float targetY = ai.homeY + (float)Math.sin(angle) * distance;
             
-            // Pathfind to roam target
             int startTileX = (int)(position.x / TileMap.TILE_SIZE);
             int startTileY = (int)(position.y / TileMap.TILE_SIZE);
             int goalTileX = (int)(targetX / TileMap.TILE_SIZE);
@@ -505,14 +574,13 @@ public class GameLogic {
                 path.setPath(foundPath);
                 movement.isRunning = false;
             } else {
-                ai.currentState = AI.State.IDLE;
+                transitionAIState(monster, ai, AI.State.IDLE);
             }
         }
         
-        // Reached destination, go back to idle
+        // Reached destination
         if (movement != null && !movement.isMoving && (path == null || !path.isFollowing)) {
-            ai.currentState = AI.State.IDLE;
-            ai.roamTimer = 0;
+            transitionAIState(monster, ai, AI.State.IDLE);
         }
         
         // Animation
@@ -524,10 +592,29 @@ public class GameLogic {
             }
         }
     }
-    
+    /**
+     * 
+	## The Key Logic
+	
+	**Before (buggy):**
+	```
+	Mob outside range + player nearby:
+	CHASING → (too far from home) → RETURNING
+	RETURNING → (player detected) → CHASING
+	CHASING → (too far from home) → RETURNING
+	(infinite loop)
+	```
+	
+	**After (fixed):**
+	```
+	Mob outside range + player nearby:
+	CHASING → (too far from home) → RETURNING
+	RETURNING → (ignore player completely) → reaches home → IDLE
+(clean behavior)
+     *      */
     private void handleChasingState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, Position playerPos, float delta) {
         if (playerPos == null || movement == null || position == null) {
-            ai.currentState = AI.State.RETURNING;
+            transitionAIState(monster, ai, AI.State.RETURNING);
             return;
         }
         
@@ -536,44 +623,34 @@ public class GameLogic {
         if (player != null) {
             Stats playerStats = player.getComponent(Stats.class);
             if (playerStats != null && playerStats.hp <= 0) {
-                // Player died! Victory idle
-                ai.currentState = AI.State.VICTORY_IDLE;
-                ai.victoryIdleTimer = 0;
-                ai.target = null;
-                if (movement != null) movement.stopMoving();
-                if (path != null) path.clear();
-                System.out.println(monster.getName() + " is victorious!");
+                transitionAIState(monster, ai, AI.State.VICTORY_IDLE);
                 return;
             }
         }
         
-        // Check if too far from home
+        // ⭐ PRIORITY 1: Check if too far from home (strict leash)
         float distFromHome = distance(position.x, position.y, ai.homeX, ai.homeY);
         if (distFromHome > ai.returnThreshold) {
-            ai.currentState = AI.State.RETURNING;
-            ai.target = null;
-            if (path != null) path.clear();
+            transitionAIState(monster, ai, AI.State.RETURNING);
+            System.out.println(monster.getName() + " leash break - too far from home!");
             return;
         }
         
-        // Check if player still in detection range
+        // ⭐ PRIORITY 2: Check if player moved too far away (lose aggro)
         float distToPlayer = distance(position.x, position.y, playerPos.x, playerPos.y);
         if (distToPlayer > ai.detectionRange * TileMap.TILE_SIZE * 1.5f) {
-            ai.currentState = AI.State.RETURNING;
-            ai.target = null;
-            if (path != null) path.clear();
+            transitionAIState(monster, ai, AI.State.RETURNING);
+            System.out.println(monster.getName() + " player too far - returning home");
             return;
         }
         
-        // Check if in attack range
+        // ⭐ PRIORITY 3: Check if in attack range
         if (distToPlayer <= ai.attackRange) {
-            ai.currentState = AI.State.ATTACKING;
-            if (movement != null) movement.stopMoving();
-            if (path != null) path.clear();
+            transitionAIState(monster, ai, AI.State.ATTACKING);
             return;
         }
         
-        // Chase player
+        // PRIORITY 4: Chase player - update path periodically
         if (!movement.isMoving || (path != null && !path.isFollowing)) {
             int startTileX = (int)(position.x / TileMap.TILE_SIZE);
             int startTileY = (int)(position.y / TileMap.TILE_SIZE);
@@ -585,44 +662,54 @@ public class GameLogic {
             if (foundPath != null && path != null) {
                 path.setPath(foundPath);
                 movement.isRunning = true;
+            } else {
+                // Can't find path to player, return home
+                transitionAIState(monster, ai, AI.State.RETURNING);
+                System.out.println(monster.getName() + " can't path to player - returning");
             }
         }
         
         // Animation
         if (sprite != null && movement.isMoving) {
             sprite.setAnimation(getRunAnimationForDirection(movement.direction));
+        } else if (sprite != null) {
+            // Not moving but still in chase state (stuck?)
+            sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
         }
     }
-    
+
     private void handleReturningState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, float delta) {
         if (movement == null || position == null) return;
+        
+        // ⭐ Apply haste effect when returning
+        if (!movement.isHasted) {
+            movement.setHaste(true);
+            System.out.println(monster.getName() + " has haste! (3x speed)");
+        }
         
         // Check if back home
         float distFromHome = distance(position.x, position.y, ai.homeX, ai.homeY);
         if (distFromHome < 32f) {
-            ai.currentState = AI.State.IDLE;
-            if (movement != null) movement.stopMoving();
-            if (path != null) path.clear();
-            ai.roamTimer = 0;
-            System.out.println(monster.getName() + " returned home and resumed patrol");
+            // Remove haste
+            movement.setHaste(false);
+            
+            // Heal to full when reaching home
+            Stats stats = monster.getComponent(Stats.class);
+            if (stats != null && stats.hp < stats.maxHp) {
+                int healAmount = stats.maxHp - stats.hp;
+                stats.hp = stats.maxHp;
+                System.out.println(monster.getName() + " healed to full! (+" + healAmount + " HP)");
+                
+                DamageText healText = new DamageText("+" + healAmount, DamageText.Type.HEAL, position.x, position.y - 30);
+                state.addDamageText(healText);
+            }
+            
+            transitionAIState(monster, ai, AI.State.IDLE);
             return;
         }
         
-        // Check if player attacks while returning - fight back!
-        Entity player = state.getPlayer();
-        if (player != null && ai.behaviorType.equals("aggressive")) {
-            Position playerPos = player.getComponent(Position.class);
-            if (playerPos != null) {
-                float distToPlayer = distance(position.x, position.y, playerPos.x, playerPos.y);
-                if (distToPlayer < ai.detectionRange * TileMap.TILE_SIZE) {
-                    ai.currentState = AI.State.CHASING;
-                    ai.target = player;
-                    if (path != null) path.clear();
-                    System.out.println(monster.getName() + " is attacked while returning - fighting back!");
-                    return;
-                }
-            }
-        }
+        // ⭐ REMOVED: Don't check for player while returning - just go home!
+        // Once we commit to returning, we ignore everything until we're home
         
         // Path back home
         if (!movement.isMoving || (path != null && !path.isFollowing)) {
@@ -631,14 +718,22 @@ public class GameLogic {
             int goalTileX = (int)(ai.homeX / TileMap.TILE_SIZE);
             int goalTileY = (int)(ai.homeY / TileMap.TILE_SIZE);
             
-            // Check if already at home tile
             if (startTileX == goalTileX && startTileY == goalTileY) {
-                // Already at home tile, just transition to idle
-                ai.currentState = AI.State.IDLE;
-                if (movement != null) movement.stopMoving();
-                if (path != null) path.clear();
-                ai.roamTimer = 0;
-                System.out.println(monster.getName() + " already at home, resuming patrol");
+                // Remove haste
+                movement.setHaste(false);
+                
+                // Heal to full
+                Stats stats = monster.getComponent(Stats.class);
+                if (stats != null && stats.hp < stats.maxHp) {
+                    int healAmount = stats.maxHp - stats.hp;
+                    stats.hp = stats.maxHp;
+                    System.out.println(monster.getName() + " healed to full! (+" + healAmount + " HP)");
+                    
+                    DamageText healText = new DamageText("+" + healAmount, DamageText.Type.HEAL, position.x, position.y - 30);
+                    state.addDamageText(healText);
+                }
+                
+                transitionAIState(monster, ai, AI.State.IDLE);
                 return;
             }
             
@@ -648,19 +743,20 @@ public class GameLogic {
                 path.setPath(foundPath);
                 movement.isRunning = false;
             } else {
-                // No path found (blocked or already there) - just go to idle
                 System.out.println(monster.getName() + " couldn't find path home, going idle");
-                ai.currentState = AI.State.IDLE;
-                if (movement != null) movement.stopMoving();
-                if (path != null) path.clear();
-                ai.roamTimer = 0;
+                movement.setHaste(false);
+                transitionAIState(monster, ai, AI.State.IDLE);
             }
         }
         
-        // Animation
+        // Animation - use run animation when hasted
         if (sprite != null && movement != null) {
             if (movement.isMoving) {
-                sprite.setAnimation(getWalkAnimationForDirection(movement.direction));
+                if (movement.isHasted) {
+                    sprite.setAnimation(getRunAnimationForDirection(movement.direction));
+                } else {
+                    sprite.setAnimation(getWalkAnimationForDirection(movement.direction));
+                }
             } else {
                 sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
             }
@@ -699,19 +795,15 @@ public class GameLogic {
         Entity player = state.getPlayer();
         
         if (playerPos == null || monsterPos == null) {
-            ai.currentState = AI.State.IDLE;
+            transitionAIState(monster, ai, AI.State.IDLE);
             return;
         }
         
-        // Check if player is dead - transition to victory idle
+        // Check if player is dead
         if (player != null) {
             Stats playerStats = player.getComponent(Stats.class);
             if (playerStats != null && playerStats.hp <= 0) {
-                ai.currentState = AI.State.VICTORY_IDLE;
-                ai.victoryIdleTimer = 0;
-                ai.target = null;
-                if (movement != null) movement.stopMoving();
-                System.out.println(monster.getName() + " is victorious! (from attacking state)");
+                transitionAIState(monster, ai, AI.State.VICTORY_IDLE);
                 return;
             }
         }
@@ -720,11 +812,11 @@ public class GameLogic {
         
         // Player moved away
         if (distToPlayer > ai.attackRange * 1.5f) {
-            ai.currentState = AI.State.CHASING;
+            transitionAIState(monster, ai, AI.State.CHASING);
             return;
         }
         
-        // Make monster face player when attacking
+        // Make monster face player
         makeFaceEachOther(monster, player);
         
         // Attack if cooldown ready
@@ -737,12 +829,10 @@ public class GameLogic {
             tryAttack(monster, player);
             ai.resetAttackCooldown();
             
-            // Play attack animation
             if (sprite != null && movement != null) {
                 sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
             }
         } else {
-            // Show idle/attack animation while in cooldown
             Combat monsterCombat = monster.getComponent(Combat.class);
             if (sprite != null && movement != null) {
                 if (monsterCombat != null && monsterCombat.isAttacking) {
@@ -1046,65 +1136,7 @@ public class GameLogic {
             state.setCameraPosition(newX, newY);
         }
     } 
-    /**
-     * Request pathfinding to a world position
-     
-    public void movePlayerTo(float worldX, float worldY, boolean run) {
-        Entity player = state.getPlayer();
-        Position position = player.getComponent(Position.class);
-        Movement movement = player.getComponent(Movement.class);
-        Path path = player.getComponent(Path.class);
-        
-        if (position == null || movement == null || path == null) {
-            return;
-        }
-        
-        // Determine smart starting point for pathfinding
-        int startTileX, startTileY;
-        
-        if (path.isFollowing && path.waypoints != null && path.currentWaypoint < path.waypoints.size()) {
-            // Hero is already following a path - start from current/next waypoint
-            int[] currentWaypoint = path.waypoints.get(path.currentWaypoint);
-            startTileX = currentWaypoint[0];
-            startTileY = currentWaypoint[1];
-            
-            System.out.println("Recalculating path from current waypoint (" + startTileX + ", " + startTileY + ")");
-        } else {
-            // Not following a path - start from hero's current position
-            startTileX = (int)(position.x / TileMap.TILE_SIZE);
-            startTileY = (int)(position.y / TileMap.TILE_SIZE);
-            
-            System.out.println("New path from hero position (" + startTileX + ", " + startTileY + ")");
-        }
-        
-        int goalTileX = (int)(worldX / TileMap.TILE_SIZE);
-        int goalTileY = (int)(worldY / TileMap.TILE_SIZE);
-        
-        // Check if clicking the same tile we're already heading to
-        if (path.isFollowing && path.waypoints != null && !path.waypoints.isEmpty()) {
-            int[] lastWaypoint = path.waypoints.get(path.waypoints.size() - 1);
-            if (lastWaypoint[0] == goalTileX && lastWaypoint[1] == goalTileY) {
-                // Same destination, just update run state
-                movement.isRunning = run;
-                return;
-            }
-        }
-        
-        // Find new path
-        Pathfinder pathfinder = state.getPathfinder();
-        List<int[]> foundPath = pathfinder.findPath(startTileX, startTileY, goalTileX, goalTileY);
-        
-        if (foundPath != null) {
-            path.setPath(foundPath);
-            movement.isRunning = run;
-            System.out.println("Path found with " + foundPath.size() + " waypoints");
-        } else {
-            System.out.println("No path to destination!");
-            path.clear();
-            movement.stopMoving();
-        }
-    }
-    */
+    
     public void movePlayerTo(float worldX, float worldY, boolean run) {
         Entity player = state.getPlayer();
         Position position = player.getComponent(Position.class);
@@ -1169,18 +1201,10 @@ public class GameLogic {
     }
 }
 /*
-
-## Expected Sprite Sheet Layout
-
-Your sprites sheet should have rows like this:
+## Visual Guide of What Should Happen
 ```
-Row 0: Idle animation (facing down or neutral)
-Row 1: Walk Down
-Row 2: Walk Up
-Row 3: Walk Left
-Row 4: Walk Right
-Row 5: Walk Down-Left (diagonal)
-Row 6: Walk Down-Right (diagonal)
-Row 7: Walk Up-Left (diagonal)
-Row 8: Walk Up-Right (diagonal)
+[HOME] ---roamRadius---> [ROAM ZONE] ---returnThreshold---> [LEASH BREAK]
+  |                           |                                    |
+  IDLE/ROAMING           CAN CHASE                           MUST RETURN
+                         PLAYER HERE                         (ignore player)
 */

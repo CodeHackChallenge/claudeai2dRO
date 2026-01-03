@@ -28,13 +28,12 @@ public class DamageText implements Component {
         this.worldY = worldY;
         this.age = 0;
         
-        // Set properties based on type
         switch(type) {
             case NORMAL:
                 this.color = Color.WHITE;
                 this.lifetime = 1.0f;
-                this.velocityX = (float)(Math.random() - 0.5) * 30f;  // Random horizontal push
-                this.velocityY = -60f;  // Float upward
+                this.velocityX = (float)(Math.random() - 0.5) * 30f;
+                this.velocityY = -60f;
                 break;
                 
             case CRITICAL:
@@ -48,7 +47,7 @@ public class DamageText implements Component {
                 this.color = new Color(200, 200, 200);  // Light gray
                 this.lifetime = 1.2f;
                 this.velocityX = 0;
-                this.velocityY = -50f;  // Float straight up
+                this.velocityY = -50f;
                 break;
                 
             case HEAL:

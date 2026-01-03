@@ -308,9 +308,11 @@ public class Renderer {
         }
     }
     
+ // In Renderer.drawDebugAI()
     private void drawDebugAI(Graphics2D g, Entity entity, float cameraX, float cameraY) {
         AI ai = entity.getComponent(AI.class);
         Position pos = entity.getComponent(Position.class);
+        Movement movement = entity.getComponent(Movement.class);
         
         if (ai == null || pos == null) return;
         
@@ -339,9 +341,21 @@ public class Renderer {
         g.setColor(detectionColor);
         g.drawOval(screenX - detectionRadius, screenY - detectionRadius, detectionRadius * 2, detectionRadius * 2);
         
+        // ⭐ Draw haste indicator
+        if (movement != null && movement.isHasted) {
+            g.setColor(new Color(255, 255, 0, 200));
+            g.setStroke(new BasicStroke(3));
+            g.drawOval(screenX - 20, screenY - 20, 40, 40);
+            g.drawString("HASTE", screenX - 20, screenY - 50);
+        }
+        
         // Draw state text
         g.setColor(Color.WHITE);
-        g.drawString(ai.currentState.toString(), screenX - 20, screenY - 40);
+        String stateText = ai.currentState.toString();
+        if (movement != null && movement.isHasted) {
+            stateText += " (HASTE)";
+        }
+        g.drawString(stateText, screenX - 30, screenY - 40);
         
         g.setStroke(originalStroke);
     }
