@@ -6,6 +6,9 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class Renderer {
     private GameState gameState;
@@ -20,13 +23,45 @@ public class Renderer {
         float cameraX = gameState.getCameraX();
         float cameraY = gameState.getCameraY();
         
-        // Render tile map
+        // === LAYER 0: GROUND ===
+        renderGround(g, cameraX, cameraY);
+        
+        // === LAYER 1: GROUND_DECOR ===
+        renderGroundDecor(g, cameraX, cameraY);
+        
+        // === LAYER 2: ENTITIES (sorted by depth) ===
+        renderEntities(g, cameraX, cameraY);
+        
+        // === LAYER 3: EFFECTS ===
+        renderEffects(g, cameraX, cameraY);
+        
+        // === LAYER 4: UI_WORLD (world-space UI) ===
+        renderWorldUI(g, cameraX, cameraY);
+        
+        // === LAYER 5: UI_SCREEN ===
+        renderScreenUI(g, cameraX, cameraY);
+        
+        // === DEBUG (always on top) ===
+        if (engine.isDebugMode()) {
+            renderDebug(g, cameraX, cameraY);
+        }
+    }
+    
+    // ===================================================================
+    // LAYER 0: GROUND
+    // ===================================================================
+    private void renderGround(Graphics2D g, float cameraX, float cameraY) {
         TileMap map = gameState.getMap();
         if (map != null) {
             map.render(g, cameraX, cameraY);
         }
-        
-        // Render target indicators
+    }
+    
+    // ===================================================================
+    // LAYER 1: GROUND_DECOR
+    // ===================================================================
+    private void renderGroundDecor(Graphics2D g, float cameraX, float cameraY) {
+        // Target indicators (diamond on ground)
         for (Entity entity : gameState.getEntities()) {
             TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
             if (indicator != null && indicator.active) {
@@ -35,298 +70,177 @@ public class Renderer {
                 DiamondRenderer.renderDiamond(g, screenX, screenY, indicator.pulseScale, 1.0f);
             }
         }
+    }
+    
+    // ===================================================================
+    // LAYER 2: ENTITIES (depth sorted)
+    // ===================================================================
+    private void renderEntities(Graphics2D g, float cameraX, float cameraY) {
+        // Collect all renderable entities
+        List<RenderObject> renderObjects = new ArrayList<>();
         
-        // Render entities
         for (Entity entity : gameState.getEntities()) {
             Position pos = entity.getComponent(Position.class);
+            Renderable renderable = entity.getComponent(Renderable.class);
             Sprite sprite = entity.getComponent(Sprite.class);
             
-            if (pos != null && sprite != null) {
-                int spriteScreenX = (int)Math.round(pos.x - cameraX);
-                int spriteScreenY = (int)Math.round(pos.y - cameraY);
-                
-                sprite.renderAtPixel(g, spriteScreenX, spriteScreenY);
-                
-                // Don't show UI for dead entities
-                Dead dead = entity.getComponent(Dead.class);
-                boolean isDead = dead != null;
-                
-                if (!isDead) {
-                    // ⭐ Draw alert (exclamation point) - BEFORE name tag so it's on top
-                    Alert alert = entity.getComponent(Alert.class);
-                    if (alert != null) {
-                        drawAlert(g, spriteScreenX, spriteScreenY, alert);
-                    }
-                    
-                    // Draw name tag
-                    NameTag nameTag = entity.getComponent(NameTag.class);
-                    if (nameTag != null && nameTag.visible) {
-                        drawNameTag(g, spriteScreenX, spriteScreenY, nameTag);
-                    }
-                    
-                    // Draw health bar
-                    Stats stats = entity.getComponent(Stats.class);
-                    HealthBar hpBar = entity.getComponent(HealthBar.class);
-                    
-                    if (stats != null && hpBar != null) {
-                        drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
-                    }
-                    
-                    // Draw stamina bar (player only)
-                    if (entity.getType() == EntityType.PLAYER) {
-                        StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
-                        if (stats != null && staminaBar != null) {
-                            drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
-                        }
-                    }
-                }
-                
-                // DEBUG
-                if (engine.isDebugMode()) {
-                    CollisionBox box = entity.getComponent(CollisionBox.class);
-                    if (box != null) {
-                        drawCollisionBox(g, pos, box, cameraX, cameraY);
-                    }
+            if (pos != null && renderable != null && sprite != null) {
+                // Only add if on ENTITIES layer
+                if (renderable.layer == RenderLayer.ENTITIES) {
+                    renderObjects.add(new RenderObject(entity, pos, renderable));
                 }
             }
         }
         
+        // Sort by depth (Y position)
+        Collections.sort(renderObjects);
+        
+        // Render in sorted order
+        for (RenderObject ro : renderObjects) {
+            Entity entity = ro.entity;
+            Position pos = ro.position;
+            
+            int spriteScreenX = (int)Math.round(pos.x - cameraX);
+            int spriteScreenY = (int)Math.round(pos.y - cameraY);
+            
+            // Draw sprite
+            Sprite sprite = entity.getComponent(Sprite.class);
+            if (sprite != null) {
+                sprite.renderAtPixel(g, spriteScreenX, spriteScreenY);
+            }
+        }
+    }
+    
+    // ===================================================================
+    // LAYER 3: EFFECTS
+    // ===================================================================
+    private void renderEffects(Graphics2D g, float cameraX, float cameraY) {
         // Render floating damage texts
         drawDamageTexts(g, cameraX, cameraY);
         
-        // DEBUG
-        if (engine.isDebugMode()) {
-            if (map != null) {
-                drawTileGrid(g, map, cameraX, cameraY);
-            }
+        // TODO: Particle effects, spell animations, etc.
+    }
+    
+    // ===================================================================
+    // LAYER 4: UI_WORLD (world-space UI elements)
+    // ===================================================================
+    private void renderWorldUI(Graphics2D g, float cameraX, float cameraY) {
+        // Collect entities for UI rendering (same depth sorting)
+        List<RenderObject> renderObjects = new ArrayList<>();
+        
+        for (Entity entity : gameState.getEntities()) {
+            Position pos = entity.getComponent(Position.class);
+            Renderable renderable = entity.getComponent(Renderable.class);
             
-            drawDebugSpawnPoints(g, cameraX, cameraY);
-            
-            for (Entity entity : gameState.getEntities()) {
-                drawDebugPath(g, entity, cameraX, cameraY);
-                if (entity.getType() == EntityType.MONSTER) {
-                    drawDebugAI(g, entity, cameraX, cameraY);
+            if (pos != null && renderable != null) {
+                if (renderable.layer == RenderLayer.ENTITIES) {
+                    renderObjects.add(new RenderObject(entity, pos, renderable));
                 }
             }
         }
-    } 
-    
-    private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {
-        if (!alert.active) return;
         
-        int alertX = spriteX;
-        int alertY = (int)(spriteY + alert.offsetY + alert.bounceOffset);
+        Collections.sort(renderObjects);
         
-        Stroke originalStroke = g.getStroke();
-        Font originalFont = g.getFont();
-        
-        // Draw exclamation point
-        Font alertFont = new Font("Arial", Font.BOLD, 24);
-        g.setFont(alertFont);
-        
-        String exclamation = "!";
-        FontMetrics fm = g.getFontMetrics();
-        int textWidth = fm.stringWidth(exclamation);
-        int textHeight = fm.getHeight();
-        
-        int textX = alertX - textWidth / 2;
-        int textY = alertY + textHeight / 4;
-        /*
-        // Draw background circle (optional - makes it more visible)
-        int circleSize = 20;
-        g.setColor(new Color(255, 255, 255, 200));
-        g.fillOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
-         
-        // Draw circle border
-        g.setColor(new Color(255, 0, 0, 255));
-        g.setStroke(new BasicStroke(2));
-        g.drawOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
-        */
-        // Draw shadow for exclamation
-        g.setColor(new Color(0, 0, 0, 150));
-        g.drawString(exclamation, textX + 1, textY + 1);
-        
-        // Draw exclamation point (red)
-        g.setColor(new Color(255, 0, 0, 255));
-        g.drawString(exclamation, textX, textY);
-        
-        g.setStroke(originalStroke);
-        g.setFont(originalFont);
+        // Render UI elements in same order as entities
+        for (RenderObject ro : renderObjects) {
+            Entity entity = ro.entity;
+            Position pos = ro.position;
+            
+            int spriteScreenX = (int)Math.round(pos.x - cameraX);
+            int spriteScreenY = (int)Math.round(pos.y - cameraY);
+            
+            Dead dead = entity.getComponent(Dead.class);
+            boolean isDead = dead != null;
+            
+            if (!isDead) {
+                // Alert (exclamation point)
+                Alert alert = entity.getComponent(Alert.class);
+                if (alert != null) {
+                    drawAlert(g, spriteScreenX, spriteScreenY, alert);
+                }
+                
+                // Name tag
+                NameTag nameTag = entity.getComponent(NameTag.class);
+                if (nameTag != null && nameTag.visible) {
+                    drawNameTag(g, spriteScreenX, spriteScreenY, nameTag);
+                }
+                
+                // Health bar
+                Stats stats = entity.getComponent(Stats.class);
+                HealthBar hpBar = entity.getComponent(HealthBar.class);
+                
+                if (stats != null && hpBar != null) {
+                    drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
+                }
+                
+                // Stamina bar (player only)
+                if (entity.getType() == EntityType.PLAYER) {
+                    StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
+                    if (stats != null && staminaBar != null) {
+                        drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
+                    }
+                }
+            }
+        }
     }
     
-    /*
-     //Animated Growing Alert
-     private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {
-	    if (!alert.active) return;
-	    
-	    // Pulse effect - grows and shrinks
-	    float scale = 1.0f + (float)Math.sin(alert.animationTimer * 8) * 0.2f;
-	    
-	    int alertX = spriteX;
-	    int alertY = (int)(spriteY + alert.offsetY + alert.bounceOffset);
-	    
-	    Font alertFont = new Font("Arial", Font.BOLD, (int)(24 * scale));
-	    g.setFont(alertFont);
-	    
-	    String exclamation = "!";
-	    FontMetrics fm = g.getFontMetrics();
-	    int textWidth = fm.stringWidth(exclamation);
-	    int textHeight = fm.getHeight();
-	    
-	    int textX = alertX - textWidth / 2;
-	    int textY = alertY + textHeight / 4;
-	    
-	    // Background
-	    int circleSize = (int)(20 * scale);
-	    g.setColor(new Color(255, 255, 255, 200));
-	    g.fillOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
-	    
-	    // Border
-	    g.setColor(new Color(255, 0, 0, 255));
-	    g.setStroke(new BasicStroke(2));
-	    g.drawOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
-	    
-	    // Exclamation
-	    g.setColor(new Color(0, 0, 0, 150));
-	    g.drawString(exclamation, textX + 1, textY + 1);
-	    g.setColor(new Color(255, 0, 0, 255));
-	    g.drawString(exclamation, textX, textY);
-	}
-      */
-    /*
-     private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert, AI ai) {
-	    if (!alert.active) return;
-	    
-	    String symbol = ai != null && ai.currentState == AI.State.CHASING ? "!" : "?";
-	    Color symbolColor = ai != null && ai.currentState == AI.State.CHASING 
-	        ? new Color(255, 0, 0) 
-	        : new Color(255, 200, 0);
-	    
-	    // ... rest of drawing code using 'symbol' and 'symbolColor' ...
-	 }
-     */
-    private void drawNameTag(Graphics2D g, int spriteX, int spriteY, NameTag tag) {
-        Font originalFont = g.getFont();
-        Font nameFont = new Font("Arial", Font.BOLD, 12);
-        g.setFont(nameFont);
-        
-        FontMetrics fm = g.getFontMetrics();
-        int textWidth = fm.stringWidth(tag.displayName);
-        
-        int textX = spriteX - textWidth / 2;
-        int textY = (int)(spriteY + tag.offsetY);
-        
-        // Draw shadow
-        g.setColor(Color.BLACK);
-        g.drawString(tag.displayName, textX + 1, textY + 1);
-        
-        // Draw text
-        g.setColor(Color.WHITE);
-        g.drawString(tag.displayName, textX, textY);
-        
-        g.setFont(originalFont);
+    // ===================================================================
+    // LAYER 5: UI_SCREEN
+    // ===================================================================
+    private void renderScreenUI(Graphics2D g, float cameraX, float cameraY) {
+        // TODO: Screen-space UI like minimap, inventory, hotbar, etc.
+        // These don't move with camera
     }
     
-    private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
-        Font originalFont = g.getFont();
+    // ===================================================================
+    // DEBUG RENDERING (always on top)
+    // ===================================================================
+    private void renderDebug(Graphics2D g, float cameraX, float cameraY) {
+        TileMap map = gameState.getMap();
         
-        if (gameState.getDamageTexts().isEmpty()) {
-            return;  // No texts to draw
+        // Tile grid
+        if (map != null) {
+            drawTileGrid(g, map, cameraX, cameraY);
         }
         
-        for (DamageText dt : gameState.getDamageTexts()) {
-            int screenX = (int)(dt.worldX - cameraX);
-            int screenY = (int)(dt.worldY - cameraY);
+        // Spawn points
+        drawDebugSpawnPoints(g, cameraX, cameraY);
+        
+        // Per-entity debug info
+        for (Entity entity : gameState.getEntities()) {
+            Position pos = entity.getComponent(Position.class);
             
-            // Choose font size based on type
-            int fontSize = dt.type == DamageText.Type.CRITICAL ? 20 : 16;
-            Font damageFont = new Font("Arial", Font.BOLD, fontSize);
-            g.setFont(damageFont);
-            
-            FontMetrics fm = g.getFontMetrics();
-            int textWidth = fm.stringWidth(dt.text);
-            
-            int textX = screenX - textWidth / 2;
-            int textY = screenY;
-            
-            // Calculate alpha
-            int alpha = (int)(dt.getAlpha() * 255);
-            
-            // Draw shadow
-            g.setColor(new Color(0, 0, 0, alpha));
-            g.drawString(dt.text, textX + 2, textY + 2);
-            
-            // Draw text with color
-            Color textColor = new Color(
-                dt.color.getRed(),
-                dt.color.getGreen(),
-                dt.color.getBlue(),
-                alpha
-            );
-            g.setColor(textColor);
-            g.drawString(dt.text, textX, textY);
+            if (pos != null) {
+                int screenX = (int)Math.round(pos.x - cameraX);
+                int screenY = (int)Math.round(pos.y - cameraY);
+                
+                // Collision box
+                CollisionBox box = entity.getComponent(CollisionBox.class);
+                if (box != null) {
+                    drawCollisionBox(g, pos, box, cameraX, cameraY);
+                }
+                
+                // Path
+                drawDebugPath(g, entity, cameraX, cameraY);
+                
+                // AI info (monsters only)
+                if (entity.getType() == EntityType.MONSTER) {
+                    drawDebugAI(g, entity, cameraX, cameraY);
+                }
+                
+                // Depth value
+                Renderable renderable = entity.getComponent(Renderable.class);
+                if (renderable != null) {
+                    g.setColor(Color.CYAN);
+                    g.drawString("Y:" + (int)pos.y, screenX + 10, screenY);
+                }
+            }
         }
-        
-        g.setFont(originalFont);
-    }
-     
-    private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
-        Stroke originalStroke = g.getStroke();
-        
-        int barX = spriteX - bar.width / 2;
-        int barY = spriteY + bar.offsetY;
-        
-        float pct = (float) hp.hp / hp.maxHp;
-        pct = Math.max(0f, Math.min(1f, pct));
-        
-        if (hp.hp > 0 && pct < 0.10f) {
-            pct = 0.10f;
-        }
-        
-        int filledWidth = (int)(bar.width * pct);
-        
-        Color hpColor =
-            pct > 0.50f ? HealthBar.HP_GREEN :
-            pct > 0.25f ? HealthBar.HP_ORANGE :
-                          HealthBar.HP_RED;
-        
-        g.setColor(HealthBar.BG_COLOR);
-        g.fillRect(barX, barY, bar.width, bar.height);
-        
-        g.setColor(hpColor);
-        g.fillRect(barX, barY, filledWidth, bar.height);
-        
-        g.setColor(Color.BLACK);
-        g.setStroke(new BasicStroke(1f));
-        g.drawRect(barX, barY, bar.width, bar.height);
-        
-        g.setStroke(originalStroke);
     }
     
-    private void drawStaminaBar(Graphics2D g, int spriteX, int spriteY, Stats stats, StaminaBar bar) {
-        Stroke originalStroke = g.getStroke();
-        
-        int barX = spriteX - bar.width / 2;
-        int barY = spriteY + bar.offsetY;
-        
-        float pct = stats.stamina / stats.maxStamina;
-        pct = Math.max(0f, Math.min(1f, pct));
-        
-        int filledWidth = (int)(bar.width * pct);
-        
-        g.setColor(StaminaBar.BG_COLOR);
-        g.fillRect(barX, barY, bar.width, bar.height);
-        
-        g.setColor(StaminaBar.STAMINA_COLOR);
-        g.fillRect(barX, barY, filledWidth, bar.height);
-        
-        g.setColor(Color.BLACK);
-        g.setStroke(new BasicStroke(1f));
-        g.drawRect(barX, barY, bar.width, bar.height);
-        
-        g.setStroke(originalStroke);
-    }
-    
+    // ===================================================================
+    // HELPER DRAWING METHODS
+    // ===================================================================
     private void drawCollisionBox(Graphics2D g, Position pos, CollisionBox box, float cameraX, float cameraY) {
         int boxX = (int)Math.round(box.getLeft(pos.x) - cameraX);
         int boxY = (int)Math.round(box.getTop(pos.y) - cameraY);
@@ -410,7 +324,6 @@ public class Renderer {
             }
         }
     }
-    
  // In Renderer.drawDebugAI()
     private void drawDebugAI(Graphics2D g, Entity entity, float cameraX, float cameraY) {
         AI ai = entity.getComponent(AI.class);
@@ -517,4 +430,164 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
+    private void drawNameTag(Graphics2D g, int spriteX, int spriteY, NameTag tag) {
+        Font originalFont = g.getFont();
+        Font nameFont = new Font("Arial", Font.BOLD, 12);
+        g.setFont(nameFont);
+        
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(tag.displayName);
+        
+        int textX = spriteX - textWidth / 2;
+        int textY = (int)(spriteY + tag.offsetY);
+        
+        // Shadow
+        g.setColor(Color.BLACK);
+        g.drawString(tag.displayName, textX + 1, textY + 1);
+        
+        // Text
+        g.setColor(Color.WHITE);
+        g.drawString(tag.displayName, textX, textY);
+        
+        g.setFont(originalFont);
+    }
+    
+    private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
+        Stroke originalStroke = g.getStroke();
+        
+        int barX = spriteX - bar.width / 2;
+        int barY = spriteY + bar.offsetY;
+        
+        float pct = (float) hp.hp / hp.maxHp;
+        pct = Math.max(0f, Math.min(1f, pct));
+        
+        if (hp.hp > 0 && pct < 0.10f) {
+            pct = 0.10f;
+        }
+        
+        int filledWidth = (int)(bar.width * pct);
+        
+        Color hpColor =
+            pct > 0.50f ? HealthBar.HP_GREEN :
+            pct > 0.25f ? HealthBar.HP_ORANGE :
+                          HealthBar.HP_RED;
+        
+        g.setColor(HealthBar.BG_COLOR);
+        g.fillRect(barX, barY, bar.width, bar.height);
+        
+        g.setColor(hpColor);
+        g.fillRect(barX, barY, filledWidth, bar.height);
+        
+        g.setColor(Color.BLACK);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barX, barY, bar.width, bar.height);
+        
+        g.setStroke(originalStroke);
+    }
+    
+    private void drawStaminaBar(Graphics2D g, int spriteX, int spriteY, Stats stats, StaminaBar bar) {
+        Stroke originalStroke = g.getStroke();
+        
+        int barX = spriteX - bar.width / 2;
+        int barY = spriteY + bar.offsetY;
+        
+        float pct = stats.stamina / stats.maxStamina;
+        pct = Math.max(0f, Math.min(1f, pct));
+        
+        int filledWidth = (int)(bar.width * pct);
+        
+        g.setColor(StaminaBar.BG_COLOR);
+        g.fillRect(barX, barY, bar.width, bar.height);
+        
+        g.setColor(StaminaBar.STAMINA_COLOR);
+        g.fillRect(barX, barY, filledWidth, bar.height);
+        
+        g.setColor(Color.BLACK);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barX, barY, bar.width, bar.height);
+        
+        g.setStroke(originalStroke);
+    }
+    
+    private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {
+        if (!alert.active) return;
+        
+        Stroke originalStroke = g.getStroke();
+        Font originalFont = g.getFont();
+        
+        int alertX = spriteX;
+        int alertY = (int)(spriteY + alert.offsetY + alert.bounceOffset);
+        
+        Font alertFont = new Font("Arial", Font.BOLD, 24);
+        g.setFont(alertFont);
+        
+        String exclamation = "!";
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(exclamation);
+        int textHeight = fm.getHeight();
+        
+        int textX = alertX - textWidth / 2;
+        int textY = alertY + textHeight / 4;
+        
+        // Background circle
+        int circleSize = 20;
+        g.setColor(new Color(255, 255, 255, 200));
+        g.fillOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
+        
+        // Border
+        g.setColor(new Color(255, 0, 0, 255));
+        g.setStroke(new BasicStroke(2));
+        g.drawOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
+        
+        // Shadow
+        g.setColor(new Color(0, 0, 0, 150));
+        g.drawString(exclamation, textX + 1, textY + 1);
+        
+        // Exclamation
+        g.setColor(new Color(255, 0, 0, 255));
+        g.drawString(exclamation, textX, textY);
+        
+        g.setStroke(originalStroke);
+        g.setFont(originalFont);
+    }
+    
+    private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
+        Font originalFont = g.getFont();
+        
+        for (DamageText dt : gameState.getDamageTexts()) {
+            int screenX = (int)(dt.worldX - cameraX);
+            int screenY = (int)(dt.worldY - cameraY);
+            
+            int fontSize = dt.type == DamageText.Type.CRITICAL ? 20 : 16;
+            Font damageFont = new Font("Arial", Font.BOLD, fontSize);
+            g.setFont(damageFont);
+            
+            FontMetrics fm = g.getFontMetrics();
+            int textWidth = fm.stringWidth(dt.text);
+            
+            int textX = screenX - textWidth / 2;
+            int textY = screenY;
+            
+            int alpha = (int)(dt.getAlpha() * 255);
+            
+            g.setColor(new Color(0, 0, 0, alpha));
+            g.drawString(dt.text, textX + 2, textY + 2);
+            
+            Color textColor = new Color(
+                dt.color.getRed(),
+                dt.color.getGreen(),
+                dt.color.getBlue(),
+                alpha
+            );
+            g.setColor(textColor);
+            g.drawString(dt.text, textX, textY);
+        }
+        
+        g.setFont(originalFont);
+    }
+    
+    // ... Include all your existing debug drawing methods:
+    // drawCollisionBox, drawTileGrid, drawDebugPath, drawDebugAI, drawDebugSpawnPoints
+    
+    // (Copy them from your existing Renderer class - they stay the same)
 }

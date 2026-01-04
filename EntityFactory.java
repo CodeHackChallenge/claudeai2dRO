@@ -53,6 +53,8 @@ public class EntityFactory {
                 monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
                 monster.addComponent(new NameTag("Goblin", -20));
                 monster.addComponent(new Alert(-40));  // NEW
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW
+                
                 
                 break;
             /*    
@@ -75,6 +77,8 @@ public class EntityFactory {
                 monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
                 monster.addComponent(new NameTag("Goblin Boss", -20));
                 monster.addComponent(new Alert(-40));  // NEW
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
+                
                 break;
             //me
             case "BunnyBoss":  // NEW: Boss monster
@@ -86,6 +90,8 @@ public class EntityFactory {
                 monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
                 monster.addComponent(new NameTag("Bunny Boss", -20));
                 monster.addComponent(new Alert(-40));  // NEW
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
+                
                 break;
                 //me
             case "Bunny":
@@ -97,6 +103,8 @@ public class EntityFactory {
                 monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
                 monster.addComponent(new NameTag("Bunny", -20));
                 monster.addComponent(new Alert(-40));  // NEW
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW: Boss renders slightly higher
+                
             /*    
             default:
                 monster.addComponent(new Sprite("/sprites/monster_default.png", 64, 64, 0.2f));
