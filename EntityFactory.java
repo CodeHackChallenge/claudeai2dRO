@@ -49,7 +49,7 @@ public class EntityFactory {
                 monster.addComponent(new Stats(80, 80f, 10, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
-                monster.addComponent(new CollisionBox(-10, -14, 20, 28));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44)); 
                 monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
                 monster.addComponent(new NameTag("Goblin", -20));
                 monster.addComponent(new Alert(-40));  // NEW
@@ -73,12 +73,12 @@ public class EntityFactory {
                 monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
                 monster.addComponent(new Movement(100f, 200f));  // Fast movement
-                monster.addComponent(new CollisionBox(-14, -16, 28, 32));  // Larger hitbox
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));  // Larger hitbox -10, 3, 28, 32
                 monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
                 monster.addComponent(new NameTag("Goblin Boss", -20));
                 monster.addComponent(new Alert(-40));  // NEW
                 monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
-                
+                 
                 break;
             //me
             case "BunnyBoss":  // NEW: Boss monster
@@ -86,12 +86,23 @@ public class EntityFactory {
                 monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
                 monster.addComponent(new Movement(100f, 200f));  // Fast movement
-                monster.addComponent(new CollisionBox(-14, -16, 28, 32));  // Larger hitbox
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));  // Larger hitbox
                 monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
                 monster.addComponent(new NameTag("Bunny Boss", -20));
                 monster.addComponent(new Alert(-40));  // NEW
                 monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
                 
+              //me
+            case "MinotaurBoss":  // NEW: Boss monster
+                monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f));
+                monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
+                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
+                monster.addComponent(new Movement(100f, 200f));  // Fast movement
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));  // Larger hitbox
+                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
+                monster.addComponent(new NameTag("Minotaur Boss", -20));
+                monster.addComponent(new Alert(-40));  // NEW
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
                 break;
                 //me
             case "Bunny":
@@ -99,7 +110,7 @@ public class EntityFactory {
                 monster.addComponent(new Stats(80, 80f, 10, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
-                monster.addComponent(new CollisionBox(-10, -14, 20, 28));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));
                 monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
                 monster.addComponent(new NameTag("Bunny", -20));
                 monster.addComponent(new Alert(-40));  // NEW

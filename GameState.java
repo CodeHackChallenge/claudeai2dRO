@@ -34,7 +34,8 @@ public class GameState {
         cameraX = 0f;
         cameraY = 0f;
         
-        map = new TileMap("/maps/map01.txt");
+        // ⭐ NEW: Pass both map image and collision map
+        map = new TileMap("/maps/world_map.png", "/maps/world_collision.txt");
         pathfinder = new Pathfinder(map);
         
         initializeWorld();
@@ -45,7 +46,7 @@ public class GameState {
         //float centerX = (map.getWidthInPixels()) / 2f;
         //float centerY = (map.getHeightInPixels()) / 2f;
         
-        player = EntityFactory.createPlayer(64, 64);
+        player = EntityFactory.createPlayer(8 * 64, 5 * 64);
         entities.add(player);
         
         
@@ -88,6 +89,8 @@ public class GameState {
         // Create spawn point for boss (5 minute respawn)
         addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn);  // 300 seconds = 5 minutes
         addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn);  // 300 seconds = 5 minutes
+        addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn);  // 300 seconds = 5 minutes
+        
         
         // Initial spawn of all monsters
         for (SpawnPoint sp : spawnPoints) {

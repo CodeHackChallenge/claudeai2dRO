@@ -528,7 +528,7 @@ public class Renderer {
         
         int textX = alertX - textWidth / 2;
         int textY = alertY + textHeight / 4;
-        
+       /* 
         // Background circle
         int circleSize = 20;
         g.setColor(new Color(255, 255, 255, 200));
@@ -538,7 +538,7 @@ public class Renderer {
         g.setColor(new Color(255, 0, 0, 255));
         g.setStroke(new BasicStroke(2));
         g.drawOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
-        
+        */
         // Shadow
         g.setColor(new Color(0, 0, 0, 150));
         g.drawString(exclamation, textX + 1, textY + 1);
