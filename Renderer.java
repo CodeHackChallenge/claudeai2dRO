@@ -52,6 +52,12 @@ public class Renderer {
                 boolean isDead = dead != null;
                 
                 if (!isDead) {
+                    // ⭐ Draw alert (exclamation point) - BEFORE name tag so it's on top
+                    Alert alert = entity.getComponent(Alert.class);
+                    if (alert != null) {
+                        drawAlert(g, spriteScreenX, spriteScreenY, alert);
+                    }
+                    
                     // Draw name tag
                     NameTag nameTag = entity.getComponent(NameTag.class);
                     if (nameTag != null && nameTag.visible) {
@@ -84,6 +90,7 @@ public class Renderer {
                 }
             }
         }
+        
         // Render floating damage texts
         drawDamageTexts(g, cameraX, cameraY);
         
@@ -93,6 +100,8 @@ public class Renderer {
                 drawTileGrid(g, map, cameraX, cameraY);
             }
             
+            drawDebugSpawnPoints(g, cameraX, cameraY);
+            
             for (Entity entity : gameState.getEntities()) {
                 drawDebugPath(g, entity, cameraX, cameraY);
                 if (entity.getType() == EntityType.MONSTER) {
@@ -100,8 +109,102 @@ public class Renderer {
                 }
             }
         }
+    } 
+    
+    private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {
+        if (!alert.active) return;
+        
+        int alertX = spriteX;
+        int alertY = (int)(spriteY + alert.offsetY + alert.bounceOffset);
+        
+        Stroke originalStroke = g.getStroke();
+        Font originalFont = g.getFont();
+        
+        // Draw exclamation point
+        Font alertFont = new Font("Arial", Font.BOLD, 24);
+        g.setFont(alertFont);
+        
+        String exclamation = "!";
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(exclamation);
+        int textHeight = fm.getHeight();
+        
+        int textX = alertX - textWidth / 2;
+        int textY = alertY + textHeight / 4;
+        /*
+        // Draw background circle (optional - makes it more visible)
+        int circleSize = 20;
+        g.setColor(new Color(255, 255, 255, 200));
+        g.fillOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
+         
+        // Draw circle border
+        g.setColor(new Color(255, 0, 0, 255));
+        g.setStroke(new BasicStroke(2));
+        g.drawOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
+        */
+        // Draw shadow for exclamation
+        g.setColor(new Color(0, 0, 0, 150));
+        g.drawString(exclamation, textX + 1, textY + 1);
+        
+        // Draw exclamation point (red)
+        g.setColor(new Color(255, 0, 0, 255));
+        g.drawString(exclamation, textX, textY);
+        
+        g.setStroke(originalStroke);
+        g.setFont(originalFont);
     }
     
+    /*
+     //Animated Growing Alert
+     private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {
+	    if (!alert.active) return;
+	    
+	    // Pulse effect - grows and shrinks
+	    float scale = 1.0f + (float)Math.sin(alert.animationTimer * 8) * 0.2f;
+	    
+	    int alertX = spriteX;
+	    int alertY = (int)(spriteY + alert.offsetY + alert.bounceOffset);
+	    
+	    Font alertFont = new Font("Arial", Font.BOLD, (int)(24 * scale));
+	    g.setFont(alertFont);
+	    
+	    String exclamation = "!";
+	    FontMetrics fm = g.getFontMetrics();
+	    int textWidth = fm.stringWidth(exclamation);
+	    int textHeight = fm.getHeight();
+	    
+	    int textX = alertX - textWidth / 2;
+	    int textY = alertY + textHeight / 4;
+	    
+	    // Background
+	    int circleSize = (int)(20 * scale);
+	    g.setColor(new Color(255, 255, 255, 200));
+	    g.fillOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
+	    
+	    // Border
+	    g.setColor(new Color(255, 0, 0, 255));
+	    g.setStroke(new BasicStroke(2));
+	    g.drawOval(alertX - circleSize/2, alertY - circleSize/2, circleSize, circleSize);
+	    
+	    // Exclamation
+	    g.setColor(new Color(0, 0, 0, 150));
+	    g.drawString(exclamation, textX + 1, textY + 1);
+	    g.setColor(new Color(255, 0, 0, 255));
+	    g.drawString(exclamation, textX, textY);
+	}
+      */
+    /*
+     private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert, AI ai) {
+	    if (!alert.active) return;
+	    
+	    String symbol = ai != null && ai.currentState == AI.State.CHASING ? "!" : "?";
+	    Color symbolColor = ai != null && ai.currentState == AI.State.CHASING 
+	        ? new Color(255, 0, 0) 
+	        : new Color(255, 200, 0);
+	    
+	    // ... rest of drawing code using 'symbol' and 'symbolColor' ...
+	 }
+     */
     private void drawNameTag(Graphics2D g, int spriteX, int spriteY, NameTag tag) {
         Font originalFont = g.getFont();
         Font nameFont = new Font("Arial", Font.BOLD, 12);
@@ -358,5 +461,60 @@ public class Renderer {
         g.drawString(stateText, screenX - 30, screenY - 40);
         
         g.setStroke(originalStroke);
+    }
+    
+    private void drawDebugSpawnPoints(Graphics2D g, float cameraX, float cameraY) {
+        Font originalFont = g.getFont();
+        Font timerFont = new Font("Arial", Font.BOLD, 12);
+        g.setFont(timerFont);
+        
+        for (SpawnPoint sp : gameState.getSpawnPoints()) {
+            int screenX = (int)(sp.x - cameraX);
+            int screenY = (int)(sp.y - cameraY);
+            
+            // Draw spawn point marker
+            if (sp.isOccupied) {
+                // Green = occupied
+                g.setColor(new Color(0, 255, 0, 150));
+            } else {
+                // Red = waiting for respawn
+                g.setColor(new Color(255, 0, 0, 150));
+            }
+            g.fillOval(screenX - 8, screenY - 8, 16, 16);
+            
+            // Draw border
+            g.setColor(Color.WHITE);
+            g.drawOval(screenX - 8, screenY - 8, 16, 16);
+            
+            // Draw respawn timer if waiting
+            if (!sp.isOccupied) {
+                float timeLeft = sp.respawnDelay - sp.respawnTimer;
+                String timerText = String.format("%.1fs", timeLeft);
+                
+                FontMetrics fm = g.getFontMetrics();
+                int textWidth = fm.stringWidth(timerText);
+                
+                // Draw shadow
+                g.setColor(Color.BLACK);
+                g.drawString(timerText, screenX - textWidth/2 + 1, screenY + 20 + 1);
+                
+                // Draw timer text
+                g.setColor(Color.YELLOW);
+                g.drawString(timerText, screenX - textWidth/2, screenY + 20);
+            }
+            
+            // Draw spawn type
+            String typeText = sp.monsterType;
+            FontMetrics fm = g.getFontMetrics();
+            int textWidth = fm.stringWidth(typeText);
+            
+            g.setColor(Color.BLACK);
+            g.drawString(typeText, screenX - textWidth/2 + 1, screenY - 15 + 1);
+            
+            g.setColor(Color.WHITE);
+            g.drawString(typeText, screenX - textWidth/2, screenY - 15);
+        }
+        
+        g.setFont(originalFont);
     }
 }

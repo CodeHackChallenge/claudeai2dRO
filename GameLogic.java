@@ -44,12 +44,45 @@ public class GameLogic {
         }
         
         state.updateDamageTexts(delta);
+        state.updateSpawnPoints(delta);  // NEW: Update respawn timers
         state.removeMarkedEntities();
         updateCamera(delta);
     }
     /**
      * Player attacks target entity (called from click or auto-attack)
      */
+    /**
+     * Player attacks target entity (called from click or auto-attack)
+     */
+    public void playerAttack(Entity target) {
+        Entity player = state.getPlayer();
+        Combat playerCombat = player.getComponent(Combat.class);
+        Position playerPos = player.getComponent(Position.class);
+        Position targetPos = target.getComponent(Position.class);
+        Movement playerMovement = player.getComponent(Movement.class);
+        
+        if (playerCombat == null) return;
+        if (playerPos == null || targetPos == null) return;
+        
+        // Set as auto-attack target
+        state.setAutoAttackTarget(target);
+        
+        // Check distance
+        float distance = distance(playerPos.x, playerPos.y, targetPos.x, targetPos.y);
+        
+        if (distance <= 80f && playerCombat.canAttack()) {
+            // In range and can attack - do it now
+            playerMovement.direction = calculateDirection(targetPos.x - playerPos.x, targetPos.y - playerPos.y);
+            playerMovement.lastDirection = playerMovement.direction;
+            
+            // ⭐ FIXED: Pass target to startAttack
+            playerCombat.startAttack(target);
+        } else {
+            // Out of range - will path to target in update loop
+            System.out.println("Moving to attack range...");
+        }
+    }
+    /*
     public void playerAttack(Entity target) {
         Entity player = state.getPlayer();
         Combat playerCombat = player.getComponent(Combat.class);
@@ -78,6 +111,7 @@ public class GameLogic {
             System.out.println("Moving to attack range...");
         }
     }
+    */
     /**
      * Stop auto-attacking (called when moving to new location)
      */
@@ -210,7 +244,6 @@ public class GameLogic {
         
         if (movement == null || position == null || sprite == null || stats == null) return;
         
-        // If already dead, just play death animation
         if (dead != null) {
             if (sprite != null) {
                 sprite.setAnimation(Sprite.ANIM_DEAD);
@@ -219,12 +252,50 @@ public class GameLogic {
             return;
         }
         
-        // Check if player just died
         if (stats.hp <= 0) {
             handlePlayerDeath(player, sprite);
             return;
         }
         
+        // ⭐ Check if attack animation hit frame reached - apply damage
+        if (combat != null && combat.shouldDealDamage() && combat.attackTarget != null) {
+            Position targetPos = combat.attackTarget.getComponent(Position.class);
+            if (targetPos != null) {
+                performAttack(player, combat.attackTarget, position, targetPos);
+            }
+        }
+        /*
+         * ## Visual Timeline Example
+
+**With `hitFrame = 0.5` (50% through animation):**
+```
+Time 0.0s: Click attack
+  └─> Animation starts (sword pulls back)
+  └─> damageApplied = false
+
+Time 0.1s: Progress = 20%
+  └─> Sword still pulling back
+  └─> shouldDealDamage() = false (not at 50% yet)
+
+Time 0.2s: Progress = 40%
+  └─> Sword mid-swing
+  └─> shouldDealDamage() = false (not at 50% yet)
+
+Time 0.25s: Progress = 50% ⭐ HIT FRAME!
+  └─> Sword impacts target (visually)
+  └─> shouldDealDamage() = TRUE! 
+  └─> performAttack() called
+  └─> Damage calculated
+  └─> Damage text spawns: "15" pops up
+  └─> damageApplied = true (mark as done)
+
+Time 0.3s: Progress = 60%
+  └─> Sword follow-through
+  └─> shouldDealDamage() = false (already applied)
+
+Time 0.5s: Progress = 100%
+  └─> Animation complete
+  └─> isAttacking = false*/
         // Auto-attack logic
         Entity autoAttackTarget = state.getAutoAttackTarget();
         if (autoAttackTarget != null) {
@@ -238,25 +309,20 @@ public class GameLogic {
                     float distance = distance(position.x, position.y, targetPos.x, targetPos.y);
                     
                     if (distance <= 80f) {
-                        // In range - attack
                         if (combat != null && combat.canAttack() && !combat.isAttacking) {
-                            // ⭐ Only face the TARGET we're attacking (not whoever hits us)
                             float dx = targetPos.x - position.x;
                             float dy = targetPos.y - position.y;
                             movement.direction = calculateDirection(dx, dy);
                             movement.lastDirection = movement.direction;
                             
-                            // Stop moving
                             movement.stopMoving();
                             if (path != null) path.clear();
                             if (indicator != null) indicator.clear();
                             
-                            // Attack
-                            combat.startAttack();
-                            performAttack(player, autoAttackTarget, position, targetPos);
+                            // ⭐ Start attack but DON'T apply damage yet
+                            combat.startAttack(autoAttackTarget);
                         }
                     } else {
-                        // Out of range - path to target
                         if (!movement.isMoving || (path != null && !path.isFollowing)) {
                             int startTileX = (int)(position.x / TileMap.TILE_SIZE);
                             int startTileY = (int)(position.y / TileMap.TILE_SIZE);
@@ -279,7 +345,6 @@ public class GameLogic {
         if (combat != null && combat.isAttacking) {
             sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
             
-            // ⭐ Keep facing the TARGET while attacking (update if target moves)
             if (autoAttackTarget != null) {
                 Position targetPos = autoAttackTarget.getComponent(Position.class);
                 if (targetPos != null) {
@@ -295,7 +360,6 @@ public class GameLogic {
             return;
         }
         
-        // Follow path
         if (path != null && path.isFollowing) {
             followPath(player, path, movement, position, delta);
         }
@@ -329,80 +393,101 @@ public class GameLogic {
         }
     }
 	
-	private void updateMonster(Entity monster, Position playerPos, float delta) {
-	    AI ai = monster.getComponent(AI.class);
-	    Position position = monster.getComponent(Position.class);
-	    Movement movement = monster.getComponent(Movement.class);
-	    Sprite sprite = monster.getComponent(Sprite.class);
-	    Stats stats = monster.getComponent(Stats.class);
-	    Path path = monster.getComponent(Path.class);
-	    Dead dead = monster.getComponent(Dead.class);
-	    Combat combat = monster.getComponent(Combat.class);
-	    
-	    if (position == null || ai == null) return;
-	    
-	    // Update dead state
-	    if (dead != null) {
-	        dead.update(delta);
-	        if (dead.shouldRemove()) {
-	            state.markForRemoval(monster);
-	        }
-	        return;
-	    }
-	    
-	    // Check if dead
-	    if (stats != null && stats.hp <= 0) {
-	        handleMonsterDeath(monster, sprite);
-	        return;
-	    }
-	    
-	    // ⭐ IMPORTANT: Update AI (this increments timers)
-	    ai.update(delta);
-	    
-	    // Update combat animations
-	    if (combat != null && combat.isAttacking) {
-	        if (sprite != null && movement != null) {
-	            sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
-	        }
-	    }
-	    
-	    // AI State Machine
-	    switch (ai.currentState) {
-	        case IDLE:
-	            handleIdleState(monster, ai, movement, sprite, playerPos, delta);
-	            break;
-	            
-	        case ROAMING:
-	            handleRoamingState(monster, ai, movement, position, path, sprite, playerPos, delta);
-	            break;
-	            
-	        case CHASING:
-	            handleChasingState(monster, ai, movement, position, path, sprite, playerPos, delta);
-	            break;
-	            
-	        case RETURNING:
-	            handleReturningState(monster, ai, movement, position, path, sprite, delta);
-	            break;
-	            
-	        case ATTACKING:
-	            handleAttackingState(monster, ai, movement, sprite, playerPos, stats, delta);
-	            break;
-	            
-	        case VICTORY_IDLE:
-	            handleVictoryIdleState(monster, ai, movement, sprite, delta);
-	            break;
-	    }
-	    
-	    // Move if has target
-	    if (movement != null && movement.isMoving) {
-	        moveTowardsTarget(monster, movement, position, delta);
-	    }
-	    
-	    // Follow path
-	    if (path != null && path.isFollowing) {
-	        followPath(monster, path, movement, position, delta);
-	    }
-	}
+    private void updateMonster(Entity monster, Position playerPos, float delta) {
+        AI ai = monster.getComponent(AI.class);
+        Position position = monster.getComponent(Position.class);
+        Movement movement = monster.getComponent(Movement.class);
+        Sprite sprite = monster.getComponent(Sprite.class);
+        Stats stats = monster.getComponent(Stats.class);
+        Path path = monster.getComponent(Path.class);
+        Dead dead = monster.getComponent(Dead.class);
+        Combat combat = monster.getComponent(Combat.class);
+        Alert alert = monster.getComponent(Alert.class);  // NEW
+        
+        if (position == null || ai == null) return;
+        
+        // Update dead state
+        if (dead != null) {
+            dead.update(delta);
+            if (dead.shouldRemove()) {
+                state.markForRemoval(monster);
+            }
+            return;
+        }
+        
+        // Check if dead
+        if (stats != null && stats.hp <= 0) {
+            handleMonsterDeath(monster, sprite);
+            return;
+        }
+        
+        // ⭐ Check if monster attack hit frame reached
+        if (combat != null && combat.shouldDealDamage() && combat.attackTarget != null) {
+            Position targetPos = combat.attackTarget.getComponent(Position.class);
+            if (targetPos != null) {
+                performAttack(monster, combat.attackTarget, position, targetPos);
+            }
+        }
+        
+        // Update AI
+        ai.update(delta);
+        
+        // ⭐ Update alert animation
+        if (alert != null) {
+            alert.update(delta);
+            
+            // Show alert when chasing or attacking, hide otherwise
+            if (ai.currentState == AI.State.CHASING || ai.currentState == AI.State.ATTACKING) {
+                alert.show();
+            } else {
+                alert.hide();
+            }
+        }
+        
+        // Update combat animations
+        if (combat != null && combat.isAttacking) {
+            if (sprite != null && movement != null) {
+                sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
+            }
+        }
+        
+        // AI State Machine
+        switch (ai.currentState) {
+            case IDLE:
+                handleIdleState(monster, ai, movement, sprite, playerPos, delta);
+                break;
+                
+            case ROAMING:
+                handleRoamingState(monster, ai, movement, position, path, sprite, playerPos, delta);
+                break;
+                
+            case CHASING:
+                handleChasingState(monster, ai, movement, position, path, sprite, playerPos, delta);
+                break;
+                
+            case RETURNING:
+                handleReturningState(monster, ai, movement, position, path, sprite, delta);
+                break;
+                
+            case ATTACKING:
+                handleAttackingState(monster, ai, movement, sprite, playerPos, stats, delta);
+                break;
+                
+            case VICTORY_IDLE:
+                handleVictoryIdleState(monster, ai, movement, sprite, delta);
+                break;
+        }
+        
+        // Move if has target
+        if (movement != null && movement.isMoving) {
+            moveTowardsTarget(monster, movement, position, delta);
+        }
+        
+        // Follow path
+        if (path != null && path.isFollowing) {
+            followPath(monster, path, movement, position, delta);
+        }
+    }
 	/**
 	 * Victory idle state - monster idles after killing player
 	 */
@@ -796,8 +881,9 @@ public class GameLogic {
     }
     */
     private void handleAttackingState(Entity monster, AI ai, Movement movement, Sprite sprite, Position playerPos, Stats stats, float delta) {
-        Position monsterPos = monster.getComponent(Position.class);
+    	Position monsterPos = monster.getComponent(Position.class);
         Entity player = state.getPlayer();
+        Combat combat = monster.getComponent(Combat.class);
         
         if (playerPos == null || monsterPos == null) {
             transitionAIState(monster, ai, AI.State.IDLE);
@@ -822,8 +908,8 @@ public class GameLogic {
         }
         
         // ⭐ Face player only when actually attacking
-        if (ai.canAttack()) {
-            // Face player before attacking
+        // ⭐ Start attack animation (damage will be applied later at hit frame)
+        if (ai.canAttack() && combat != null && combat.canAttack()) {
             if (movement != null) {
                 float dx = playerPos.x - monsterPos.x;
                 float dy = playerPos.y - monsterPos.y;
@@ -831,22 +917,15 @@ public class GameLogic {
                 movement.lastDirection = movement.direction;
             }
             
-            Combat monsterCombat = monster.getComponent(Combat.class);
-            if (monsterCombat != null) {
-                monsterCombat.startAttack();
-            }
-            
-            tryAttack(monster, player);
+            combat.startAttack(player);  // ⭐ Pass target to combat
             ai.resetAttackCooldown();
             
             if (sprite != null && movement != null) {
                 sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
             }
         } else {
-            // Waiting for cooldown - keep current facing direction
-            Combat monsterCombat = monster.getComponent(Combat.class);
             if (sprite != null && movement != null) {
-                if (monsterCombat != null && monsterCombat.isAttacking) {
+                if (combat != null && combat.isAttacking) {
                     sprite.setAnimation(getAttackAnimationForDirection(movement.lastDirection));
                 } else {
                     sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
@@ -868,8 +947,11 @@ public class GameLogic {
             state.setTargetedEntity(null);
         }
         
+        // Notify spawn point of death
+        state.onMonsterDeath(monster);  // NEW
+        
         // Add dead component
-        monster.addComponent(new Dead(5f));
+        monster.addComponent(new Dead(1.5f));
         
         // Stop movement
         Movement movement = monster.getComponent(Movement.class);
@@ -907,7 +989,7 @@ public class GameLogic {
         float dy = y2 - y1;
         return (float)Math.sqrt(dx * dx + dy * dy);
     }
-    
+    /*
     public void tryAttack(Entity attacker, Entity target) {
         Position attackerPos = attacker.getComponent(Position.class);
         Position targetPos = target.getComponent(Position.class);
@@ -919,6 +1001,7 @@ public class GameLogic {
         
         performAttack(attacker, target, attackerPos, targetPos);
     }
+    */
     /**
      * Follow the current path waypoint by waypoint
      */

@@ -13,77 +13,92 @@ public class EntityFactory {
         player.addComponent(new Position(x, y));
         player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
         player.addComponent(new Movement(100f, 200f));
-        player.addComponent(new Stats(1000, 100f, 15, 5));
-        player.addComponent(new Combat(0.8f, 0.15f, 0.05f));  // 0.8s cooldown, 15% crit, 5% evasion 
+        player.addComponent(new Stats(1000, 500f, 15, 5));
+        player.addComponent(new Combat(1.1f, 0.15f, 0.05f));  // 0.8s cooldown, 15% crit, 5% evasion 
         player.addComponent(new HealthBar(40, 4, 40));
         player.addComponent(new StaminaBar(40, 4, 46));
         player.addComponent(new CollisionBox(-10, -14, 22, 44));
         player.addComponent(new Path());
         player.addComponent(new TargetIndicator()); 
+        player.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW
         
         return player;
     }
-    
+    ///sprites/goblin_dark.png
     /**
      * Create a monster entity
      */
     public static Entity createMonster(String monsterType, float x, float y) {
         Entity monster = new Entity(monsterType, EntityType.MONSTER);
         
-        // Position
         monster.addComponent(new Position(x, y));
         
-        // Monster-specific stats based on type
         switch(monsterType) {
-            case "Slime":
+          /*  case "Slime":
                 monster.addComponent(new Sprite("/sprites/slime.png", 64, 64, 0.2f));
                 monster.addComponent(new Stats(50, 50f, 5, 2));
-                monster.addComponent(new Combat(1.5f, 0.05f, 0.10f));  // 1.5s cooldown, 5% crit, 10% evasion
-                
-                monster.addComponent(new Movement(60f, 120f));  // Slower than player
+                monster.addComponent(new Combat(1.5f, 0.05f, 0.10f));
+                monster.addComponent(new Movement(60f, 120f));
                 monster.addComponent(new CollisionBox(-12, -12, 24, 24));
-                monster.addComponent(new AI("aggressive", x, y, 128f, 3f));  // 3 tiles detection
+                monster.addComponent(new AI("aggressive", x, y, 128f, 3f));
                 monster.addComponent(new NameTag("Slime", -45));
-                
                 break;
-                
+             */   
             case "Goblin":
-                monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.2f)); //0.15
-                monster.addComponent(new Stats(80, 80f, 8, 4));
+                monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f));
+                monster.addComponent(new Stats(80, 80f, 10, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
-                
                 monster.addComponent(new Movement(80f, 160f));
-                monster.addComponent(new CollisionBox(-10, -14, 22, 44));//-10, -14, 22, 44
-                monster.addComponent(new AI("aggressive", x, y, 600f, 4f));  // 4 tiles detection
-                monster.addComponent(new NameTag("Goblin", -45));
+                monster.addComponent(new CollisionBox(-10, -14, 20, 28));
+                monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
+                monster.addComponent(new NameTag("Goblin", -20));
+                monster.addComponent(new Alert(-40));  // NEW
                 
                 break;
-                
-            case "Poring":  // Passive creature
+            /*    
+            case "Poring":
                 monster.addComponent(new Sprite("/sprites/poring.png", 64, 64, 0.25f));
                 monster.addComponent(new Stats(30, 30f, 3, 1));
                 monster.addComponent(new Combat(2.0f, 0.02f, 0.15f));
                 monster.addComponent(new Movement(40f, 80f));
                 monster.addComponent(new CollisionBox(-12, -12, 24, 24));
-                monster.addComponent(new AI("passive", x, y, 96f, 0f));  // Doesn't detect/chase
+                monster.addComponent(new AI("passive", x, y, 96f, 0f));
                 monster.addComponent(new NameTag("Poring", -45));
-                
+                break;
+             */   
+            case "GoblinBoss":  // NEW: Boss monster
+                monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.12f));
+                monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
+                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
+                monster.addComponent(new Movement(100f, 200f));  // Fast movement
+                monster.addComponent(new CollisionBox(-14, -16, 28, 32));  // Larger hitbox
+                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
+                monster.addComponent(new NameTag("Goblin Boss", -20));
+                monster.addComponent(new Alert(-40));  // NEW
+                break;
+            //me
+            case "BunnyBoss":  // NEW: Boss monster
+                monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f));
+                monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
+                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
+                monster.addComponent(new Movement(100f, 200f));  // Fast movement
+                monster.addComponent(new CollisionBox(-14, -16, 28, 32));  // Larger hitbox
+                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
+                monster.addComponent(new NameTag("Bunny Boss", -20));
+                monster.addComponent(new Alert(-40));  // NEW
                 break;
                 //me
-            case "Goblin_Boss":
-                monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.2f)); //0.15
-                monster.addComponent(new Stats(150, 80f, 16, 4));
+            case "Bunny":
+                monster.addComponent(new Sprite("/sprites/bunny.png", 64, 64, 0.15f));
+                monster.addComponent(new Stats(80, 80f, 10, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
-                
                 monster.addComponent(new Movement(80f, 160f));
-                monster.addComponent(new CollisionBox(-10, -14, 22, 44));//-10, -14, 22, 44
-                monster.addComponent(new AI("aggressive", x, y, 600f, 4f));  // 4 tiles detection
-                monster.addComponent(new NameTag("Goblin Boss", -45));
-                
-                break;
-                
+                monster.addComponent(new CollisionBox(-10, -14, 20, 28));
+                monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
+                monster.addComponent(new NameTag("Bunny", -20));
+                monster.addComponent(new Alert(-40));  // NEW
+            /*    
             default:
-                // Default monster
                 monster.addComponent(new Sprite("/sprites/monster_default.png", 64, 64, 0.2f));
                 monster.addComponent(new Stats(40, 40f, 5, 2));
                 monster.addComponent(new Combat(1.5f, 0.05f, 0.08f));
@@ -92,9 +107,9 @@ public class EntityFactory {
                 monster.addComponent(new AI("neutral", x, y, 128f, 2f));
                 monster.addComponent(new NameTag("Monster", -45));
                 break;
+                */
         }
         
-        // Common components for all monsters
         monster.addComponent(new HealthBar(40, 4, 40));
         monster.addComponent(new Path());
         

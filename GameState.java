@@ -12,6 +12,8 @@ public class GameState {
     private List<Entity> entities;
     private List<Entity> entitiesToRemove;  // NEW: For safe removal
     private List<DamageText> damageTexts;  // NEW
+    private List<SpawnPoint> spawnPoints;  // NEW
+    
     private Entity player;
     private Entity hoveredEntity;  // NEW
     private Entity targetedEntity;  // NEW
@@ -26,6 +28,8 @@ public class GameState {
         entities = new ArrayList<>();
         entitiesToRemove = new ArrayList<>();
         damageTexts = new ArrayList<>();  // NEW
+        spawnPoints = new ArrayList<>();  // NEW
+        
         gameTime = 0f;
         cameraX = 0f;
         cameraY = 0f;
@@ -44,6 +48,12 @@ public class GameState {
         player = EntityFactory.createPlayer(64, 64);
         entities.add(player);
         
+        
+        // Adjust these values as needed:
+        float normalRespawn = 30f;      // 30 seconds for normal mobs
+        float bossRespawn = 50f;       // 300f = 5 minutes for bosses 
+        
+        /*
         // Spawn some monsters
         //spawnMonster("Slime", 400, 400);
         //spawnMonster("Slime", 600, 300);
@@ -55,7 +65,85 @@ public class GameState {
         spawnMonster("Goblin", 764, 500); 
         //spawnMonster("Goblin", 300, 700);
         //spawnMonster("Poring", 500, 600);
+      
+        // Create spawn points for regular monsters (30 second respawn)
+        //addSpawnPoint("Slime", 400, 400, normalRespawn);
+        //addSpawnPoint("Slime", 600, 300, normalRespawn);
+        addSpawnPoint("Goblin", 800, 500, normalRespawn);
+        addSpawnPoint("Goblin", 900, 700, normalRespawn);
+        addSpawnPoint("Goblin", 764, 500, normalRespawn);
+        addSpawnPoint("Goblin", 864, 600, normalRespawn);
+        //addSpawnPoint("Poring", 500, 600, normalRespawn);
+          */
+        //goblin
+        addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn);
+        addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn);
+        addSpawnPoint("Goblin", 12 * 64, 10 * 64, normalRespawn);
+        addSpawnPoint("Goblin", 13 * 64, 10 * 64, normalRespawn);
+        //bunny
+        addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn);
+        addSpawnPoint("Bunny", 20 * 64, 21 * 64, normalRespawn);
+        addSpawnPoint("Bunny", 21 * 64, 22 * 64, normalRespawn);
+        addSpawnPoint("Bunny", 21 * 64, 23 * 64, normalRespawn);
+        // Create spawn point for boss (5 minute respawn)
+        addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn);  // 300 seconds = 5 minutes
+        addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn);  // 300 seconds = 5 minutes
+        
+        // Initial spawn of all monsters
+        for (SpawnPoint sp : spawnPoints) {
+            spawnMonsterAtPoint(sp);
+        }
     }
+    
+    public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay) {
+        SpawnPoint sp = new SpawnPoint(monsterType, x, y, respawnDelay);
+        spawnPoints.add(sp);
+        System.out.println("Added spawn point: " + monsterType + " at (" + (int)x + ", " + (int)y + ") - respawn: " + respawnDelay + "s");
+    }
+    
+    public void updateSpawnPoints(float delta) {
+        for (SpawnPoint sp : spawnPoints) {
+            sp.update(delta);
+            
+            if (sp.canRespawn()) {
+                spawnMonsterAtPoint(sp);
+            }
+        }
+    }
+    
+    public void onMonsterDeath(Entity monster) {
+        // Find the spawn point this monster belongs to
+        Respawn respawn = monster.getComponent(Respawn.class);
+        if (respawn != null) {
+            for (SpawnPoint sp : spawnPoints) {
+                if (sp.currentMonster == monster) {
+                    sp.onMonsterDeath();
+                    break;
+                }
+            }
+        }
+    }
+    
+    public List<SpawnPoint> getSpawnPoints() {
+        return spawnPoints;
+    }
+        
+    public void spawnMonsterAtPoint(SpawnPoint spawnPoint) {
+        if (spawnPoint.isOccupied) {
+            return;  // Already has a monster
+        }
+        
+        Entity monster = EntityFactory.createMonster(spawnPoint.monsterType, spawnPoint.x, spawnPoint.y);
+        
+        // Add respawn component so we can track which spawn point this monster belongs to
+        monster.addComponent(new Respawn(spawnPoint.monsterType, spawnPoint.x, spawnPoint.y, spawnPoint.respawnDelay));
+        
+        entities.add(monster);
+        spawnPoint.spawn(monster);
+        
+        System.out.println("Spawned " + spawnPoint.monsterType + " at (" + (int)spawnPoint.x + ", " + (int)spawnPoint.y + ")");
+    }
+    
     public Entity getAutoAttackTarget() {
         return autoAttackTarget;
     }
