@@ -1,77 +1,3 @@
-package dev.main;
-
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-import javax.imageio.ImageIO;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
-import javax.swing.filechooser.FileNameExtensionFilter;
- 
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import javax.imageio.ImageIO;
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import javax.imageio.ImageIO;
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import javax.imageio.ImageIO;
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import javax.imageio.ImageIO;
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import javax.imageio.ImageIO;
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import javax.imageio.ImageIO;
-
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
@@ -81,506 +7,497 @@ import java.io.*;
 import javax.imageio.ImageIO;
 
 public class TileMapMaker extends JFrame {
-    private static final int TILE_SIZE = 64;
-    private int mapWidth = 50;
-    private int mapHeight = 50;
+private static final int TILE_SIZE = 64;
+private int mapWidth = 50;
+private int mapHeight = 50;
+
+```
+private int[][] tileMap;
+private MapPanel mapPanel;
+private MiniMapPanel miniMapPanel;
+private JScrollPane scrollPane;
+private JLabel coordinateLabel;
+private int currentTile = 0; // 0 = walkable, 1 = solid
+private BufferedImage referenceImage;
+
+public TileMapMaker() {
+    setTitle("2D Tile Map Maker");
+    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    setLayout(new BorderLayout());
     
-    private int[][] tileMap;
-    private MapPanel mapPanel;
-    private MiniMapPanel miniMapPanel;
-    private JScrollPane scrollPane;
-    private JLabel coordinateLabel;
-    private int currentTile = 0; // 0 = walkable, 1 = solid
-    private BufferedImage referenceImage;
+    // Show dialog to set map dimensions
+    showDimensionsDialog();
     
-    public TileMapMaker() {
-        setTitle("2D Tile Map Maker");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
-        
-        // Show dialog to set map dimensions
-        showDimensionsDialog();
-        
-        // Initialize tile map
-        tileMap = new int[mapHeight][mapWidth];
-        
-        // Create map panel
-        mapPanel = new MapPanel();
-        scrollPane = new JScrollPane(mapPanel);
-        scrollPane.setPreferredSize(new Dimension(800, 600));
-        scrollPane.getViewport().addChangeListener(e -> {
-            if (miniMapPanel != null) {
-                miniMapPanel.repaint();
-            }
-        });
-        add(scrollPane, BorderLayout.CENTER);
-        
-        // Create mini map panel
-        miniMapPanel = new MiniMapPanel();
-        JPanel topRightPanel = new JPanel(new BorderLayout());
-        topRightPanel.setOpaque(false);
-        topRightPanel.add(miniMapPanel, BorderLayout.NORTH);
-        
-        JLayeredPane layeredPane = new JLayeredPane();
-        layeredPane.setLayout(null);
-        add(layeredPane, BorderLayout.NORTH);
-        
-        // Add mini map overlay
-        JPanel overlayPanel = new JPanel(new BorderLayout());
-        overlayPanel.setOpaque(false);
-        overlayPanel.add(miniMapPanel, BorderLayout.EAST);
-        
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(scrollPane, BorderLayout.CENTER);
-        
-        // Create control panel
-        JPanel controlPanel = new JPanel();
-        
-        // Create coordinate label
-        coordinateLabel = new JLabel("Tile: (0, 0)");
-        coordinateLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        coordinateLabel.setFont(new Font("Monospaced", Font.BOLD, 12));
-        
-        JButton walkableBtn = new JButton("Walkable (0)");
-        walkableBtn.setBackground(Color.GREEN);
-        walkableBtn.addActionListener(e -> currentTile = 0);
-        
-        JButton solidBtn = new JButton("Solid (1)");
-        solidBtn.setBackground(Color.RED);
-        solidBtn.addActionListener(e -> currentTile = 1);
-        
-        JButton loadImageBtn = new JButton("Load Reference Image");
-        loadImageBtn.addActionListener(e -> loadReferenceImage());
-        
-        JButton clearImageBtn = new JButton("Clear Reference");
-        clearImageBtn.addActionListener(e -> {
-            referenceImage = null;
-            mapPanel.repaint();
+    // Initialize tile map
+    tileMap = new int[mapHeight][mapWidth];
+    
+    // Create map panel
+    mapPanel = new MapPanel();
+    scrollPane = new JScrollPane(mapPanel);
+    scrollPane.setPreferredSize(new Dimension(800, 600));
+    scrollPane.getViewport().addChangeListener(e -> {
+        if (miniMapPanel != null) {
             miniMapPanel.repaint();
-        });
-        
-        JButton saveBtn = new JButton("Save Map");
-        saveBtn.addActionListener(e -> saveMap());
-        
-        JButton loadBtn = new JButton("Load Map");
-        loadBtn.addActionListener(e -> loadMap());
-        
-        JButton clearBtn = new JButton("Clear All");
-        clearBtn.addActionListener(e -> {
-            for (int i = 0; i < mapHeight; i++) {
-                for (int j = 0; j < mapWidth; j++) {
-                    tileMap[i][j] = 0;
-                }
-            }
-            mapPanel.repaint();
-        });
-        
-        JButton resizeBtn = new JButton("Resize Map");
-        resizeBtn.addActionListener(e -> resizeMap());
-        
-        controlPanel.add(coordinateLabel);
-        controlPanel.add(walkableBtn);
-        controlPanel.add(solidBtn);
-        controlPanel.add(loadImageBtn);
-        controlPanel.add(clearImageBtn);
-        controlPanel.add(saveBtn);
-        controlPanel.add(loadBtn);
-        controlPanel.add(clearBtn);
-        controlPanel.add(resizeBtn);
-        
-        getContentPane().add(overlayPanel, BorderLayout.NORTH);
-        getContentPane().add(controlPanel, BorderLayout.SOUTH);
-        
-        pack();
-        setLocationRelativeTo(null);
-    }
+        }
+    });
     
-    private void showDimensionsDialog() {
-        JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
-        JTextField widthField = new JTextField(String.valueOf(mapWidth), 10);
-        JTextField heightField = new JTextField(String.valueOf(mapHeight), 10);
-        
-        panel.add(new JLabel("Map Width:"));
-        panel.add(widthField);
-        panel.add(new JLabel("Map Height:"));
-        panel.add(heightField);
-        
-        int result = JOptionPane.showConfirmDialog(this, panel, 
-            "Set Map Dimensions", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        
-        if (result == JOptionPane.OK_OPTION) {
-            try {
-                int newWidth = Integer.parseInt(widthField.getText().trim());
-                int newHeight = Integer.parseInt(heightField.getText().trim());
-                
-                if (newWidth > 0 && newWidth <= 200 && newHeight > 0 && newHeight <= 200) {
-                    mapWidth = newWidth;
-                    mapHeight = newHeight;
-                } else {
-                    JOptionPane.showMessageDialog(this, 
-                        "Dimensions must be between 1 and 200", 
-                        "Invalid Input", JOptionPane.WARNING_MESSAGE);
-                    mapWidth = 50;
-                    mapHeight = 50;
-                }
-            } catch (NumberFormatException e) {
+    // Create mini map panel
+    miniMapPanel = new MiniMapPanel();
+    
+    // Create layered pane to overlay minimap on scroll pane
+    JLayeredPane layeredPane = new JLayeredPane();
+    layeredPane.setLayout(new OverlayLayout(layeredPane));
+    
+    // Add scroll pane to bottom layer
+    scrollPane.setAlignmentX(0.0f);
+    scrollPane.setAlignmentY(0.0f);
+    layeredPane.add(scrollPane, JLayeredPane.DEFAULT_LAYER);
+    
+    // Create panel for minimap positioned at bottom right
+    JPanel minimapContainer = new JPanel(new BorderLayout());
+    minimapContainer.setOpaque(false);
+    minimapContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 10));
+    minimapContainer.add(miniMapPanel, BorderLayout.SOUTH);
+    
+    JPanel minimapWrapper = new JPanel(new BorderLayout());
+    minimapWrapper.setOpaque(false);
+    minimapWrapper.add(minimapContainer, BorderLayout.EAST);
+    minimapWrapper.setAlignmentX(0.0f);
+    minimapWrapper.setAlignmentY(0.0f);
+    layeredPane.add(minimapWrapper, JLayeredPane.PALETTE_LAYER);
+    
+    add(layeredPane, BorderLayout.CENTER);
+    
+    // Create control panel
+    JPanel controlPanel = new JPanel();
+    
+    // Create coordinate label
+    coordinateLabel = new JLabel("Tile: (0, 0)");
+    coordinateLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+    coordinateLabel.setFont(new Font("Monospaced", Font.BOLD, 12));
+    
+    JButton walkableBtn = new JButton("Walkable (0)");
+    walkableBtn.setBackground(Color.GREEN);
+    walkableBtn.addActionListener(e -> currentTile = 0);
+    
+    JButton solidBtn = new JButton("Solid (1)");
+    solidBtn.setBackground(Color.RED);
+    solidBtn.addActionListener(e -> currentTile = 1);
+    
+    JButton loadImageBtn = new JButton("Load Reference Image");
+    loadImageBtn.addActionListener(e -> loadReferenceImage());
+    
+    JButton clearImageBtn = new JButton("Clear Reference");
+    clearImageBtn.addActionListener(e -> {
+        referenceImage = null;
+        mapPanel.repaint();
+        miniMapPanel.repaint();
+    });
+    
+    JButton saveBtn = new JButton("Save Map");
+    saveBtn.addActionListener(e -> saveMap());
+    
+    JButton loadBtn = new JButton("Load Map");
+    loadBtn.addActionListener(e -> loadMap());
+    
+    JButton clearBtn = new JButton("Clear All");
+    clearBtn.addActionListener(e -> {
+        for (int i = 0; i < mapHeight; i++) {
+            for (int j = 0; j < mapWidth; j++) {
+                tileMap[i][j] = 0;
+            }
+        }
+        mapPanel.repaint();
+    });
+    
+    JButton resizeBtn = new JButton("Resize Map");
+    resizeBtn.addActionListener(e -> resizeMap());
+    
+    controlPanel.add(coordinateLabel);
+    controlPanel.add(walkableBtn);
+    controlPanel.add(solidBtn);
+    controlPanel.add(loadImageBtn);
+    controlPanel.add(clearImageBtn);
+    controlPanel.add(saveBtn);
+    controlPanel.add(loadBtn);
+    controlPanel.add(clearBtn);
+    controlPanel.add(resizeBtn);
+    
+    add(controlPanel, BorderLayout.SOUTH);
+    
+    pack();
+    setLocationRelativeTo(null);
+}
+
+private void showDimensionsDialog() {
+    JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
+    JTextField widthField = new JTextField(String.valueOf(mapWidth), 10);
+    JTextField heightField = new JTextField(String.valueOf(mapHeight), 10);
+    
+    panel.add(new JLabel("Map Width:"));
+    panel.add(widthField);
+    panel.add(new JLabel("Map Height:"));
+    panel.add(heightField);
+    
+    int result = JOptionPane.showConfirmDialog(this, panel, 
+        "Set Map Dimensions", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+    
+    if (result == JOptionPane.OK_OPTION) {
+        try {
+            int newWidth = Integer.parseInt(widthField.getText().trim());
+            int newHeight = Integer.parseInt(heightField.getText().trim());
+            
+            if (newWidth > 0 && newWidth <= 200 && newHeight > 0 && newHeight <= 200) {
+                mapWidth = newWidth;
+                mapHeight = newHeight;
+            } else {
                 JOptionPane.showMessageDialog(this, 
-                    "Invalid number format. Using default 50x50", 
+                    "Dimensions must be between 1 and 200", 
                     "Invalid Input", JOptionPane.WARNING_MESSAGE);
                 mapWidth = 50;
                 mapHeight = 50;
             }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid number format. Using default 50x50", 
+                "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            mapWidth = 50;
+            mapHeight = 50;
         }
     }
+}
+
+private void resizeMap() {
+    JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
+    JTextField widthField = new JTextField(String.valueOf(mapWidth), 10);
+    JTextField heightField = new JTextField(String.valueOf(mapHeight), 10);
     
-    private void resizeMap() {
-        JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
-        JTextField widthField = new JTextField(String.valueOf(mapWidth), 10);
-        JTextField heightField = new JTextField(String.valueOf(mapHeight), 10);
-        
-        panel.add(new JLabel("Map Width:"));
-        panel.add(widthField);
-        panel.add(new JLabel("Map Height:"));
-        panel.add(heightField);
-        
-        int result = JOptionPane.showConfirmDialog(this, panel, 
-            "Resize Map", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        
-        if (result == JOptionPane.OK_OPTION) {
-            try {
-                int newWidth = Integer.parseInt(widthField.getText().trim());
-                int newHeight = Integer.parseInt(heightField.getText().trim());
+    panel.add(new JLabel("Map Width:"));
+    panel.add(widthField);
+    panel.add(new JLabel("Map Height:"));
+    panel.add(heightField);
+    
+    int result = JOptionPane.showConfirmDialog(this, panel, 
+        "Resize Map", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+    
+    if (result == JOptionPane.OK_OPTION) {
+        try {
+            int newWidth = Integer.parseInt(widthField.getText().trim());
+            int newHeight = Integer.parseInt(heightField.getText().trim());
+            
+            if (newWidth > 0 && newWidth <= 200 && newHeight > 0 && newHeight <= 200) {
+                // Create new tile map with new dimensions
+                int[][] newTileMap = new int[newHeight][newWidth];
                 
-                if (newWidth > 0 && newWidth <= 200 && newHeight > 0 && newHeight <= 200) {
-                    // Create new tile map with new dimensions
-                    int[][] newTileMap = new int[newHeight][newWidth];
-                    
-                    // Copy existing data
-                    for (int i = 0; i < Math.min(mapHeight, newHeight); i++) {
-                        for (int j = 0; j < Math.min(mapWidth, newWidth); j++) {
-                            newTileMap[i][j] = tileMap[i][j];
-                        }
+                // Copy existing data
+                for (int i = 0; i < Math.min(mapHeight, newHeight); i++) {
+                    for (int j = 0; j < Math.min(mapWidth, newWidth); j++) {
+                        newTileMap[i][j] = tileMap[i][j];
                     }
-                    
-                    mapWidth = newWidth;
-                    mapHeight = newHeight;
-                    tileMap = newTileMap;
-                    
-                    // Update panel
-                    mapPanel.setPreferredSize(new Dimension(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE));
-                    mapPanel.revalidate();
-                    mapPanel.repaint();
-                    miniMapPanel.repaint();
-                    
-                    JOptionPane.showMessageDialog(this, "Map resized successfully!");
-                } else {
-                    JOptionPane.showMessageDialog(this, 
-                        "Dimensions must be between 1 and 200", 
-                        "Invalid Input", JOptionPane.WARNING_MESSAGE);
                 }
-            } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, 
-                    "Invalid number format", 
-                    "Invalid Input", JOptionPane.WARNING_MESSAGE);
-            }
-        }
-    }
-    
-    private void loadReferenceImage() {
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter(
-            "Image files", "jpg", "jpeg", "png", "gif", "bmp");
-        fileChooser.setFileFilter(filter);
-        
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            try {
-                referenceImage = ImageIO.read(fileChooser.getSelectedFile());
+                
+                mapWidth = newWidth;
+                mapHeight = newHeight;
+                tileMap = newTileMap;
+                
+                // Update panel
+                mapPanel.setPreferredSize(new Dimension(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE));
+                mapPanel.revalidate();
                 mapPanel.repaint();
                 miniMapPanel.repaint();
+                
+                JOptionPane.showMessageDialog(this, "Map resized successfully!");
+            } else {
                 JOptionPane.showMessageDialog(this, 
-                    "Reference image loaded! It will be displayed behind the grid.");
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error loading image: " + e.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                    "Dimensions must be between 1 and 200", 
+                    "Invalid Input", JOptionPane.WARNING_MESSAGE);
             }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, 
+                "Invalid number format", 
+                "Invalid Input", JOptionPane.WARNING_MESSAGE);
         }
     }
+}
+
+private void loadReferenceImage() {
+    JFileChooser fileChooser = new JFileChooser();
+    FileNameExtensionFilter filter = new FileNameExtensionFilter(
+        "Image files", "jpg", "jpeg", "png", "gif", "bmp");
+    fileChooser.setFileFilter(filter);
     
-    private void saveMap() {
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Text files", "txt");
-        fileChooser.setFileFilter(filter);
-        
-        int result = fileChooser.showSaveDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            if (!file.getName().endsWith(".txt")) {
-                file = new File(file.getAbsolutePath() + ".txt");
-            }
-            
-            try (PrintWriter writer = new PrintWriter(file)) {
-                // Write width and height as first line
-                writer.println(mapWidth + " " + mapHeight);
-                
-                // Write tile data
-                for (int i = 0; i < mapHeight; i++) {
-                    for (int j = 0; j < mapWidth; j++) {
-                        writer.print(tileMap[i][j]);
-                        if (j < mapWidth - 1) writer.print(" ");
-                    }
-                    writer.println();
-                }
-                JOptionPane.showMessageDialog(this, "Map saved successfully!");
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error saving map: " + e.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            }
+    int result = fileChooser.showOpenDialog(this);
+    if (result == JFileChooser.APPROVE_OPTION) {
+        try {
+            referenceImage = ImageIO.read(fileChooser.getSelectedFile());
+            mapPanel.repaint();
+            miniMapPanel.repaint();
+            JOptionPane.showMessageDialog(this, 
+                "Reference image loaded! It will be displayed behind the grid.");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, 
+                "Error loading image: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+}
+
+private void saveMap() {
+    JFileChooser fileChooser = new JFileChooser();
+    FileNameExtensionFilter filter = new FileNameExtensionFilter("Text files", "txt");
+    fileChooser.setFileFilter(filter);
     
-    private void loadMap() {
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Text files", "txt");
-        fileChooser.setFileFilter(filter);
+    int result = fileChooser.showSaveDialog(this);
+    if (result == JFileChooser.APPROVE_OPTION) {
+        File file = fileChooser.getSelectedFile();
+        if (!file.getName().endsWith(".txt")) {
+            file = new File(file.getAbsolutePath() + ".txt");
+        }
         
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            try (BufferedReader reader = new BufferedReader(
-                    new FileReader(fileChooser.getSelectedFile()))) {
-                
-                // Read width and height from first line
-                String firstLine = reader.readLine();
-                if (firstLine != null) {
-                    String[] dimensions = firstLine.trim().split("\\s+");
-                    int width = Integer.parseInt(dimensions[0]);
-                    int height = Integer.parseInt(dimensions[1]);
-                    
-                    // Resize map to match loaded dimensions
-                    mapWidth = width;
-                    mapHeight = height;
-                    tileMap = new int[mapHeight][mapWidth];
-                    
-                    // Read tile data
-                    String line;
-                    int row = 0;
-                    while ((line = reader.readLine()) != null && row < height) {
-                        String[] tokens = line.trim().split("\\s+");
-                        for (int col = 0; col < Math.min(tokens.length, width); col++) {
-                            tileMap[row][col] = Integer.parseInt(tokens[col]);
-                        }
-                        row++;
-                    }
-                    
-                    // Update panel
-                    mapPanel.setPreferredSize(new Dimension(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE));
-                    mapPanel.revalidate();
-                    mapPanel.repaint();
-                    miniMapPanel.repaint();
-                    
-                    JOptionPane.showMessageDialog(this, "Map loaded successfully!");
+        try (PrintWriter writer = new PrintWriter(file)) {
+            // Write width and height as first line
+            writer.println(mapWidth + " " + mapHeight);
+            
+            // Write tile data
+            for (int i = 0; i < mapHeight; i++) {
+                for (int j = 0; j < mapWidth; j++) {
+                    writer.print(tileMap[i][j]);
+                    if (j < mapWidth - 1) writer.print(" ");
                 }
-            } catch (IOException | NumberFormatException e) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error loading map: " + e.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                writer.println();
             }
+            JOptionPane.showMessageDialog(this, "Map saved successfully!");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, 
+                "Error saving map: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+}
+
+private void loadMap() {
+    JFileChooser fileChooser = new JFileChooser();
+    FileNameExtensionFilter filter = new FileNameExtensionFilter("Text files", "txt");
+    fileChooser.setFileFilter(filter);
     
-    private class MiniMapPanel extends JPanel {
-        private static final int MINIMAP_MAX_SIZE = 200;
-        private double scale;
-        
-        public MiniMapPanel() {
-            setPreferredSize(new Dimension(MINIMAP_MAX_SIZE + 10, MINIMAP_MAX_SIZE + 10));
-            setOpaque(true);
-            setBackground(new Color(255, 255, 255, 230));
-            setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+    int result = fileChooser.showOpenDialog(this);
+    if (result == JFileChooser.APPROVE_OPTION) {
+        try (BufferedReader reader = new BufferedReader(
+                new FileReader(fileChooser.getSelectedFile()))) {
             
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    handleMiniMapClick(e);
-                }
-            });
-            
-            addMouseMotionListener(new MouseAdapter() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    handleMiniMapClick(e);
-                }
-            });
-        }
-        
-        private void handleMiniMapClick(MouseEvent e) {
-            int miniWidth = Math.min(mapWidth, MINIMAP_MAX_SIZE);
-            int miniHeight = Math.min(mapHeight, MINIMAP_MAX_SIZE);
-            scale = Math.min((double) MINIMAP_MAX_SIZE / mapWidth, (double) MINIMAP_MAX_SIZE / mapHeight);
-            
-            int offsetX = (MINIMAP_MAX_SIZE - (int)(mapWidth * scale)) / 2 + 5;
-            int offsetY = (MINIMAP_MAX_SIZE - (int)(mapHeight * scale)) / 2 + 5;
-            
-            int clickX = e.getX() - offsetX;
-            int clickY = e.getY() - offsetY;
-            
-            if (clickX >= 0 && clickY >= 0) {
-                int mapX = (int)(clickX / scale * TILE_SIZE);
-                int mapY = (int)(clickY / scale * TILE_SIZE);
+            // Read width and height from first line
+            String firstLine = reader.readLine();
+            if (firstLine != null) {
+                String[] dimensions = firstLine.trim().split("\\s+");
+                int width = Integer.parseInt(dimensions[0]);
+                int height = Integer.parseInt(dimensions[1]);
                 
-                Rectangle viewRect = scrollPane.getViewport().getViewRect();
-                int centerX = mapX - viewRect.width / 2;
-                int centerY = mapY - viewRect.height / 2;
+                // Resize map to match loaded dimensions
+                mapWidth = width;
+                mapHeight = height;
+                tileMap = new int[mapHeight][mapWidth];
                 
-                centerX = Math.max(0, Math.min(centerX, mapPanel.getWidth() - viewRect.width));
-                centerY = Math.max(0, Math.min(centerY, mapPanel.getHeight() - viewRect.height));
-                
-                scrollPane.getViewport().setViewPosition(new Point(centerX, centerY));
-            }
-        }
-        
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) g;
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            
-            scale = Math.min((double) MINIMAP_MAX_SIZE / mapWidth, (double) MINIMAP_MAX_SIZE / mapHeight);
-            int miniWidth = (int)(mapWidth * scale);
-            int miniHeight = (int)(mapHeight * scale);
-            
-            int offsetX = (MINIMAP_MAX_SIZE - miniWidth) / 2 + 5;
-            int offsetY = (MINIMAP_MAX_SIZE - miniHeight) / 2 + 5;
-            
-            // Draw reference image if loaded
-            if (referenceImage != null) {
-                g2d.drawImage(referenceImage, offsetX, offsetY, miniWidth, miniHeight, this);
-            }
-            
-            // Draw tiles with semi-transparency so reference image shows through
-            for (int row = 0; row < mapHeight; row++) {
-                for (int col = 0; col < mapWidth; col++) {
-                    int x = offsetX + (int)(col * scale);
-                    int y = offsetY + (int)(row * scale);
-                    int w = Math.max(1, (int)scale);
-                    int h = Math.max(1, (int)scale);
-                    
-                    if (tileMap[row][col] == 0) {
-                        g2d.setColor(new Color(0, 255, 0, 100));
-                    } else {
-                        g2d.setColor(new Color(255, 0, 0, 150));
+                // Read tile data
+                String line;
+                int row = 0;
+                while ((line = reader.readLine()) != null && row < height) {
+                    String[] tokens = line.trim().split("\\s+");
+                    for (int col = 0; col < Math.min(tokens.length, width); col++) {
+                        tileMap[row][col] = Integer.parseInt(tokens[col]);
                     }
-                    g2d.fillRect(x, y, w, h);
+                    row++;
                 }
+                
+                // Update panel
+                mapPanel.setPreferredSize(new Dimension(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE));
+                mapPanel.revalidate();
+                mapPanel.repaint();
+                miniMapPanel.repaint();
+                
+                JOptionPane.showMessageDialog(this, "Map loaded successfully!");
             }
-            
-            // Remove grid lines from minimap
-            /*
-            // Draw grid lines
-            g2d.setColor(new Color(0, 0, 0, 150));
-            g2d.setStroke(new BasicStroke(1));
-            
-            // Vertical lines
-            for (int col = 0; col <= mapWidth; col++) {
-                int x = offsetX + (int)(col * scale);
-                g2d.drawLine(x, offsetY, x, offsetY + miniHeight);
-            }
-            
-            // Horizontal lines
-            for (int row = 0; row <= mapHeight; row++) {
-                int y = offsetY + (int)(row * scale);
-                g2d.drawLine(offsetX, y, offsetX + miniWidth, y);
-            }
-            */
-            
-            // Draw viewport rectangle
-            Rectangle viewRect = scrollPane.getViewport().getViewRect();
-            int viewX = offsetX + (int)(viewRect.x / TILE_SIZE * scale);
-            int viewY = offsetY + (int)(viewRect.y / TILE_SIZE * scale);
-            int viewW = (int)(viewRect.width / TILE_SIZE * scale);
-            int viewH = (int)(viewRect.height / TILE_SIZE * scale);
-            
-            g2d.setColor(new Color(0, 0, 255, 100));
-            g2d.fillRect(viewX, viewY, viewW, viewH);
-            g2d.setColor(Color.BLUE);
-            g2d.setStroke(new BasicStroke(2));
-            g2d.drawRect(viewX, viewY, viewW, viewH);
+        } catch (IOException | NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, 
+                "Error loading map: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+}
+
+private class MiniMapPanel extends JPanel {
+    private static final int MINIMAP_MAX_SIZE = 200;
+    private double scale;
     
-    private class MapPanel extends JPanel {
-        public MapPanel() {
-            setPreferredSize(new Dimension(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE));
-            
-            MouseAdapter mouseAdapter = new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    handleMouseEvent(e);
-                }
-                
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    handleMouseEvent(e);
-                }
-                
-                private void handleMouseEvent(MouseEvent e) {
-                    int col = e.getX() / TILE_SIZE;
-                    int row = e.getY() / TILE_SIZE;
-                    
-                    if (row >= 0 && row < mapHeight && col >= 0 && col < mapWidth) {
-                        tileMap[row][col] = currentTile;
-                        coordinateLabel.setText(String.format("Tile: (%d, %d)", col, row));
-                        repaint();
-                        miniMapPanel.repaint();
-                    }
-                }
-            };
-            
-            addMouseListener(mouseAdapter);
-            addMouseMotionListener(mouseAdapter);
-        }
+    public MiniMapPanel() {
+        setPreferredSize(new Dimension(MINIMAP_MAX_SIZE + 10, MINIMAP_MAX_SIZE + 10));
+        setOpaque(true);
+        setBackground(new Color(255, 255, 255, 230));
+        setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            
-            // Draw reference image if loaded
-            if (referenceImage != null) {
-                g.drawImage(referenceImage, 0, 0, 
-                    mapWidth * TILE_SIZE, mapHeight * TILE_SIZE, this);
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                handleMiniMapClick(e);
             }
-            
-            // Draw tiles
-            for (int row = 0; row < mapHeight; row++) {
-                for (int col = 0; col < mapWidth; col++) {
-                    int x = col * TILE_SIZE;
-                    int y = row * TILE_SIZE;
-                    
-                    if (tileMap[row][col] == 0) {
-                        g.setColor(new Color(0, 255, 0, 128)); // Semi-transparent green
-                    } else {
-                        g.setColor(new Color(255, 0, 0, 128)); // Semi-transparent red
-                    }
-                    g.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                }
+        });
+        
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                handleMiniMapClick(e);
             }
-            
-            // Draw grid
-            g.setColor(Color.BLACK);
-            for (int i = 0; i <= mapHeight; i++) {
-                g.drawLine(0, i * TILE_SIZE, mapWidth * TILE_SIZE, i * TILE_SIZE);
-            }
-            for (int i = 0; i <= mapWidth; i++) {
-                g.drawLine(i * TILE_SIZE, 0, i * TILE_SIZE, mapHeight * TILE_SIZE);
-            }
-        }
-    }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new TileMapMaker().setVisible(true);
         });
     }
+    
+    private void handleMiniMapClick(MouseEvent e) {
+        int miniWidth = Math.min(mapWidth, MINIMAP_MAX_SIZE);
+        int miniHeight = Math.min(mapHeight, MINIMAP_MAX_SIZE);
+        scale = Math.min((double) MINIMAP_MAX_SIZE / mapWidth, (double) MINIMAP_MAX_SIZE / mapHeight);
+        
+        int offsetX = (MINIMAP_MAX_SIZE - (int)(mapWidth * scale)) / 2 + 5;
+        int offsetY = (MINIMAP_MAX_SIZE - (int)(mapHeight * scale)) / 2 + 5;
+        
+        int clickX = e.getX() - offsetX;
+        int clickY = e.getY() - offsetY;
+        
+        if (clickX >= 0 && clickY >= 0) {
+            int mapX = (int)(clickX / scale * TILE_SIZE);
+            int mapY = (int)(clickY / scale * TILE_SIZE);
+            
+            Rectangle viewRect = scrollPane.getViewport().getViewRect();
+            int centerX = mapX - viewRect.width / 2;
+            int centerY = mapY - viewRect.height / 2;
+            
+            centerX = Math.max(0, Math.min(centerX, mapPanel.getWidth() - viewRect.width));
+            centerY = Math.max(0, Math.min(centerY, mapPanel.getHeight() - viewRect.height));
+            
+            scrollPane.getViewport().setViewPosition(new Point(centerX, centerY));
+        }
+    }
+    
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        scale = Math.min((double) MINIMAP_MAX_SIZE / mapWidth, (double) MINIMAP_MAX_SIZE / mapHeight);
+        int miniWidth = (int)(mapWidth * scale);
+        int miniHeight = (int)(mapHeight * scale);
+        
+        int offsetX = (MINIMAP_MAX_SIZE - miniWidth) / 2 + 5;
+        int offsetY = (MINIMAP_MAX_SIZE - miniHeight) / 2 + 5;
+        
+        // Draw reference image if loaded
+        if (referenceImage != null) {
+            g2d.drawImage(referenceImage, offsetX, offsetY, miniWidth, miniHeight, this);
+        }
+        
+        // Draw tiles with semi-transparency so reference image shows through
+        for (int row = 0; row < mapHeight; row++) {
+            for (int col = 0; col < mapWidth; col++) {
+                int x = offsetX + (int)(col * scale);
+                int y = offsetY + (int)(row * scale);
+                int w = Math.max(1, (int)scale);
+                int h = Math.max(1, (int)scale);
+                
+                if (tileMap[row][col] == 0) {
+                    g2d.setColor(new Color(0, 255, 0, 100));
+                } else {
+                    g2d.setColor(new Color(255, 0, 0, 150));
+                }
+                g2d.fillRect(x, y, w, h);
+            }
+        }
+        
+        // Draw viewport rectangle
+        Rectangle viewRect = scrollPane.getViewport().getViewRect();
+        int viewX = offsetX + (int)(viewRect.x / TILE_SIZE * scale);
+        int viewY = offsetY + (int)(viewRect.y / TILE_SIZE * scale);
+        int viewW = (int)(viewRect.width / TILE_SIZE * scale);
+        int viewH = (int)(viewRect.height / TILE_SIZE * scale);
+        
+        g2d.setColor(new Color(0, 0, 255, 100));
+        g2d.fillRect(viewX, viewY, viewW, viewH);
+        g2d.setColor(Color.BLUE);
+        g2d.setStroke(new BasicStroke(2));
+        g2d.drawRect(viewX, viewY, viewW, viewH);
+    }
+}
+
+private class MapPanel extends JPanel {
+    public MapPanel() {
+        setPreferredSize(new Dimension(mapWidth * TILE_SIZE, mapHeight * TILE_SIZE));
+        
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handleMouseEvent(e);
+            }
+            
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                handleMouseEvent(e);
+            }
+            
+            private void handleMouseEvent(MouseEvent e) {
+                int col = e.getX() / TILE_SIZE;
+                int row = e.getY() / TILE_SIZE;
+                
+                if (row >= 0 && row < mapHeight && col >= 0 && col < mapWidth) {
+                    tileMap[row][col] = currentTile;
+                    coordinateLabel.setText(String.format("Tile: (%d, %d)", col, row));
+                    repaint();
+                    miniMapPanel.repaint();
+                }
+            }
+        };
+        
+        addMouseListener(mouseAdapter);
+        addMouseMotionListener(mouseAdapter);
+    }
+    
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        
+        // Draw reference image if loaded
+        if (referenceImage != null) {
+            g.drawImage(referenceImage, 0, 0, 
+                mapWidth * TILE_SIZE, mapHeight * TILE_SIZE, this);
+        }
+        
+        // Draw tiles
+        for (int row = 0; row < mapHeight; row++) {
+            for (int col = 0; col < mapWidth; col++) {
+                int x = col * TILE_SIZE;
+                int y = row * TILE_SIZE;
+                
+                if (tileMap[row][col] == 0) {
+                    g.setColor(new Color(0, 255, 0, 128)); // Semi-transparent green
+                } else {
+                    g.setColor(new Color(255, 0, 0, 128)); // Semi-transparent red
+                }
+                g.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+            }
+        }
+        
+        // Draw grid
+        g.setColor(Color.BLACK);
+        for (int i = 0; i <= mapHeight; i++) {
+            g.drawLine(0, i * TILE_SIZE, mapWidth * TILE_SIZE, i * TILE_SIZE);
+        }
+        for (int i = 0; i <= mapWidth; i++) {
+            g.drawLine(i * TILE_SIZE, 0, i * TILE_SIZE, mapHeight * TILE_SIZE);
+        }
+    }
+}
+
+public static void main(String[] args) {
+    SwingUtilities.invokeLater(() -> {
+        new TileMapMaker().setVisible(true);
+    });
+}
+```
+
 }
