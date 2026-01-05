@@ -124,6 +124,7 @@ public class Renderer {
     // ===================================================================
     // LAYER 4: UI_WORLD (world-space UI elements)
     // ===================================================================
+ // Update the renderWorldUI method to include XP bar and level display:
     private void renderWorldUI(Graphics2D g, float cameraX, float cameraY) {
         // Collect entities for UI rendering (same depth sorting)
         List<RenderObject> renderObjects = new ArrayList<>();
@@ -173,11 +174,25 @@ public class Renderer {
                     drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
                 }
                 
-                // Stamina bar (player only)
+                // Player-specific UI
                 if (entity.getType() == EntityType.PLAYER) {
+                    // Stamina bar
                     StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
                     if (stats != null && staminaBar != null) {
                         drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
+                    }
+                    
+                    // ★ NEW: XP bar
+                    Experience exp = entity.getComponent(Experience.class);
+                    if (exp != null) {
+                        drawXPBar(g, spriteScreenX, spriteScreenY, exp);
+                        drawLevelBadge(g, spriteScreenX, spriteScreenY, exp.level);
+                    }
+                    
+                    // ★ NEW: Level-up effect
+                    LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
+                    if (levelUpEffect != null && levelUpEffect.active) {
+                        drawLevelUpEffect(g, spriteScreenX, spriteScreenY, levelUpEffect);
                     }
                 }
             }
@@ -507,6 +522,110 @@ public class Renderer {
         g.drawRect(barX, barY, bar.width, bar.height);
         
         g.setStroke(originalStroke);
+    }
+    
+    /**
+     * Draw XP bar (similar to health/stamina bar)
+     */
+    private void drawXPBar(Graphics2D g, int spriteX, int spriteY, Experience exp) {
+        Stroke originalStroke = g.getStroke();
+        
+        int barWidth = 40;
+        int barHeight = 3;
+        int offsetY = 52; // Below stamina bar
+        
+        int barX = spriteX - barWidth / 2;
+        int barY = spriteY + offsetY;
+        
+        float pct = exp.getXPProgress();
+        int filledWidth = (int)(barWidth * pct);
+        
+        // Background
+        g.setColor(new Color(40, 40, 40));
+        g.fillRect(barX, barY, barWidth, barHeight);
+        
+        // XP fill (gold color)
+        g.setColor(new Color(255, 215, 0));
+        g.fillRect(barX, barY, filledWidth, barHeight);
+        
+        // Border
+        g.setColor(Color.BLACK);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barX, barY, barWidth, barHeight);
+        
+        g.setStroke(originalStroke);
+    }
+
+    /**
+     * Draw player level badge
+     */
+    private void drawLevelBadge(Graphics2D g, int spriteX, int spriteY, int level) {
+        Font originalFont = g.getFont();
+        Font levelFont = new Font("Arial", Font.BOLD, 10);
+        g.setFont(levelFont);
+        
+        String levelText = "Lv" + level;
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(levelText);
+        
+        int badgeX = spriteX - 25;
+        int badgeY = spriteY - 35;
+        
+        // Badge background (circle)
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillOval(badgeX - 12, badgeY - 8, 24, 16);
+        
+        // Badge border
+        g.setColor(new Color(255, 215, 0));
+        g.setStroke(new BasicStroke(2));
+        g.drawOval(badgeX - 12, badgeY - 8, 24, 16);
+        
+        // Level text
+        g.setColor(Color.WHITE);
+        g.drawString(levelText, badgeX - textWidth/2, badgeY + 4);
+        
+        g.setFont(originalFont);
+    }
+
+    /**
+     * Draw level-up effect (glowing aura)
+     */
+    private void drawLevelUpEffect(Graphics2D g, int spriteX, int spriteY, LevelUpEffect effect) {
+        if (!effect.active) return;
+        
+        float alpha = effect.getAlpha();
+        int alphaVal = (int)(alpha * 200);
+        
+        Font originalFont = g.getFont();
+        Font levelUpFont = new Font("Arial", Font.BOLD, 20);
+        g.setFont(levelUpFont);
+        
+        // Expanding circle effect
+        int radius = (int)(30 + (1 - alpha) * 20);
+        g.setColor(new Color(255, 255, 0, alphaVal / 2));
+        g.fillOval(spriteX - radius, spriteY - radius, radius * 2, radius * 2);
+        
+        // Outer glow
+        g.setColor(new Color(255, 215, 0, alphaVal));
+        g.setStroke(new BasicStroke(3));
+        g.drawOval(spriteX - radius, spriteY - radius, radius * 2, radius * 2);
+        
+        // "LEVEL UP!" text
+        String text = "LEVEL " + effect.newLevel;
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        
+        int textY = spriteY - 50 - (int)((1 - alpha) * 20); // Floats up
+        
+        // Shadow
+        g.setColor(new Color(0, 0, 0, alphaVal));
+        g.drawString(text, spriteX - textWidth/2 + 2, textY + 2);
+        
+        // Text
+        g.setColor(new Color(255, 215, 0, alphaVal));
+        g.drawString(text, spriteX - textWidth/2, textY);
+        
+        g.setFont(originalFont);
     }
     
     private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {

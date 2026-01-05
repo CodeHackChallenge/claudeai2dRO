@@ -6,7 +6,7 @@ public class EntityFactory {
     
     /**
      * Create a player entity
-     */
+     
     public static Entity createPlayer(float x, float y) {
         Entity player = new Entity("Player", EntityType.PLAYER);
         
@@ -23,7 +23,56 @@ public class EntityFactory {
         player.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW
         
         return player;
-    }
+    } 
+	/**
+	 * Create a player entity with level system
+	 */
+	public static Entity createPlayer(float x, float y) {
+	    Entity player = new Entity("Player", EntityType.PLAYER);
+	    
+	    player.addComponent(new Position(x, y));
+	    player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
+	    player.addComponent(new Movement(100f, 200f));
+	    
+	    // ★ LEVEL 1 BASE STATS: HP=100, Attack=10, Defense=2, Accuracy=0, Stamina=500
+	    Stats stats = new Stats(100, 10, 2, 0, 500f);
+	    player.addComponent(stats);
+	    
+	    // ★ ADD EXPERIENCE COMPONENT
+	    Experience exp = new Experience();
+	    // Customize stat growth per level
+	    exp.hpGrowth = 10;      // +10 HP per level
+	    exp.attackGrowth = 2;   // +2 Attack per level
+	    exp.defenseGrowth = 1;  // +1 Defense per level
+	    exp.accGrowth = 1;      // +1 Accuracy per level
+	    player.addComponent(exp);
+	    
+	    // ★ APPLY LEVEL 1 STATS (calculates maxHp, attack, etc.)
+	    stats.applyLevelStats(exp);
+	    
+	    // Combat system
+	    player.addComponent(new Combat(1.1f, 0.15f, 0.05f));  // 1.1s cooldown, 15% crit, 5% evasion
+	    
+	    // UI Components
+	    player.addComponent(new HealthBar(40, 4, 40));
+	    player.addComponent(new StaminaBar(40, 4, 46));
+	    player.addComponent(new XPBar(40, 3, 52));  // ★ NEW: XP bar
+	    
+	    // Collision and movement
+	    player.addComponent(new CollisionBox(-10, -14, 22, 44));
+	    player.addComponent(new Path());
+	    player.addComponent(new TargetIndicator()); 
+	    
+	    // Rendering
+	    player.addComponent(new Renderable(RenderLayer.ENTITIES));
+	    
+	    // ★ NEW: Level-up visual effect
+	    player.addComponent(new LevelUpEffect());
+	    
+	    return player;
+	}
+	
+	
     ///sprites/goblin_dark.png
     /**
      * Create a monster entity

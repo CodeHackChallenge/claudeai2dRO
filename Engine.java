@@ -269,6 +269,84 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             }
             System.out.println("======================\n");
         }
+        
+     // Add these to the keyPressed method in Engine.java
+
+     // Add XP for testing (press X)
+     if (e.getKeyCode() == KeyEvent.VK_X) {
+         Entity player = gameState.getPlayer();
+         Experience exp = player.getComponent(Experience.class);
+         Stats stats = player.getComponent(Stats.class);
+         
+         if (exp != null && stats != null) {
+             // Add 100 XP for testing
+             int xpGain = 100;
+             System.out.println("DEBUG: Adding " + xpGain + " XP");
+             
+             int levelsGained = exp.addExperience(xpGain);
+             
+             if (levelsGained > 0) {
+                 stats.applyLevelStats(exp);
+                 
+                 LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
+                 if (levelUpEffect != null) {
+                     levelUpEffect.trigger(exp.level);
+                 }
+                 
+                 Position pos = player.getComponent(Position.class);
+                 if (pos != null) {
+                     DamageText levelText = new DamageText(
+                         "LEVEL UP! " + exp.level,
+                         DamageText.Type.HEAL,
+                         pos.x,
+                         pos.y - 40
+                     );
+                     gameState.addDamageText(levelText);
+                 }
+                 
+                 System.out.println("LEVEL UP to " + exp.level + "!");
+                 System.out.println("HP: " + stats.maxHp + " | ATK: " + stats.attack + 
+                                  " | DEF: " + stats.defense + " | ACC: " + stats.accuracy);
+             }
+             
+             System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel);
+         }
+     }
+
+     // Show stats (press S)
+     if (e.getKeyCode() == KeyEvent.VK_S) {
+         Entity player = gameState.getPlayer();
+         Experience exp = player.getComponent(Experience.class);
+         Stats stats = player.getComponent(Stats.class);
+         
+         if (exp != null && stats != null) {
+             System.out.println("\n═══════════════════════════════");
+             System.out.println("       PLAYER STATS");
+             System.out.println("═══════════════════════════════");
+             System.out.println("Level:      " + exp.level);
+             System.out.println("XP:         " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
+                              " (" + (int)(exp.getXPProgress() * 100) + "%)");
+             System.out.println("───────────────────────────────");
+             System.out.println("HP:         " + stats.hp + "/" + stats.maxHp);
+             System.out.println("Stamina:    " + (int)stats.stamina + "/" + (int)stats.maxStamina);
+             System.out.println("Attack:     " + stats.attack);
+             System.out.println("Defense:    " + stats.defense);
+             System.out.println("Accuracy:   " + stats.accuracy);
+             System.out.println("Evasion:    " + stats.evasion);
+             System.out.println("───────────────────────────────");
+             System.out.println("Magic ATK:  " + stats.magicAttack);
+             System.out.println("Magic DEF:  " + stats.magicDefense);
+             System.out.println("───────────────────────────────");
+             System.out.println("Fire Res:   " + stats.fireResistance + "%");
+             System.out.println("Light Res:  " + stats.lightningResistance + "%");
+             System.out.println("Poison Res: " + stats.poisonResistance + "%");
+             System.out.println("───────────────────────────────");
+             System.out.println("Silence:    " + stats.silenceResistance + "%");
+             System.out.println("Blind:      " + stats.blindResistance + "%");
+             System.out.println("Curse:      " + stats.curseResistance + "%");
+             System.out.println("═══════════════════════════════\n");
+         }
+     }
     }
     
     public boolean isDebugMode() {

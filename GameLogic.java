@@ -41,6 +41,13 @@ public class GameLogic {
             if (indicator != null) {
                 indicator.update(delta);
             }
+            
+            // Add to the update method in GameLogic (inside the entity loop):
+            // Update level-up effect
+            LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
+            if (levelUpEffect != null) {
+                levelUpEffect.update(delta);
+            }
         }
         
         state.updateDamageTexts(delta);
@@ -79,7 +86,7 @@ public class GameLogic {
             playerCombat.startAttack(target);
         } else {
             // Out of range - will path to target in update loop
-            System.out.println("Moving to attack range...");
+           // System.out.println("Moving to attack range...");
         }
     }
     /*
@@ -137,7 +144,7 @@ public class GameLogic {
         float evasionChance = targetCombat != null ? targetCombat.evasionChance : 0f;
         
         if (evasionRoll < evasionChance) {
-            System.out.println(attacker.getName() + " attacks " + target.getName() + " - MISS!");
+            //System.out.println(attacker.getName() + " attacks " + target.getName() + " - MISS!");
             DamageText missText = new DamageText("MISS", DamageText.Type.MISS, targetPos.x, targetPos.y - 30);
             state.addDamageText(missText);
             return;
@@ -166,7 +173,7 @@ public class GameLogic {
         
         // Log
         String hitType = isCrit ? " - CRITICAL HIT!" : "";
-        System.out.println(attacker.getName() + " attacks " + target.getName() + " for " + baseDamage + " damage" + hitType);
+        //System.out.println(attacker.getName() + " attacks " + target.getName() + " for " + baseDamage + " damage" + hitType);
         
         // Spawn damage text
         DamageText.Type textType = isCrit ? DamageText.Type.CRITICAL : DamageText.Type.NORMAL;
@@ -498,27 +505,27 @@ Time 0.5s: Progress = 100%
 	    }
 	    
 	    // Debug output
-	    System.out.println(monster.getName() + " victory idle: " + ai.victoryIdleTimer + "/" + ai.victoryIdleDuration);
+	    //System.out.println(monster.getName() + " victory idle: " + ai.victoryIdleTimer + "/" + ai.victoryIdleDuration);
 	    
 	    // After timer expires, return to patrolling
 	    if (ai.victoryIdleTimer >= ai.victoryIdleDuration) {
-	        System.out.println(monster.getName() + " victory timer complete! Transitioning...");
+	        //System.out.println(monster.getName() + " victory timer complete! Transitioning...");
 	        
 	        Position monsterPos = monster.getComponent(Position.class);
 	        if (monsterPos != null) {
 	            float distFromHome = distance(monsterPos.x, monsterPos.y, ai.homeX, ai.homeY);
 	            
-	            System.out.println("  Distance from home: " + distFromHome + " (roam radius: " + ai.roamRadius + ")");
+	            //System.out.println("  Distance from home: " + distFromHome + " (roam radius: " + ai.roamRadius + ")");
 	            
 	            if (distFromHome <= ai.roamRadius * 1.2f) {
-	                System.out.println("  -> Transitioning to IDLE");
+	                //System.out.println("  -> Transitioning to IDLE");
 	                transitionAIState(monster, ai, AI.State.IDLE);
 	            } else {
-	                System.out.println("  -> Transitioning to RETURNING");
+	                //System.out.println("  -> Transitioning to RETURNING");
 	                transitionAIState(monster, ai, AI.State.RETURNING);
 	            }
 	        } else {
-	            System.out.println("  -> No position, transitioning to IDLE");
+	            //System.out.println("  -> No position, transitioning to IDLE");
 	            transitionAIState(monster, ai, AI.State.IDLE);
 	        }
 	    }
@@ -529,7 +536,7 @@ Time 0.5s: Progress = 100%
 	private void transitionAIState(Entity entity, AI ai, AI.State newState) {
 	    if (ai.currentState == newState) return;
 	    
-	    System.out.println(entity.getName() + " transitioning: " + ai.currentState + " -> " + newState);
+	    //System.out.println(entity.getName() + " transitioning: " + ai.currentState + " -> " + newState);
 	    
 	    AI.State oldState = ai.currentState;
 	    ai.currentState = newState;
@@ -544,7 +551,7 @@ Time 0.5s: Progress = 100%
 	        // ⭐ Clear haste when leaving RETURNING state
 	        if (oldState == AI.State.RETURNING && newState != AI.State.RETURNING) {
 	            movement.setHaste(false);
-	            System.out.println("  Haste removed");
+	            //System.out.println("  Haste removed");
 	        }
 	    }
 	    if (path != null) {
@@ -560,7 +567,7 @@ Time 0.5s: Progress = 100%
 	        case VICTORY_IDLE:
 	            ai.victoryIdleTimer = 0;
 	            ai.target = null;
-	            System.out.println("  Victory idle timer reset to 0");
+	            //System.out.println("  Victory idle timer reset to 0");
 	            break;
 	        case RETURNING:
 	            ai.target = null;
@@ -722,7 +729,7 @@ Time 0.5s: Progress = 100%
         float distFromHome = distance(position.x, position.y, ai.homeX, ai.homeY);
         if (distFromHome > ai.returnThreshold) {
             transitionAIState(monster, ai, AI.State.RETURNING);
-            System.out.println(monster.getName() + " leash break - too far from home!");
+            //System.out.println(monster.getName() + " leash break - too far from home!");
             return;
         }
         
@@ -730,7 +737,7 @@ Time 0.5s: Progress = 100%
         float distToPlayer = distance(position.x, position.y, playerPos.x, playerPos.y);
         if (distToPlayer > ai.detectionRange * TileMap.TILE_SIZE * 1.5f) {
             transitionAIState(monster, ai, AI.State.RETURNING);
-            System.out.println(monster.getName() + " player too far - returning home");
+            //System.out.println(monster.getName() + " player too far - returning home");
             return;
         }
         
@@ -755,7 +762,7 @@ Time 0.5s: Progress = 100%
             } else {
                 // Can't find path to player, return home
                 transitionAIState(monster, ai, AI.State.RETURNING);
-                System.out.println(monster.getName() + " can't path to player - returning");
+                //System.out.println(monster.getName() + " can't path to player - returning");
             }
         }
         
@@ -774,7 +781,7 @@ Time 0.5s: Progress = 100%
         // ⭐ Apply haste effect when returning
         if (!movement.isHasted) {
             movement.setHaste(true);
-            System.out.println(monster.getName() + " has haste! (3x speed)");
+            //System.out.println(monster.getName() + " has haste! (3x speed)");
         }
         
         // Check if back home
@@ -788,7 +795,7 @@ Time 0.5s: Progress = 100%
             if (stats != null && stats.hp < stats.maxHp) {
                 int healAmount = stats.maxHp - stats.hp;
                 stats.hp = stats.maxHp;
-                System.out.println(monster.getName() + " healed to full! (+" + healAmount + " HP)");
+               // System.out.println(monster.getName() + " healed to full! (+" + healAmount + " HP)");
                 
                 DamageText healText = new DamageText("+" + healAmount, DamageText.Type.HEAL, position.x, position.y - 30);
                 state.addDamageText(healText);
@@ -817,7 +824,7 @@ Time 0.5s: Progress = 100%
                 if (stats != null && stats.hp < stats.maxHp) {
                     int healAmount = stats.maxHp - stats.hp;
                     stats.hp = stats.maxHp;
-                    System.out.println(monster.getName() + " healed to full! (+" + healAmount + " HP)");
+                    //System.out.println(monster.getName() + " healed to full! (+" + healAmount + " HP)");
                     
                     DamageText healText = new DamageText("+" + healAmount, DamageText.Type.HEAL, position.x, position.y - 30);
                     state.addDamageText(healText);
@@ -833,7 +840,7 @@ Time 0.5s: Progress = 100%
                 path.setPath(foundPath);
                 movement.isRunning = false;
             } else {
-                System.out.println(monster.getName() + " couldn't find path home, going idle");
+                //System.out.println(monster.getName() + " couldn't find path home, going idle");
                 movement.setHaste(false);
                 transitionAIState(monster, ai, AI.State.IDLE);
             }
@@ -933,7 +940,7 @@ Time 0.5s: Progress = 100%
             }
         }
     }
-    
+    /*
     private void handleMonsterDeath(Entity monster, Sprite sprite) {
         System.out.println(monster.getName() + " has died!");
         
@@ -975,6 +982,7 @@ Time 0.5s: Progress = 100%
             sprite.setAnimation(Sprite.ANIM_DEAD);
         }
     }
+    */
     /**
      * Detect player using distance check (can add dot product later for FOV)
      */
@@ -1279,9 +1287,9 @@ Time 0.5s: Progress = 100%
                 indicator.setTarget(worldX, worldY);
             }
             
-            System.out.println("Path found with " + foundPath.size() + " waypoints");
+            //System.out.println("Path found with " + foundPath.size() + " waypoints");
         } else {
-            System.out.println("No path to destination!");
+           // System.out.println("No path to destination!");
             path.clear();
             movement.stopMoving();
             
@@ -1293,6 +1301,130 @@ Time 0.5s: Progress = 100%
     public void setCameraLerpSpeed(float speed) {
         this.cameraLerpSpeed = speed;
     }
+    
+ // Add these methods to GameLogic.java
+
+    /**
+     * Calculate XP reward for killing a monster
+     * Formula: Base XP = monsterHP * 0.5 + monsterAttack * 2
+     */
+    private int calculateMonsterXP(Entity monster) {
+        Stats stats = monster.getComponent(Stats.class);
+        if (stats == null) return 10; // Default XP
+        
+        // Base XP calculation
+        int baseXP = (int)(stats.maxHp * 0.5f + stats.attack * 2);
+        
+        // Boss monsters give bonus XP
+        String monsterType = monster.getName();
+        if (monsterType.contains("Boss")) {
+            baseXP *= 3; // Bosses give 3x XP
+        }
+        
+        return Math.max(10, baseXP); // Minimum 10 XP
+    }
+
+    /**
+     * Award XP to player and handle level-ups
+     */
+    private void awardExperience(Entity player, int xpAmount) {
+        Experience exp = player.getComponent(Experience.class);
+        Stats stats = player.getComponent(Stats.class);
+        LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
+        
+        if (exp == null || stats == null) return;
+        
+        System.out.println("Gained " + xpAmount + " XP!");
+        
+        // Add XP and check for level-ups
+        int levelsGained = exp.addExperience(xpAmount);
+        
+        if (levelsGained > 0) {
+            // Recalculate stats with new level
+            stats.applyLevelStats(exp);
+            
+            // Trigger level-up effect
+            if (levelUpEffect != null) {
+                levelUpEffect.trigger(exp.level);
+            }
+            
+            // Spawn level-up text
+            Position pos = player.getComponent(Position.class);
+            if (pos != null) {
+                DamageText levelText = new DamageText(
+                    "LEVEL UP! " + exp.level,
+                    DamageText.Type.HEAL,
+                    pos.x,
+                    pos.y - 40
+                );
+                state.addDamageText(levelText);
+            }
+            
+            System.out.println("╔════════════════════════════════╗");
+            System.out.println("║        LEVEL UP!               ║");
+            System.out.println("╠════════════════════════════════╣");
+            System.out.println("║ New Level: " + exp.level + "                  ║");
+            System.out.println("║ HP:        " + stats.maxHp + "                ║");
+            System.out.println("║ Attack:    " + stats.attack + "                 ║");
+            System.out.println("║ Defense:   " + stats.defense + "                  ║");
+            System.out.println("║ Accuracy:  " + stats.accuracy + "                  ║");
+            System.out.println("╚════════════════════════════════╝");
+        }
+        
+        // Show XP progress
+        System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
+                           " (" + (int)(exp.getXPProgress() * 100) + "%)");
+    }
+
+    // Update the handleMonsterDeath method to award XP:
+    private void handleMonsterDeath(Entity monster, Sprite sprite) {
+        //System.out.println(monster.getName() + " has died!");
+        
+        // ★ NEW: Award XP to player
+        Entity player = state.getPlayer();
+        int xpReward = calculateMonsterXP(monster);
+        awardExperience(player, xpReward);
+        
+        // Clear as auto-attack target
+        if (state.getAutoAttackTarget() == monster) {
+            state.clearAutoAttackTarget();
+        }
+        
+        // Clear as targeted entity
+        if (state.getTargetedEntity() == monster) {
+            state.setTargetedEntity(null);
+        }
+        
+        // Notify spawn point of death
+        state.onMonsterDeath(monster);
+        
+        // Add dead component
+        monster.addComponent(new Dead(1.5f));
+        
+        // Stop movement
+        Movement movement = monster.getComponent(Movement.class);
+        if (movement != null) {
+            movement.stopMoving();
+        }
+        
+        Path path = monster.getComponent(Path.class);
+        if (path != null) {
+            path.clear();
+        }
+        
+        // Set AI to dead state
+        AI ai = monster.getComponent(AI.class);
+        if (ai != null) {
+            ai.currentState = AI.State.DEAD;
+        }
+        
+        // Play death animation
+        if (sprite != null) {
+            sprite.setAnimation(Sprite.ANIM_DEAD);
+        }
+    }
+
+    
 }
 /*
 ## Visual Guide of What Should Happen
