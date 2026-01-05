@@ -1,0 +1,72 @@
+// In GameState.initializeWorld()
+private void initializeWorld() {
+    // ... existing player/monster spawns ...
+    
+    // Add static environment objects
+    addTree(500, 400);
+    addTree(700, 600);
+    addTree(900, 300);
+}
+
+private void addTree(float x, float y) {
+    Entity tree = EntityFactory.createTree(x, y);
+    entities.add(tree);
+}
+/////
+public static Entity createTree(float x, float y) {
+    Entity tree = new Entity("Tree", EntityType.ENVIRONMENT);  // New type
+    
+    tree.addComponent(new Position(x, y));
+    tree.addComponent(new Sprite("/sprites/tree.png", 128, 128, 0f));  // Static, no animation
+    tree.addComponent(new Renderable(RenderLayer.ENTITIES, 20));  // Same layer as entities, +20 depth offset
+    
+    // Optional: Collision so player can't walk through trunk
+    tree.addComponent(new CollisionBox(-16, 0, 32, 40));  // Small box at base of tree
+    
+    return tree;
+}
+////
+// In EntityType.java
+public enum EntityType {
+    PLAYER,
+    MONSTER,
+    NPC,
+    ENVIRONMENT  // NEW: For trees, rocks, signs, etc.
+}
+///
+// In moveTowardsTarget(), check collisions with environment objects
+private void moveTowardsTarget(Entity entity, Movement movement, Position position, float delta) {
+    // ... existing movement code ...
+    
+    // Check collision with environment
+    CollisionBox entityBox = entity.getComponent(CollisionBox.class);
+    if (entityBox != null) {
+        for (Entity other : state.getEntities()) {
+            if (other == entity) continue;
+            if (other.getType() != EntityType.ENVIRONMENT) continue;
+            
+            CollisionBox otherBox = other.getComponent(CollisionBox.class);
+            Position otherPos = other.getComponent(Position.class);
+            
+            if (otherBox != null && otherPos != null) {
+                if (entityBox.overlaps(position.x, newY, otherBox, otherPos.x, otherPos.y)) {
+                    // Collision with tree! Block movement
+                    return;
+                }
+            }
+        }
+    }
+}
+///
+// Trunk renders with entities
+Entity treeTrunk = new Entity("TreeTrunk", EntityType.ENVIRONMENT);
+treeTrunk.addComponent(new Position(x, y));
+treeTrunk.addComponent(new Sprite("/sprites/tree_trunk.png", 64, 64, 0f));
+treeTrunk.addComponent(new Renderable(RenderLayer.ENTITIES));
+treeTrunk.addComponent(new CollisionBox(-16, 0, 32, 40));
+
+// Canopy always renders on top (blocks player when walking behind)
+Entity treeCanopy = new Entity("TreeCanopy", EntityType.ENVIRONMENT);
+treeCanopy.addComponent(new Position(x, y - 64));  // Higher up
+treeCanopy.addComponent(new Sprite("/sprites/tree_canopy.png", 128, 128, 0f));
+treeCanopy.addComponent(new Renderable(RenderLayer.UI_WORLD));  // Always on top
