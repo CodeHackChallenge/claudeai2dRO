@@ -1,0 +1,283 @@
+# Experience & Leveling System Implementation
+
+## 📋 Overview
+
+This system implements a complete leveling system with XP gains, level-ups, and stat growth.
+
+-----
+
+## 🆕 New Files to Create
+
+### 1. `Experience.java`
+
+- Tracks player level and XP
+- Handles XP formula: `XP(L) = 120 * L^2.7`
+- Manages stat growth per level
+- Default growth rates: +10 HP, +2 ATK, +1 DEF, +1 ACC per level
+
+### 2. `LevelUpEffect.java`
+
+- Visual effect component for level-ups
+- 2-second golden glow and text display
+
+### 3. `XPBar.java`
+
+- Component for XP bar display (similar to HealthBar)
+
+-----
+
+## 🔧 Files to Modify
+
+### 1. **Stats.java** - Complete Overhaul
+
+**Changes:**
+
+- Added base stats (baseMaxHp, baseAttack, baseDefense, baseAccuracy)
+- Added current stats (calculated from base + level bonuses)
+- Added all new stats: accuracy, evasion, magic stats, resistances
+- New constructor for player: `Stats(baseMaxHp, baseAttack, baseDefense, baseAccuracy, maxStamina)`
+- New method: `applyLevelStats(Experience exp)` - recalculates stats when leveling
+- New method: `getHitChance(Stats target)` - uses accuracy vs evasion
+
+**Player Level 1 Stats:**
+
+```java
+HP: 100
+Attack: 10
+Defense: 2
+Accuracy: 0
+Evasion: 0
+Magic Attack: 0
+Magic Defense: 0
+Fire/Lightning/Poison Resistance: 0%
+Silence/Blind/Curse Resistance: 0%
+```
+
+### 2. **EntityFactory.java** - Update `createPlayer()`
+
+```java
+// Old
+player.addComponent(new Stats(1000, 500f, 15, 5));
+
+// New
+Stats stats = new Stats(100, 10, 2, 0, 500f);  // Base level 1 stats
+player.addComponent(stats);
+
+Experience exp = new Experience();
+exp.hpGrowth = 10;      // +10 HP per level
+exp.attackGrowth = 2;   // +2 Attack per level
+exp.defenseGrowth = 1;  // +1 Defense per level
+exp.accGrowth = 1;      // +1 Accuracy per level
+player.addComponent(exp);
+
+stats.applyLevelStats(exp);  // Apply level 1
+player.addComponent(new LevelUpEffect());
+player.addComponent(new XPBar(40, 3, 52));  // Below stamina bar
+```
+
+### 3. **GameLogic.java** - Add XP System
+
+**Add these methods:**
+
+```java
+private int calculateMonsterXP(Entity monster)
+private void awardExperience(Entity player, int xpAmount)
+```
+
+**Update `handleMonsterDeath()`:**
+
+```java
+// Add after "System.out.println(monster.getName() + " has died!");"
+Entity player = state.getPlayer();
+int xpReward = calculateMonsterXP(monster);
+awardExperience(player, xpReward);
+```
+
+**Update main `update()` loop:**
+
+```java
+// Inside entity loop, add:
+LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
+if (levelUpEffect != null) {
+    levelUpEffect.update(delta);
+}
+```
+
+### 4. **Renderer.java** - Add XP Display
+
+**Add these methods:**
+
+- `drawXPBar(Graphics2D g, int spriteX, int spriteY, Experience exp)`
+- `drawLevelBadge(Graphics2D g, int spriteX, int spriteY, int level)`
+- `drawLevelUpEffect(Graphics2D g, int spriteX, int spriteY, LevelUpEffect effect)`
+
+**Update `renderWorldUI()`:**
+
+```java
+// In player-specific UI section, add:
+Experience exp = entity.getComponent(Experience.class);
+if (exp != null) {
+    drawXPBar(g, spriteScreenX, spriteScreenY, exp);
+    drawLevelBadge(g, spriteScreenX, spriteScreenY, exp.level);
+}
+
+LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
+if (levelUpEffect != null && levelUpEffect.active) {
+    drawLevelUpEffect(g, spriteScreenX, spriteScreenY, levelUpEffect);
+}
+```
+
+### 5. **Engine.java** - Debug Commands
+
+Add to `keyPressed()`:
+
+- **X key** - Add 100 XP for testing
+- **S key** - Show all player stats
+
+-----
+
+## 📊 XP Formula Breakdown
+
+```java
+XP(L) = 120 * L^2.7
+```
+
+**Example XP Requirements:**
+
+- Level 1 → 2: 226 XP
+- Level 2 → 3: 422 XP
+- Level 3 → 4: 662 XP
+- Level 5 → 6: 1,277 XP
+- Level 10 → 11: 4,562 XP
+- Level 20 → 21: 15,733 XP
+- Level 50 → 51: 117,849 XP
+
+-----
+
+## 🎮 How It Works
+
+### 1. **Killing Monsters**
+
+```java
+Monster dies → calculateMonsterXP() → awardExperience()
+```
+
+XP formula: `monsterHP * 0.5 + monsterAttack * 2`
+
+- Bosses give 3x XP
+- Minimum 10 XP per kill
+
+### 2. **Leveling Up**
+
+```java
+XP added → Check if currentXP >= xpToNextLevel
+  └─> Level up! → Recalculate stats → Show effect
+```
+
+### 3. **Stat Growth**
+
+At each level:
+
+```java
+HP:       100 + (level - 1) × 10
+Attack:   10 + (level - 1) × 2
+Defense:  2 + (level - 1) × 1
+Accuracy: 0 + (level - 1) × 1
+```
+
+**Example Stats:**
+
+- **Level 1:** 100 HP, 10 ATK, 2 DEF, 0 ACC
+- **Level 5:** 140 HP, 18 ATK, 6 DEF, 4 ACC
+- **Level 10:** 190 HP, 28 ATK, 11 DEF, 9 ACC
+- **Level 20:** 290 HP, 48 ATK, 21 DEF, 19 ACC
+
+-----
+
+## 🎨 Visual Features
+
+### XP Bar
+
+- Gold-colored bar below stamina
+- Shows progress to next level
+- 40px wide, 3px tall
+
+### Level Badge
+
+- Golden circle with “Lv{X}” text
+- Positioned top-left of player sprite
+
+### Level-Up Effect
+
+- 2-second golden expanding aura
+- “LEVEL X” text floats upward
+- Automatically fades out
+
+-----
+
+## 🧪 Testing Commands
+
+Press these keys in-game:
+
+- **X** - Add 100 XP (spam to test level-ups)
+- **S** - Show detailed stat screen
+- **F3** - Toggle debug mode (see AI, paths, etc.)
+
+-----
+
+## 📝 Monster XP Examples
+
+With default formula:
+
+```
+Goblin (80 HP, 10 ATK): 60 XP
+GoblinBoss (500 HP, 25 ATK): 900 XP (3x bonus)
+Bunny (80 HP, 10 ATK): 60 XP
+```
+
+-----
+
+## 🔮 Future Enhancements
+
+Easy to add later:
+
+1. **Skills/Abilities unlocked at certain levels**
+1. **Stat point allocation** (player chooses growth)
+1. **Class system** (different growth rates per class)
+1. **Skill trees**
+1. **Equipment that adds stats**
+1. **Level-based monster scaling**
+1. **XP multiplier items/buffs**
+1. **Rest XP bonus**
+
+-----
+
+## ✅ Testing Checklist
+
+- [ ] Player starts at level 1 with correct stats
+- [ ] Killing monsters awards XP
+- [ ] XP bar displays correctly
+- [ ] Level badge shows current level
+- [ ] Level-up triggers correctly
+- [ ] Stats increase properly per level
+- [ ] HP heals on level-up
+- [ ] Level-up effect displays
+- [ ] Console shows level-up message
+- [ ] Can test with X key
+- [ ] S key shows all stats
+
+-----
+
+## 🐛 Common Issues
+
+**Problem:** Stats not updating on level-up
+**Fix:** Make sure `stats.applyLevelStats(exp)` is called
+
+**Problem:** XP bar not showing
+**Fix:** Check that XPBar component is added in EntityFactory
+
+**Problem:** Level-up effect not appearing
+**Fix:** Ensure LevelUpEffect component exists and update() is called
+
+**Problem:** Wrong base stats
+**Fix:** Use new Stats constructor: `Stats(100, 10, 2, 0, 500f)`
