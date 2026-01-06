@@ -106,6 +106,8 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         gameLogic = new GameLogic(gameState);
         renderer = new Renderer(gameState, this);  // Pass 'this' (Engine) reference
         
+        // ★ UI Manager is created inside GameState constructor
+        
         System.out.println("Game initialized!");
     }
     
@@ -118,6 +120,9 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         
         // Update game logic
         gameLogic.update(delta);
+        
+        // ★ NEW: Update UI
+        gameState.getUIManager().update(delta);
     }
     
     private void handleMouseHover() {
@@ -166,22 +171,25 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
+            // ★ NEW: Check UI clicks first (UI has priority)
+            gameState.getUIManager().handleClick(screenX, screenY);
+            
+            // Only handle world clicks if not clicking UI
+            // (You might want to add a check here if UI consumed the click)
+            
             float worldX = screenX + gameState.getCameraX();
             float worldY = screenY + gameState.getCameraY();
             
             Entity hoveredEntity = gameState.getHoveredEntity();
             
             if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
-                // Check if target is alive
                 Stats stats = hoveredEntity.getComponent(Stats.class);
                 if (stats != null && stats.hp > 0) {
-                    // Attack monster (sets as auto-attack target)
                     gameState.setTargetedEntity(hoveredEntity);
                     gameLogic.playerAttack(hoveredEntity);
                     System.out.println("Auto-attacking " + hoveredEntity.getName());
                 }
             } else {
-                // Clicked ground - stop auto-attack and move
                 gameLogic.stopAutoAttack();
                 gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             }
@@ -190,9 +198,11 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         }
         
         if (mouse.isRightClick()) {
-            // Right-click always stops auto-attack and moves
             int screenX = mouse.getX();
             int screenY = mouse.getY();
+            
+            // ★ NEW: Check UI right clicks
+            gameState.getUIManager().handleRightClick(screenX, screenY);
             
             float worldX = screenX + gameState.getCameraX();
             float worldY = screenY + gameState.getCameraY();
@@ -214,6 +224,9 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             debugMode = !debugMode;
             System.out.println("Debug mode: " + (debugMode ? "ON" : "OFF"));
         }
+        
+        // ★ NEW: Handle skill hotkeys
+        gameState.getUIManager().handleKeyPress(e.getKeyCode());
         
         // Debug keys
         if (e.getKeyCode() == KeyEvent.VK_D) {
@@ -547,6 +560,8 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 deltaF--;
             }
 
+            // ★ NEW: Update UI hover states
+            gameState.getUIManager().handleMouseMove(mouse.getX(), mouse.getY());
             // Prevent CPU maxing
             try {
                 Thread.sleep(1);

@@ -41,6 +41,9 @@ public class Renderer {
         // === LAYER 5: UI_SCREEN ===
         renderScreenUI(g, cameraX, cameraY);
         
+        // ★ NEW: LAYER 6: UI MANAGER (skill bar, inventory, etc.)
+        gameState.getUIManager().render(g);
+        
         // === DEBUG (always on top) ===
         if (engine.isDebugMode()) {
             renderDebug(g, cameraX, cameraY);

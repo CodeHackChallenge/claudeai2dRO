@@ -19,6 +19,9 @@ public class GameState {
     private Entity targetedEntity;  // NEW
     private Entity autoAttackTarget;  // NEW: Auto-attack target
     private Pathfinder pathfinder;
+    //UI
+    private UIManager uiManager;
+    
     
     private float gameTime;
     private float cameraX;
@@ -39,6 +42,10 @@ public class GameState {
         pathfinder = new Pathfinder(map);
         
         initializeWorld();
+        
+        //UI
+        uiManager = new UIManager(this);
+        
     }
     // ★ UPDATE initializeWorld() method:
     private void initializeWorld() {
@@ -318,6 +325,10 @@ public class GameState {
     public void setCameraPosition(float x, float y) {
         this.cameraX = x;
         this.cameraY = y;
+    }    
+    // Add getter:
+    public UIManager getUIManager() {
+        return uiManager;
     }
 }
 /*
