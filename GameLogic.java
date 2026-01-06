@@ -1301,29 +1301,31 @@ Time 0.5s: Progress = 100%
     public void setCameraLerpSpeed(float speed) {
         this.cameraLerpSpeed = speed;
     }
-    
- // Add these methods to GameLogic.java
-
     /**
      * Calculate XP reward for killing a monster
-     * Formula: Base XP = monsterHP * 0.5 + monsterAttack * 2
+     * Uses MonsterLevel component if available, otherwise falls back to old formula
      */
     private int calculateMonsterXP(Entity monster) {
-        Stats stats = monster.getComponent(Stats.class);
-        if (stats == null) return 10; // Default XP
+        // NEW: Use MonsterLevel component for XP calculation
+        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
+        if (monsterLevel != null) {
+            return monsterLevel.calculateXPReward();
+        }
         
-        // Base XP calculation
+        // OLD: Fallback for monsters without MonsterLevel component
+        Stats stats = monster.getComponent(Stats.class);
+        if (stats == null) return 10;
+        
         int baseXP = (int)(stats.maxHp * 0.5f + stats.attack * 2);
         
         // Boss monsters give bonus XP
         String monsterType = monster.getName();
         if (monsterType.contains("Boss")) {
-            baseXP *= 3; // Bosses give 3x XP
+            baseXP *= 3;
         }
         
-        return Math.max(10, baseXP); // Minimum 10 XP
+        return Math.max(10, baseXP);
     }
-
     /**
      * Award XP to player and handle level-ups
      */
@@ -1340,8 +1342,8 @@ Time 0.5s: Progress = 100%
         int levelsGained = exp.addExperience(xpAmount);
         
         if (levelsGained > 0) {
-            // Recalculate stats with new level
-            stats.applyLevelStats(exp);
+            // ★ Recalculate stats with new level AND fully heal
+            stats.applyLevelStats(exp, true);  // true = full heal on level up
             
             // Trigger level-up effect
             if (levelUpEffect != null) {
@@ -1358,16 +1360,26 @@ Time 0.5s: Progress = 100%
                     pos.y - 40
                 );
                 state.addDamageText(levelText);
+                
+                // ★ Spawn "FULLY HEALED!" text below level up
+                DamageText healText = new DamageText(
+                    "FULLY HEALED!",
+                    DamageText.Type.HEAL,
+                    pos.x,
+                    pos.y - 20
+                );
+                state.addDamageText(healText);
             }
             
             System.out.println("╔════════════════════════════════╗");
             System.out.println("║        LEVEL UP!               ║");
             System.out.println("╠════════════════════════════════╣");
-            System.out.println("║ New Level: " + exp.level + "                  ║");
-            System.out.println("║ HP:        " + stats.maxHp + "                ║");
-            System.out.println("║ Attack:    " + stats.attack + "                 ║");
-            System.out.println("║ Defense:   " + stats.defense + "                  ║");
-            System.out.println("║ Accuracy:  " + stats.accuracy + "                  ║");
+            System.out.println("║ New Level: " + exp.level);
+            System.out.println("║ HP:        " + stats.hp + "/" + stats.maxHp + " (FULL!)");
+            System.out.println("║ Stamina:   " + (int)stats.stamina + "/" + (int)stats.maxStamina + " (FULL!)");
+            System.out.println("║ Attack:    " + stats.attack);
+            System.out.println("║ Defense:   " + stats.defense);
+            System.out.println("║ Accuracy:  " + stats.accuracy);
             System.out.println("╚════════════════════════════════╝");
         }
         
@@ -1375,14 +1387,23 @@ Time 0.5s: Progress = 100%
         System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
                            " (" + (int)(exp.getXPProgress() * 100) + "%)");
     }
-
-    // Update the handleMonsterDeath method to award XP:
+    /**
+     * Handle monster death with tier-based XP
+     */
     private void handleMonsterDeath(Entity monster, Sprite sprite) {
-        //System.out.println(monster.getName() + " has died!");
+        // Get monster info for logging
+        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
+        String monsterInfo = monster.getName();
+        if (monsterLevel != null) {
+            monsterInfo += " Lv" + monsterLevel.level + " " + monsterLevel.tier;
+        }
         
-        // ★ NEW: Award XP to player
+        System.out.println(monsterInfo + " has died!");
+        
+        // ★ Award XP to player
         Entity player = state.getPlayer();
         int xpReward = calculateMonsterXP(monster);
+        System.out.println("→ XP Reward: " + xpReward);
         awardExperience(player, xpReward);
         
         // Clear as auto-attack target

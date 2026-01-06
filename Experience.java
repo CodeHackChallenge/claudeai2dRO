@@ -65,6 +65,13 @@ public class Experience implements Component {
     }
     
     /**
+     * Check if player just leveled up (for triggering effects)
+     */
+    public boolean didLevelUp(int levelsGained) {
+        return levelsGained > 0;
+    }
+    
+    /**
      * Get current XP progress as percentage (0.0 to 1.0)
      */
     public float getXPProgress() {

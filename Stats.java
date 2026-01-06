@@ -110,26 +110,41 @@ public class Stats implements Component {
     /**
      * Apply level-based stat bonuses from Experience component
      * Call this after leveling up to recalculate stats
+     * @param exp The experience component
+     * @param fullHeal If true, restore HP and stamina to full (default for level-ups)
      */
-    public void applyLevelStats(Experience exp) {
+    public void applyLevelStats(Experience exp, boolean fullHeal) {
         // Calculate new max stats
-        int oldMaxHp = this.maxHp;
-        
         this.maxHp = exp.calculateMaxHP(baseMaxHp);
         this.attack = exp.calculateAttack(baseAttack);
         this.defense = exp.calculateDefense(baseDefense);
         this.accuracy = exp.calculateAccuracy(baseAccuracy);
         
-        // Heal HP difference when max HP increases
-        int hpIncrease = this.maxHp - oldMaxHp;
-        if (hpIncrease > 0) {
-            this.hp += hpIncrease;
-        }
-        
-        // Cap HP at max
-        if (this.hp > this.maxHp) {
+        // ★ FULL HEAL on level up
+        if (fullHeal) {
             this.hp = this.maxHp;
+            this.stamina = this.maxStamina;
+        } else {
+            // Just cap HP at new max if not healing
+            if (this.hp > this.maxHp) {
+                this.hp = this.maxHp;
+            }
         }
+    }
+    
+    /**
+     * Apply level stats without healing (for initialization)
+     */
+    public void applyLevelStats(Experience exp) {
+        applyLevelStats(exp, false);
+    }
+    
+    /**
+     * Fully restore HP and stamina
+     */
+    public void fullHeal() {
+        this.hp = this.maxHp;
+        this.stamina = this.maxStamina;
     }
     
     /**

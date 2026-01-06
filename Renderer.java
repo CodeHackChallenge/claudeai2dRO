@@ -124,81 +124,95 @@ public class Renderer {
     // ===================================================================
     // LAYER 4: UI_WORLD (world-space UI elements)
     // ===================================================================
- // Update the renderWorldUI method to include XP bar and level display:
     private void renderWorldUI(Graphics2D g, float cameraX, float cameraY) {
-        // Collect entities for UI rendering (same depth sorting)
-        List<RenderObject> renderObjects = new ArrayList<>();
-        
-        for (Entity entity : gameState.getEntities()) {
-            Position pos = entity.getComponent(Position.class);
-            Renderable renderable = entity.getComponent(Renderable.class);
-            
-            if (pos != null && renderable != null) {
-                if (renderable.layer == RenderLayer.ENTITIES) {
-                    renderObjects.add(new RenderObject(entity, pos, renderable));
-                }
-            }
-        }
-        
-        Collections.sort(renderObjects);
-        
-        // Render UI elements in same order as entities
-        for (RenderObject ro : renderObjects) {
-            Entity entity = ro.entity;
-            Position pos = ro.position;
-            
-            int spriteScreenX = (int)Math.round(pos.x - cameraX);
-            int spriteScreenY = (int)Math.round(pos.y - cameraY);
-            
-            Dead dead = entity.getComponent(Dead.class);
-            boolean isDead = dead != null;
-            
-            if (!isDead) {
-                // Alert (exclamation point)
-                Alert alert = entity.getComponent(Alert.class);
-                if (alert != null) {
-                    drawAlert(g, spriteScreenX, spriteScreenY, alert);
-                }
-                
-                // Name tag
-                NameTag nameTag = entity.getComponent(NameTag.class);
-                if (nameTag != null && nameTag.visible) {
-                    drawNameTag(g, spriteScreenX, spriteScreenY, nameTag);
-                }
-                
-                // Health bar
-                Stats stats = entity.getComponent(Stats.class);
-                HealthBar hpBar = entity.getComponent(HealthBar.class);
-                
-                if (stats != null && hpBar != null) {
-                    drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
-                }
-                
-                // Player-specific UI
-                if (entity.getType() == EntityType.PLAYER) {
-                    // Stamina bar
-                    StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
-                    if (stats != null && staminaBar != null) {
-                        drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
-                    }
-                    
-                    // ★ NEW: XP bar
-                    Experience exp = entity.getComponent(Experience.class);
-                    if (exp != null) {
-                        drawXPBar(g, spriteScreenX, spriteScreenY, exp);
-                        drawLevelBadge(g, spriteScreenX, spriteScreenY, exp.level);
-                    }
-                    
-                    // ★ NEW: Level-up effect
-                    LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
-                    if (levelUpEffect != null && levelUpEffect.active) {
-                        drawLevelUpEffect(g, spriteScreenX, spriteScreenY, levelUpEffect);
-                    }
-                }
-            }
-        }
-    }
-    
+	    // Collect entities for UI rendering (same depth sorting)
+	    List<RenderObject> renderObjects = new ArrayList<>();
+	    
+	    for (Entity entity : gameState.getEntities()) {
+	        Position pos = entity.getComponent(Position.class);
+	        Renderable renderable = entity.getComponent(Renderable.class);
+	        
+	        if (pos != null && renderable != null) {
+	            if (renderable.layer == RenderLayer.ENTITIES) {
+	                renderObjects.add(new RenderObject(entity, pos, renderable));
+	            }
+	        }
+	    }
+	    
+	    Collections.sort(renderObjects);
+	    
+	    // Render UI elements in same order as entities
+	    for (RenderObject ro : renderObjects) {
+	        Entity entity = ro.entity;
+	        Position pos = ro.position;
+	        
+	        int spriteScreenX = (int)Math.round(pos.x - cameraX);
+	        int spriteScreenY = (int)Math.round(pos.y - cameraY);
+	        
+	        Dead dead = entity.getComponent(Dead.class);
+	        boolean isDead = dead != null;
+	        
+	        if (!isDead) {
+	            // Alert (exclamation point)
+	            Alert alert = entity.getComponent(Alert.class);
+	            if (alert != null) {
+	                drawAlert(g, spriteScreenX, spriteScreenY, alert);
+	            }
+	            
+	            // Name tag
+	            NameTag nameTag = entity.getComponent(NameTag.class);
+	            if (nameTag != null && nameTag.visible) {
+	                drawNameTag(g, spriteScreenX, spriteScreenY, nameTag);
+	                
+	                // ★ NEW: Draw tier indicator for monsters
+	                if (entity.getType() == EntityType.MONSTER) {
+	                    MonsterLevel monsterLevel = entity.getComponent(MonsterLevel.class);
+	                    if (monsterLevel != null) {
+	                        drawTierIndicator(g, spriteScreenX, spriteScreenY, monsterLevel, nameTag);
+	                    }
+	                }
+	            }
+	            
+	            // ★ NEW: Monster level badge (always show)
+	            if (entity.getType() == EntityType.MONSTER) {
+	                MonsterLevel monsterLevel = entity.getComponent(MonsterLevel.class);
+	                if (monsterLevel != null) {
+	                    drawMonsterLevelBadge(g, spriteScreenX, spriteScreenY, monsterLevel);
+	                }
+	            }
+	            
+	            // Health bar
+	            Stats stats = entity.getComponent(Stats.class);
+	            HealthBar hpBar = entity.getComponent(HealthBar.class);
+	            
+	            if (stats != null && hpBar != null) {
+	                drawHealthBar(g, spriteScreenX, spriteScreenY, stats, hpBar);
+	            }
+	            
+	            // Player-specific UI
+	            if (entity.getType() == EntityType.PLAYER) {
+	                // Stamina bar
+	                StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
+	                if (stats != null && staminaBar != null) {
+	                    drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
+	                }
+	                
+	                // XP bar
+	                Experience exp = entity.getComponent(Experience.class);
+	                if (exp != null) {
+	                    drawXPBar(g, spriteScreenX, spriteScreenY, exp);
+	                    drawLevelBadge(g, spriteScreenX, spriteScreenY, exp.level);
+	                }
+	                
+	                // Level-up effect
+	                LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
+	                if (levelUpEffect != null && levelUpEffect.active) {
+	                    drawLevelUpEffect(g, spriteScreenX, spriteScreenY, levelUpEffect);
+	                }
+	            }
+	        }
+	    }
+	}
     // ===================================================================
     // LAYER 5: UI_SCREEN
     // ===================================================================
@@ -252,7 +266,106 @@ public class Renderer {
             }
         }
     }
-    
+    /**
+     * Draw monster level badge with tier color
+     */
+    private void drawMonsterLevelBadge(Graphics2D g, int spriteX, int spriteY, MonsterLevel monsterLevel) {
+        Font originalFont = g.getFont();
+        Font levelFont = new Font("Arial", Font.BOLD, 9);
+        g.setFont(levelFont);
+        
+        String levelText = "Lv" + monsterLevel.level;
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(levelText);
+        
+        int badgeX = spriteX + 20;  // Right side of monster
+        int badgeY = spriteY - 30;
+        
+        // Tier color
+        Color tierColor;
+        switch (monsterLevel.tier) {
+            case TRASH:
+                tierColor = new Color(150, 150, 150);  // Gray
+                break;
+            case NORMAL:
+                tierColor = new Color(100, 200, 100);  // Green
+                break;
+            case ELITE:
+                tierColor = new Color(100, 150, 255);  // Blue
+                break;
+            case MINIBOSS:
+                tierColor = new Color(200, 100, 200);  // Purple
+                break;
+            default:
+                tierColor = new Color(200, 200, 200);
+        }
+        
+        // Badge background
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillOval(badgeX - 10, badgeY - 6, 20, 12);
+        
+        // Badge border (tier colored)
+        g.setColor(tierColor);
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawOval(badgeX - 10, badgeY - 6, 20, 12);
+        
+        // Level text
+        g.setColor(Color.WHITE);
+        g.drawString(levelText, badgeX - textWidth/2, badgeY + 3);
+        
+        g.setFont(originalFont);
+    }
+    /**
+     * Draw tier indicator below name tag
+     */
+    private void drawTierIndicator(Graphics2D g, int spriteX, int spriteY, MonsterLevel monsterLevel, NameTag nameTag) {
+        Font originalFont = g.getFont();
+        Font tierFont = new Font("Arial", Font.PLAIN, 8);
+        g.setFont(tierFont);
+        
+        String tierText;
+        Color tierColor;
+        
+        switch (monsterLevel.tier) {
+            case TRASH:
+                tierText = "TRASH";
+                tierColor = new Color(150, 150, 150);
+                break;
+            case NORMAL:
+                tierText = ""; // Don't show NORMAL tier (clutter)
+                tierColor = new Color(100, 200, 100);
+                break;
+            case ELITE:
+                tierText = "ELITE";
+                tierColor = new Color(100, 150, 255);
+                break;
+            case MINIBOSS:
+                tierText = "MINIBOSS";
+                tierColor = new Color(200, 100, 200);
+                break;
+            default:
+                tierText = "";
+                tierColor = Color.WHITE;
+        }
+        
+        if (!tierText.isEmpty()) {
+            FontMetrics fm = g.getFontMetrics();
+            int textWidth = fm.stringWidth(tierText);
+            
+            int textX = spriteX - textWidth / 2;
+            int textY = (int)(spriteY + nameTag.offsetY + 12); // Below name tag
+            
+            // Shadow
+            g.setColor(new Color(0, 0, 0, 200));
+            g.drawString(tierText, textX + 1, textY + 1);
+            
+            // Text
+            g.setColor(tierColor);
+            g.drawString(tierText, textX, textY);
+        }
+        
+        g.setFont(originalFont);
+    }
     // ===================================================================
     // HELPER DRAWING METHODS
     // ===================================================================
@@ -339,15 +452,17 @@ public class Renderer {
             }
         }
     }
- // In Renderer.drawDebugAI()
     private void drawDebugAI(Graphics2D g, Entity entity, float cameraX, float cameraY) {
         AI ai = entity.getComponent(AI.class);
         Position pos = entity.getComponent(Position.class);
         Movement movement = entity.getComponent(Movement.class);
+        Stats stats = entity.getComponent(Stats.class);
+        MonsterLevel monsterLevel = entity.getComponent(MonsterLevel.class);
         
         if (ai == null || pos == null) return;
         
         Stroke originalStroke = g.getStroke();
+        Font originalFont = g.getFont();
         
         // Draw home position
         int homeScreenX = (int)(ai.homeX - cameraX);
@@ -372,7 +487,7 @@ public class Renderer {
         g.setColor(detectionColor);
         g.drawOval(screenX - detectionRadius, screenY - detectionRadius, detectionRadius * 2, detectionRadius * 2);
         
-        // ⭐ Draw haste indicator
+        // Draw haste indicator
         if (movement != null && movement.isHasted) {
             g.setColor(new Color(255, 255, 0, 200));
             g.setStroke(new BasicStroke(3));
@@ -380,14 +495,40 @@ public class Renderer {
             g.drawString("HASTE", screenX - 20, screenY - 50);
         }
         
-        // Draw state text
+        // ★ Draw detailed monster info
+        Font infoFont = new Font("Arial", Font.PLAIN, 10);
+        g.setFont(infoFont);
         g.setColor(Color.WHITE);
+        
+        int textY = screenY - 60;
+        
+        // State
         String stateText = ai.currentState.toString();
         if (movement != null && movement.isHasted) {
             stateText += " (HASTE)";
         }
-        g.drawString(stateText, screenX - 30, screenY - 40);
+        g.drawString(stateText, screenX - 30, textY);
+        textY += 12;
         
+        // Level and tier
+        if (monsterLevel != null) {
+            String levelInfo = "Lv" + monsterLevel.level + " " + monsterLevel.tier;
+            g.setColor(new Color(255, 215, 0));
+            g.drawString(levelInfo, screenX - 30, textY);
+            textY += 12;
+            g.setColor(Color.WHITE);
+        }
+        
+        // Stats
+        if (stats != null) {
+            g.drawString(String.format("HP:%d/%d", stats.hp, stats.maxHp), screenX - 30, textY);
+            textY += 12;
+            g.drawString(String.format("ATK:%d DEF:%d", stats.attack, stats.defense), screenX - 30, textY);
+            textY += 12;
+            g.drawString(String.format("ACC:%d EVA:%d", stats.accuracy, stats.evasion), screenX - 30, textY);
+        }
+        
+        g.setFont(originalFont);
         g.setStroke(originalStroke);
     }
     

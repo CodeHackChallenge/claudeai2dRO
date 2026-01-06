@@ -270,81 +270,213 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             System.out.println("======================\n");
         }
         
-     // Add these to the keyPressed method in Engine.java
-
      // Add XP for testing (press X)
-     if (e.getKeyCode() == KeyEvent.VK_X) {
+        if (e.getKeyCode() == KeyEvent.VK_X) {
+            Entity player = gameState.getPlayer();
+            Experience exp = player.getComponent(Experience.class);
+            Stats stats = player.getComponent(Stats.class);
+            
+            if (exp != null && stats != null) {
+                // Add 100 XP for testing
+                int xpGain = 100;
+                System.out.println("DEBUG: Adding " + xpGain + " XP");
+                
+                int levelsGained = exp.addExperience(xpGain);
+                
+                if (levelsGained > 0) {
+                    // ★ Full heal on level up
+                    stats.applyLevelStats(exp, true);
+                    
+                    LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
+                    if (levelUpEffect != null) {
+                        levelUpEffect.trigger(exp.level);
+                    }
+                    
+                    Position pos = player.getComponent(Position.class);
+                    if (pos != null) {
+                        DamageText levelText = new DamageText(
+                            "LEVEL UP! " + exp.level,
+                            DamageText.Type.HEAL,
+                            pos.x,
+                            pos.y - 40
+                        );
+                        gameState.addDamageText(levelText);
+                        
+                        // ★ Add heal text
+                        DamageText healText = new DamageText(
+                            "FULLY HEALED!",
+                            DamageText.Type.HEAL,
+                            pos.x,
+                            pos.y - 20
+                        );
+                        gameState.addDamageText(healText);
+                    }
+                    
+                    System.out.println("LEVEL UP to " + exp.level + "!");
+                    System.out.println("HP: " + stats.hp + "/" + stats.maxHp + " (FULL!) | " +
+                                     "Stamina: " + (int)stats.stamina + "/" + (int)stats.maxStamina + " (FULL!)");
+                    System.out.println("ATK: " + stats.attack + " | DEF: " + stats.defense + 
+                                     " | ACC: " + stats.accuracy);
+                }
+                
+                System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel);
+            }
+        }
+
+        // Show stats (press S)
+        if (e.getKeyCode() == KeyEvent.VK_S) {
+            Entity player = gameState.getPlayer();
+            Experience exp = player.getComponent(Experience.class);
+            Stats stats = player.getComponent(Stats.class);
+            
+            if (exp != null && stats != null) {
+                System.out.println("\n═══════════════════════════════");
+                System.out.println("       PLAYER STATS");
+                System.out.println("═══════════════════════════════");
+                System.out.println("Level:      " + exp.level);
+                System.out.println("XP:         " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
+                                 " (" + (int)(exp.getXPProgress() * 100) + "%)");
+                System.out.println("───────────────────────────────");
+                System.out.println("HP:         " + stats.hp + "/" + stats.maxHp);
+                System.out.println("Stamina:    " + (int)stats.stamina + "/" + (int)stats.maxStamina);
+                System.out.println("Attack:     " + stats.attack);
+                System.out.println("Defense:    " + stats.defense);
+                System.out.println("Accuracy:   " + stats.accuracy);
+                System.out.println("Evasion:    " + stats.evasion);
+                System.out.println("───────────────────────────────");
+                System.out.println("Magic ATK:  " + stats.magicAttack);
+                System.out.println("Magic DEF:  " + stats.magicDefense);
+                System.out.println("───────────────────────────────");
+                System.out.println("Fire Res:   " + stats.fireResistance + "%");
+                System.out.println("Light Res:  " + stats.lightningResistance + "%");
+                System.out.println("Poison Res: " + stats.poisonResistance + "%");
+                System.out.println("───────────────────────────────");
+                System.out.println("Silence:    " + stats.silenceResistance + "%");
+                System.out.println("Blind:      " + stats.blindResistance + "%");
+                System.out.println("Curse:      " + stats.curseResistance + "%");
+                System.out.println("═══════════════════════════════\n");
+            }
+        }
+     
+     // ★ NEW: Full heal command (press F)
+        if (e.getKeyCode() == KeyEvent.VK_F) {
+            Entity player = gameState.getPlayer();
+            Stats stats = player.getComponent(Stats.class);
+            Position pos = player.getComponent(Position.class);
+            
+            if (stats != null) {
+                stats.fullHeal();
+                System.out.println("DEBUG: Full heal!");
+                System.out.println("HP: " + stats.hp + "/" + stats.maxHp);
+                System.out.println("Stamina: " + (int)stats.stamina + "/" + (int)stats.maxStamina);
+                
+                // Visual feedback
+                if (pos != null) {
+                    DamageText healText = new DamageText(
+                        "HEALED!",
+                        DamageText.Type.HEAL,
+                        pos.x,
+                        pos.y - 30
+                    );
+                    gameState.addDamageText(healText);
+                }
+            }
+        }
+  // Show tier comparison (press T)
+     if (e.getKeyCode() == KeyEvent.VK_T) {
          Entity player = gameState.getPlayer();
          Experience exp = player.getComponent(Experience.class);
-         Stats stats = player.getComponent(Stats.class);
+         Stats playerStats = player.getComponent(Stats.class);
          
-         if (exp != null && stats != null) {
-             // Add 100 XP for testing
-             int xpGain = 100;
-             System.out.println("DEBUG: Adding " + xpGain + " XP");
+         if (exp != null && playerStats != null) {
+             int playerLevel = exp.level;
              
-             int levelsGained = exp.addExperience(xpGain);
+             System.out.println("\n═══════════════════════════════════════════════════════════");
+             System.out.println("          TIER COMPARISON - LEVEL " + playerLevel);
+             System.out.println("═══════════════════════════════════════════════════════════");
+             System.out.println("PLAYER:");
+             System.out.println("  HP: " + playerStats.maxHp + " | ATK: " + playerStats.attack + 
+                              " | DEF: " + playerStats.defense + " | ACC: " + playerStats.accuracy + 
+                              " | EVA: " + playerStats.evasion);
+             System.out.println("───────────────────────────────────────────────────────────");
              
-             if (levelsGained > 0) {
-                 stats.applyLevelStats(exp);
+             // Show each tier at player's level
+             MobTier[] tiers = {MobTier.TRASH, MobTier.NORMAL, MobTier.ELITE, MobTier.MINIBOSS};
+             
+             for (MobTier tier : tiers) {
+                 MobStats mobStats = MobStatFactory.create(playerLevel, tier);
+                 MonsterLevel mobLevel = new MonsterLevel(playerLevel, tier);
+                 int xpReward = mobLevel.calculateXPReward();
                  
-                 LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
-                 if (levelUpEffect != null) {
-                     levelUpEffect.trigger(exp.level);
-                 }
+                 System.out.println(tier + " MOB:");
+                 System.out.println("  HP: " + mobStats.hp + " | ATK: " + mobStats.attack + 
+                                  " | DEF: " + mobStats.defense + " | ACC: " + mobStats.accuracy + 
+                                  " | EVA: " + mobStats.evasion);
+                 System.out.println("  XP Reward: " + xpReward);
                  
-                 Position pos = player.getComponent(Position.class);
-                 if (pos != null) {
-                     DamageText levelText = new DamageText(
-                         "LEVEL UP! " + exp.level,
-                         DamageText.Type.HEAL,
-                         pos.x,
-                         pos.y - 40
-                     );
-                     gameState.addDamageText(levelText);
-                 }
+                 // Calculate player vs mob hit chances
+                 float playerHitChance = playerStats.getHitChance(
+                     new Stats(mobStats.hp, 50f, mobStats.attack, mobStats.defense)
+                 );
+                 Stats tempMobStats = new Stats(mobStats.hp, 50f, mobStats.attack, mobStats.defense);
+                 tempMobStats.accuracy = mobStats.accuracy;
+                 tempMobStats.evasion = mobStats.evasion;
+                 float mobHitChance = tempMobStats.getHitChance(playerStats);
                  
-                 System.out.println("LEVEL UP to " + exp.level + "!");
-                 System.out.println("HP: " + stats.maxHp + " | ATK: " + stats.attack + 
-                                  " | DEF: " + stats.defense + " | ACC: " + stats.accuracy);
+                 System.out.println("  Player Hit Rate: " + (int)(playerHitChance * 100) + "% | " +
+                                  "Mob Hit Rate: " + (int)(mobHitChance * 100) + "%");
+                 System.out.println("───────────────────────────────────────────────────────────");
              }
-             
-             System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel);
+             System.out.println("═══════════════════════════════════════════════════════════\n");
          }
      }
 
-     // Show stats (press S)
-     if (e.getKeyCode() == KeyEvent.VK_S) {
+     // Spawn test monster (press M)
+     if (e.getKeyCode() == KeyEvent.VK_M) {
          Entity player = gameState.getPlayer();
+         Position playerPos = player.getComponent(Position.class);
          Experience exp = player.getComponent(Experience.class);
-         Stats stats = player.getComponent(Stats.class);
          
-         if (exp != null && stats != null) {
-             System.out.println("\n═══════════════════════════════");
-             System.out.println("       PLAYER STATS");
-             System.out.println("═══════════════════════════════");
-             System.out.println("Level:      " + exp.level);
-             System.out.println("XP:         " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
-                              " (" + (int)(exp.getXPProgress() * 100) + "%)");
-             System.out.println("───────────────────────────────");
-             System.out.println("HP:         " + stats.hp + "/" + stats.maxHp);
-             System.out.println("Stamina:    " + (int)stats.stamina + "/" + (int)stats.maxStamina);
-             System.out.println("Attack:     " + stats.attack);
-             System.out.println("Defense:    " + stats.defense);
-             System.out.println("Accuracy:   " + stats.accuracy);
-             System.out.println("Evasion:    " + stats.evasion);
-             System.out.println("───────────────────────────────");
-             System.out.println("Magic ATK:  " + stats.magicAttack);
-             System.out.println("Magic DEF:  " + stats.magicDefense);
-             System.out.println("───────────────────────────────");
-             System.out.println("Fire Res:   " + stats.fireResistance + "%");
-             System.out.println("Light Res:  " + stats.lightningResistance + "%");
-             System.out.println("Poison Res: " + stats.poisonResistance + "%");
-             System.out.println("───────────────────────────────");
-             System.out.println("Silence:    " + stats.silenceResistance + "%");
-             System.out.println("Blind:      " + stats.blindResistance + "%");
-             System.out.println("Curse:      " + stats.curseResistance + "%");
-             System.out.println("═══════════════════════════════\n");
+         if (playerPos != null && exp != null) {
+             // Spawn a NORMAL tier goblin at player level, near player
+             float spawnX = playerPos.x + 100;
+             float spawnY = playerPos.y;
+             int playerLevel = exp.level;
+             
+             gameState.spawnMonster("Goblin", spawnX, spawnY, playerLevel, MobTier.NORMAL);
+             System.out.println("Spawned Lv" + playerLevel + " NORMAL Goblin for testing");
+         }
+     }
+
+     // Spawn ELITE test monster (press E)
+     if (e.getKeyCode() == KeyEvent.VK_E) {
+         Entity player = gameState.getPlayer();
+         Position playerPos = player.getComponent(Position.class);
+         Experience exp = player.getComponent(Experience.class);
+         
+         if (playerPos != null && exp != null) {
+             float spawnX = playerPos.x + 100;
+             float spawnY = playerPos.y;
+             int playerLevel = exp.level;
+             
+             gameState.spawnMonster("Goblin", spawnX, spawnY, playerLevel, MobTier.ELITE);
+             System.out.println("Spawned Lv" + playerLevel + " ELITE Goblin for testing");
+         }
+     }
+
+     // Spawn MINIBOSS test monster (press B)
+     if (e.getKeyCode() == KeyEvent.VK_B) {
+         Entity player = gameState.getPlayer();
+         Position playerPos = player.getComponent(Position.class);
+         Experience exp = player.getComponent(Experience.class);
+         
+         if (playerPos != null && exp != null) {
+             float spawnX = playerPos.x + 100;
+             float spawnY = playerPos.y;
+             int playerLevel = exp.level;
+             
+             gameState.spawnMonster("GoblinBoss", spawnX, spawnY, playerLevel, MobTier.MINIBOSS);
+             System.out.println("Spawned Lv" + playerLevel + " MINIBOSS for testing");
          }
      }
     }

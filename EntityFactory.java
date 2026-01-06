@@ -1,181 +1,132 @@
 package dev.main;
- 
-//player.addComponent(new CollisionBox(-10, 3, 22, 28));
 
 public class EntityFactory {
     
     /**
-     * Create a player entity
-     
+     * Create a player entity with level system
+     */
     public static Entity createPlayer(float x, float y) {
         Entity player = new Entity("Player", EntityType.PLAYER);
         
         player.addComponent(new Position(x, y));
         player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
         player.addComponent(new Movement(100f, 200f));
-        player.addComponent(new Stats(1000, 500f, 15, 5));
-        player.addComponent(new Combat(1.1f, 0.15f, 0.05f));  // 0.8s cooldown, 15% crit, 5% evasion 
+        
+        // LEVEL 1 BASE STATS: HP=100, Attack=10, Defense=2, Accuracy=0, Stamina=500
+        Stats stats = new Stats(100, 10, 2, 0, 500f);
+        player.addComponent(stats);
+        
+        // ADD EXPERIENCE COMPONENT
+        Experience exp = new Experience();
+        exp.hpGrowth = 10;      // +10 HP per level
+        exp.attackGrowth = 2;   // +2 Attack per level
+        exp.defenseGrowth = 1;  // +1 Defense per level
+        exp.accGrowth = 1;      // +1 Accuracy per level
+        player.addComponent(exp);
+        
+        // APPLY LEVEL 1 STATS
+        stats.applyLevelStats(exp);
+        
+        player.addComponent(new Combat(1.1f, 0.15f, 0.05f));
         player.addComponent(new HealthBar(40, 4, 40));
         player.addComponent(new StaminaBar(40, 4, 46));
+        player.addComponent(new XPBar(40, 3, 52));
         player.addComponent(new CollisionBox(-10, -14, 22, 44));
         player.addComponent(new Path());
         player.addComponent(new TargetIndicator()); 
-        player.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW
+        player.addComponent(new Renderable(RenderLayer.ENTITIES));
+        player.addComponent(new LevelUpEffect());
         
         return player;
-    } 
-	/**
-	 * Create a player entity with level system
-	 */
-	public static Entity createPlayer(float x, float y) {
-	    Entity player = new Entity("Player", EntityType.PLAYER);
-	    
-	    player.addComponent(new Position(x, y));
-	    player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
-	    player.addComponent(new Movement(100f, 200f));
-	    
-	    // ★ LEVEL 1 BASE STATS: HP=100, Attack=10, Defense=2, Accuracy=0, Stamina=500
-	    Stats stats = new Stats(100, 10, 2, 0, 500f);
-	    player.addComponent(stats);
-	    
-	    // ★ ADD EXPERIENCE COMPONENT
-	    Experience exp = new Experience();
-	    // Customize stat growth per level
-	    exp.hpGrowth = 10;      // +10 HP per level
-	    exp.attackGrowth = 2;   // +2 Attack per level
-	    exp.defenseGrowth = 1;  // +1 Defense per level
-	    exp.accGrowth = 1;      // +1 Accuracy per level
-	    player.addComponent(exp);
-	    
-	    // ★ APPLY LEVEL 1 STATS (calculates maxHp, attack, etc.)
-	    stats.applyLevelStats(exp);
-	    
-	    // Combat system
-	    player.addComponent(new Combat(1.1f, 0.15f, 0.05f));  // 1.1s cooldown, 15% crit, 5% evasion
-	    
-	    // UI Components
-	    player.addComponent(new HealthBar(40, 4, 40));
-	    player.addComponent(new StaminaBar(40, 4, 46));
-	    player.addComponent(new XPBar(40, 3, 52));  // ★ NEW: XP bar
-	    
-	    // Collision and movement
-	    player.addComponent(new CollisionBox(-10, -14, 22, 44));
-	    player.addComponent(new Path());
-	    player.addComponent(new TargetIndicator()); 
-	    
-	    // Rendering
-	    player.addComponent(new Renderable(RenderLayer.ENTITIES));
-	    
-	    // ★ NEW: Level-up visual effect
-	    player.addComponent(new LevelUpEffect());
-	    
-	    return player;
-	}
-	
-	
-    ///sprites/goblin_dark.png
+    }
+    
     /**
-     * Create a monster entity
+     * NEW: Create monster with level and tier scaling
      */
-    public static Entity createMonster(String monsterType, float x, float y) {
+    public static Entity createMonster(String monsterType, float x, float y, int level, MobTier tier) {
         Entity monster = new Entity(monsterType, EntityType.MONSTER);
         
         monster.addComponent(new Position(x, y));
         
+        // Calculate stats based on level and tier
+        MobStats mobStats = MobStatFactory.create(level, tier);
+        
+        // Add MonsterLevel component for XP calculation
+        monster.addComponent(new MonsterLevel(level, tier));
+        
+        // Create Stats component with calculated values
+        Stats stats = new Stats(mobStats.hp, 50f, mobStats.attack, mobStats.defense);
+        stats.accuracy = mobStats.accuracy;
+        stats.evasion = mobStats.evasion;
+        monster.addComponent(stats);
+        
+        // Configure monster type-specific properties
         switch(monsterType) {
-          /*  case "Slime":
-                monster.addComponent(new Sprite("/sprites/slime.png", 64, 64, 0.2f));
-                monster.addComponent(new Stats(50, 50f, 5, 2));
-                monster.addComponent(new Combat(1.5f, 0.05f, 0.10f));
-                monster.addComponent(new Movement(60f, 120f));
-                monster.addComponent(new CollisionBox(-12, -12, 24, 24));
-                monster.addComponent(new AI("aggressive", x, y, 128f, 3f));
-                monster.addComponent(new NameTag("Slime", -45));
-                break;
-             */   
             case "Goblin":
                 monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f));
-                monster.addComponent(new Stats(80, 80f, 10, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44)); 
-                monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
+                monster.addComponent(new AI("passive", x, y, 500f, 4f));
                 monster.addComponent(new NameTag("Goblin", -20));
-                monster.addComponent(new Alert(-40));  // NEW
-                monster.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW
-                
-                
+                monster.addComponent(new Alert(-40));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES));
                 break;
-            /*    
-            case "Poring":
-                monster.addComponent(new Sprite("/sprites/poring.png", 64, 64, 0.25f));
-                monster.addComponent(new Stats(30, 30f, 3, 1));
-                monster.addComponent(new Combat(2.0f, 0.02f, 0.15f));
-                monster.addComponent(new Movement(40f, 80f));
-                monster.addComponent(new CollisionBox(-12, -12, 24, 24));
-                monster.addComponent(new AI("passive", x, y, 96f, 0f));
-                monster.addComponent(new NameTag("Poring", -45));
-                break;
-             */   
-            case "GoblinBoss":  // NEW: Boss monster
+                
+            case "GoblinBoss":
                 monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.12f));
-                monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
-                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
-                monster.addComponent(new Movement(100f, 200f));  // Fast movement
-                monster.addComponent(new CollisionBox(-10, -14, 22, 44));  // Larger hitbox -10, 3, 28, 32
-                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
+                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
+                monster.addComponent(new Movement(100f, 200f));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));
+                monster.addComponent(new AI("aggressive", x, y, 250f, 6f));
                 monster.addComponent(new NameTag("Goblin Boss", -20));
-                monster.addComponent(new Alert(-40));  // NEW
-                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
-                 
+                monster.addComponent(new Alert(-40));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));
                 break;
-            //me
-            case "BunnyBoss":  // NEW: Boss monster
-                monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f));
-                monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
-                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
-                monster.addComponent(new Movement(100f, 200f));  // Fast movement
-                monster.addComponent(new CollisionBox(-10, -14, 22, 44));  // Larger hitbox
-                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
-                monster.addComponent(new NameTag("Bunny Boss", -20));
-                monster.addComponent(new Alert(-40));  // NEW
-                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
                 
-              //me
-            case "MinotaurBoss":  // NEW: Boss monster
-                monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f));
-                monster.addComponent(new Stats(100, 500f, 25, 10));  // High HP and damage
-                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));  // Fast attacks, high crit
-                monster.addComponent(new Movement(100f, 200f));  // Fast movement
-                monster.addComponent(new CollisionBox(-10, -14, 22, 44));  // Larger hitbox
-                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));  // Large aggro range
-                monster.addComponent(new NameTag("Minotaur Boss", -20));
-                monster.addComponent(new Alert(-40));  // NEW
-                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));  // NEW: Boss renders slightly higher
+            case "BunnyBoss":
+                monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f));
+                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
+                monster.addComponent(new Movement(100f, 200f));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));
+                monster.addComponent(new AI("aggressive", x, y, 500f, 6f));
+                monster.addComponent(new NameTag("Bunny Boss", -20));
+                monster.addComponent(new Alert(-40));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));
                 break;
-                //me
+                
+            case "MinotaurBoss":
+                monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f));
+                monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
+                monster.addComponent(new Movement(100f, 200f));
+                monster.addComponent(new CollisionBox(-10, -14, 22, 44));
+                monster.addComponent(new AI("aggressive", x, y, 250f, 6f));
+                monster.addComponent(new NameTag("Minotaur Boss", -20));
+                monster.addComponent(new Alert(-40));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES, 10));
+                break;
+                
             case "Bunny":
                 monster.addComponent(new Sprite("/sprites/bunny.png", 64, 64, 0.15f));
-                monster.addComponent(new Stats(80, 80f, 10, 4));
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
-                monster.addComponent(new AI("aggressive", x, y, 500f, 4f));
+                monster.addComponent(new AI("passive", x, y, 500f, 4f));
                 monster.addComponent(new NameTag("Bunny", -20));
-                monster.addComponent(new Alert(-40));  // NEW
-                monster.addComponent(new Renderable(RenderLayer.ENTITIES));  // NEW: Boss renders slightly higher
+                monster.addComponent(new Alert(-40));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES));
+                break;
                 
-            /*    
             default:
-                monster.addComponent(new Sprite("/sprites/monster_default.png", 64, 64, 0.2f));
-                monster.addComponent(new Stats(40, 40f, 5, 2));
+                // Default monster setup
+                monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f));
                 monster.addComponent(new Combat(1.5f, 0.05f, 0.08f));
                 monster.addComponent(new Movement(50f, 100f));
                 monster.addComponent(new CollisionBox(-12, -12, 24, 24));
                 monster.addComponent(new AI("neutral", x, y, 128f, 2f));
                 monster.addComponent(new NameTag("Monster", -45));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES));
                 break;
-                */
         }
         
         monster.addComponent(new HealthBar(40, 4, 40));
@@ -185,13 +136,18 @@ public class EntityFactory {
     }
     
     /**
+     * OLD: Backwards compatibility - creates level 1 NORMAL tier monster
+     */
+    public static Entity createMonster(String monsterType, float x, float y) {
+        return createMonster(monsterType, x, y, 1, MobTier.NORMAL);
+    }
+    
+    /**
      * Create NPC entity (reserved for later)
      */
     public static Entity createNPC(String npcName, float x, float y) {
         Entity npc = new Entity(npcName, EntityType.NPC);
-        
         // TODO: Implement NPC creation
-        
         return npc;
     }
 }

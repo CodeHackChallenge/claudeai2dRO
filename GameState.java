@@ -40,68 +40,77 @@ public class GameState {
         
         initializeWorld();
     }
-    
+    // ★ UPDATE initializeWorld() method:
     private void initializeWorld() {
         // Create player
-        //float centerX = (map.getWidthInPixels()) / 2f;
-        //float centerY = (map.getHeightInPixels()) / 2f;
-        
         player = EntityFactory.createPlayer(8 * 64, 5 * 64);
         entities.add(player);
         
+        float normalRespawn = 30f;  // 30 seconds for normal mobs
+        float bossRespawn = 50f;    // 50 seconds for bosses 
         
-        // Adjust these values as needed:
-        float normalRespawn = 30f;      // 30 seconds for normal mobs
-        float bossRespawn = 50f;       // 300f = 5 minutes for bosses 
+        // Example spawns with level and tier:
         
-        /*
-        // Spawn some monsters
-        //spawnMonster("Slime", 400, 400);
-        //spawnMonster("Slime", 600, 300);
-        spawnMonster("Goblin_Boss", 800, 500);
-        spawnMonster("Goblin", 864, 500);
-        spawnMonster("Goblin", 900, 500);
-        spawnMonster("Goblin", 964, 500);
-        spawnMonster("Goblin", 700, 500);
-        spawnMonster("Goblin", 764, 500); 
-        //spawnMonster("Goblin", 300, 700);
-        //spawnMonster("Poring", 500, 600);
-      
-        // Create spawn points for regular monsters (30 second respawn)
-        //addSpawnPoint("Slime", 400, 400, normalRespawn);
-        //addSpawnPoint("Slime", 600, 300, normalRespawn);
-        addSpawnPoint("Goblin", 800, 500, normalRespawn);
-        addSpawnPoint("Goblin", 900, 700, normalRespawn);
-        addSpawnPoint("Goblin", 764, 500, normalRespawn);
-        addSpawnPoint("Goblin", 864, 600, normalRespawn);
-        //addSpawnPoint("Poring", 500, 600, normalRespawn);
-          */
-        //goblin
-        addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn);
-        addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn);
-        addSpawnPoint("Goblin", 12 * 64, 10 * 64, normalRespawn);
-        addSpawnPoint("Goblin", 13 * 64, 10 * 64, normalRespawn);
-        //bunny
-        addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn);
-        addSpawnPoint("Bunny", 20 * 64, 21 * 64, normalRespawn);
-        addSpawnPoint("Bunny", 21 * 64, 22 * 64, normalRespawn);
-        addSpawnPoint("Bunny", 21 * 64, 23 * 64, normalRespawn);
-        // Create spawn point for boss (5 minute respawn)
-        addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn);  // 300 seconds = 5 minutes
-        addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn);  // 300 seconds = 5 minutes
-        addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn);  // 300 seconds = 5 minutes
+        // TRASH tier goblins (weak, low XP)
+        addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
+        //me
+        addSpawnPoint("Goblin", 5 * 64, 5 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 7 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 8 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 8 * 64, 9 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 9 * 64, 2 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 9 * 64, 5 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 4 * 64, 6 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 4 * 64, 4 * 64, normalRespawn, 1, MobTier.TRASH);
         
+        // NORMAL tier goblins
+        addSpawnPoint("Goblin", 12 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Goblin", 13 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
+        
+        //me
+        addSpawnPoint("Goblin", 12 * 64, 2 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Goblin", 13 * 64, 2 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Goblin", 12 * 64, 3 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Goblin", 14 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
+        // ELITE goblin (stronger, more XP)
+        addSpawnPoint("Goblin", 14 * 64, 10 * 64, normalRespawn, 3, MobTier.ELITE);
+        
+        // NORMAL bunnies
+        addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn, 1, MobTier.NORMAL);
+        addSpawnPoint("Bunny", 20 * 64, 21 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Bunny", 21 * 64, 22 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Bunny", 21 * 64, 23 * 64, normalRespawn, 3, MobTier.NORMAL);
+        //me
+        addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn, 1, MobTier.NORMAL);
+        addSpawnPoint("Bunny", 20 * 64, 22 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Bunny", 22 * 64, 22 * 64, normalRespawn, 2, MobTier.NORMAL);
+        addSpawnPoint("Bunny", 23 * 64, 23 * 64, normalRespawn, 3, MobTier.NORMAL);
+        
+        // MINIBOSS spawns (high level, great rewards)
+        addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn, 5, MobTier.MINIBOSS);
+        addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn, 5, MobTier.MINIBOSS);
+        addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn, 7, MobTier.MINIBOSS);
         
         // Initial spawn of all monsters
         for (SpawnPoint sp : spawnPoints) {
             spawnMonsterAtPoint(sp);
         }
     }
-    
-    public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay) {
-        SpawnPoint sp = new SpawnPoint(monsterType, x, y, respawnDelay);
+    /**
+     * OLD: Backwards compatibility - defaults to level 1, NORMAL tier
+     */
+   // public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay) {
+    //    addSpawnPoint(monsterType, x, y, respawnDelay, 1, MobTier.NORMAL);
+   // }
+
+    /**
+     * NEW: Add spawn point with level and tier
+     */
+    public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay, int level, MobTier tier) {
+        SpawnPoint sp = new SpawnPoint(monsterType, x, y, respawnDelay, level, tier);
         spawnPoints.add(sp);
-        System.out.println("Added spawn point: " + monsterType + " at (" + (int)x + ", " + (int)y + ") - respawn: " + respawnDelay + "s");
+        System.out.println("Added spawn point: " + sp);
     }
     
     public void updateSpawnPoints(float delta) {
@@ -129,22 +138,58 @@ public class GameState {
     
     public List<SpawnPoint> getSpawnPoints() {
         return spawnPoints;
-    }
-        
+    } 
+    /**
+     * Spawn monster at spawn point (uses spawn point's level and tier)
+     */
     public void spawnMonsterAtPoint(SpawnPoint spawnPoint) {
         if (spawnPoint.isOccupied) {
             return;  // Already has a monster
         }
         
-        Entity monster = EntityFactory.createMonster(spawnPoint.monsterType, spawnPoint.x, spawnPoint.y);
+        // ★ Create monster with spawn point's level and tier
+        Entity monster = EntityFactory.createMonster(
+            spawnPoint.monsterType, 
+            spawnPoint.x, 
+            spawnPoint.y,
+            spawnPoint.level,
+            spawnPoint.tier
+        );
         
         // Add respawn component so we can track which spawn point this monster belongs to
-        monster.addComponent(new Respawn(spawnPoint.monsterType, spawnPoint.x, spawnPoint.y, spawnPoint.respawnDelay));
+        monster.addComponent(new Respawn(
+            spawnPoint.monsterType, 
+            spawnPoint.x, 
+            spawnPoint.y, 
+            spawnPoint.respawnDelay
+        ));
         
         entities.add(monster);
         spawnPoint.spawn(monster);
         
-        System.out.println("Spawned " + spawnPoint.monsterType + " at (" + (int)spawnPoint.x + ", " + (int)spawnPoint.y + ")");
+        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
+        Stats stats = monster.getComponent(Stats.class);
+        
+        System.out.println("Spawned " + spawnPoint.monsterType + 
+                         " Lv" + spawnPoint.level + " " + spawnPoint.tier +
+                         " at (" + (int)spawnPoint.x + ", " + (int)spawnPoint.y + ")" +
+                         " - HP:" + stats.maxHp + " ATK:" + stats.attack + 
+                         " DEF:" + stats.defense + " ACC:" + stats.accuracy + 
+                         " EVA:" + stats.evasion);
+    }
+    /**
+     * OLD: Backwards compatibility - spawns level 1 NORMAL monster
+     */
+    public void spawnMonster(String type, float x, float y) {
+        spawnMonster(type, x, y, 1, MobTier.NORMAL);
+    }
+    /**
+     * NEW: Spawn monster directly with level and tier
+     */
+    public void spawnMonster(String type, float x, float y, int level, MobTier tier) {
+        Entity monster = EntityFactory.createMonster(type, x, y, level, tier);
+        entities.add(monster);
+        System.out.println("Spawned " + type + " Lv" + level + " " + tier + " at (" + x + ", " + y + ")");
     }
     
     public Entity getAutoAttackTarget() {
@@ -217,12 +262,12 @@ public class GameState {
             if (tag != null) tag.show();
         }
     }
-            
+     /*       
     public void spawnMonster(String type, float x, float y) {
         Entity monster = EntityFactory.createMonster(type, x, y);
         entities.add(monster);
         System.out.println("Spawned " + type + " at (" + x + ", " + y + ")");
-    }
+    }*/
     
     public void markForRemoval(Entity entity) {
         if (!entitiesToRemove.contains(entity)) {
