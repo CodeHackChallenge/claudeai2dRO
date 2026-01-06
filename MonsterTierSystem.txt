@@ -1,0 +1,348 @@
+# Monster Tier System Implementation Guide
+
+## 📋 Overview
+This system implements dynamic monster scaling with 4 tiers and level-based stat generation. Monsters scale based on their level and tier, providing appropriate challenges and rewards.
+
+---
+
+## 🆕 New Files to Create
+
+### 1. `MobTier.java` ✅ (Provided)
+Enum with 4 tiers and stat multipliers:
+- **TRASH** - 40% HP, 50% ATK (weak, low XP)
+- **NORMAL** - 70% HP, 80% ATK (standard mobs)
+- **ELITE** - 120% HP, 110% ATK (challenging, good XP)
+- **MINIBOSS** - 300% HP, 150% ATK (very strong, great XP)
+
+### 2. `MobStatFactory.java` ✅ (Provided)
+Calculates monster stats based on player level formula:
+```java
+Player Lv5: HP=140, ATK=18, DEF=6, ACC=4, EVA=0
+  ↓ Apply tier multipliers ↓
+TRASH Goblin: HP=56, ATK=9, DEF=2, ACC=3, EVA=2
+NORMAL Goblin: HP=98, ATK=14, DEF=4, ACC=4, EVA=3
+ELITE Goblin: HP=168, ATK=19, DEF=6, ACC=4, EVA=4
+MINIBOSS: HP=420, ATK=27, DEF=7, ACC=4, EVA=5
+```
+
+### 3. `MobStats.java`
+Simple data class holding calculated mob stats (HP, ATK, DEF, ACC, EVA).
+
+### 4. `MonsterLevel.java`
+Component to track monster level and tier. Includes XP calculation:
+```java
+XP = 50 × (1 + level × 0.5) × tierMultiplier
+```
+
+**Tier Multipliers:**
+- TRASH: 0.5x
+- NORMAL: 1.0x
+- ELITE: 2.5x
+- MINIBOSS: 5.0x
+
+---
+
+## 🔧 Files to Modify
+
+### 1. **EntityFactory.java**
+**Add new method:**
+```java
+createMonster(String type, float x, float y, int level, MobTier tier)
+```
+
+**Changes:**
+- Uses `MobStatFactory.create()` to calculate stats
+- Adds `MonsterLevel` component
+- Applies calculated stats to `Stats` component
+- Keeps old `createMonster()` for backwards compatibility
+
+### 2. **SpawnPoint.java**
+**Add fields:**
+```java
+public int level;
+public MobTier tier;
+```
+
+**Add constructor:**
+```java
+SpawnPoint(String type, float x, float y, float respawn, int level, MobTier tier)
+```
+
+### 3. **GameState.java**
+**Update methods:**
+```java
+addSpawnPoint(String type, float x, y, respawn, int level, MobTier tier)
+spawnMonsterAtPoint(SpawnPoint sp) // Uses sp.level and sp.tier
+spawnMonster(String type, float x, y, int level, MobTier tier)
+```
+
+**Update `initializeWorld()`:**
+```java
+// Example spawns:
+addSpawnPoint("Goblin", 10*64, 10*64, 30f, 1, MobTier.TRASH);
+addSpawnPoint("Goblin", 12*64, 10*64, 30f, 2, MobTier.NORMAL);
+addSpawnPoint("Goblin", 14*64, 10*64, 30f, 3, MobTier.ELITE);
+addSpawnPoint("GoblinBoss", 13*64, 12*64, 50f, 5, MobTier.MINIBOSS);
+```
+
+### 4. **GameLogic.java**
+**Update `calculateMonsterXP()`:**
+```java
+MonsterLevel ml = monster.getComponent(MonsterLevel.class);
+if (ml != null) {
+    return ml.calculateXPReward();
+}
+```
+
+**Update `handleMonsterDeath()`:**
+- Shows monster level/tier in death message
+- Uses new XP calculation
+
+### 5. **Renderer.java**
+**Add methods:**
+- `drawMonsterLevelBadge()` - Shows "Lv5" badge with tier color
+- `drawTierIndicator()` - Shows tier text below name (ELITE, MINIBOSS, etc.)
+
+**Update `renderWorldUI()`:**
+- Draws level badges for monsters
+- Draws tier indicators when name is visible
+
+**Tier Colors:**
+- TRASH: Gray (150, 150, 150)
+- NORMAL: Green (100, 200, 100) - Hidden by default
+- ELITE: Blue (100, 150, 255)
+- MINIBOSS: Purple (200, 100, 200)
+
+**Update `drawDebugAI()`:**
+- Shows monster level, tier, and all stats in debug mode
+
+### 6. **Engine.java**
+**Add debug keys:**
+- **T** - Show tier comparison table at player level
+- **M** - Spawn NORMAL tier goblin at player level
+- **E** - Spawn ELITE tier goblin at player level
+- **B** - Spawn MINIBOSS at player level
+
+---
+
+## 📊 Stat Scaling Examples
+
+### Level 1 Player vs Monsters
+```
+PLAYER Lv1:  HP=100  ATK=10  DEF=2   ACC=0  EVA=0
+─────────────────────────────────────────────────────
+TRASH:       HP=40   ATK=5   DEF=0   ACC=0  EVA=0  → XP: 37
+NORMAL:      HP=70   ATK=8   DEF=1   ACC=0  EVA=0  → XP: 75
+ELITE:       HP=120  ATK=11  DEF=2   ACC=1  EVA=0  → XP: 187
+MINIBOSS:    HP=300  ATK=15  DEF=2   ACC=1  EVA=1  → XP: 375
+```
+
+### Level 5 Player vs Monsters
+```
+PLAYER Lv5:  HP=140  ATK=18  DEF=6   ACC=4  EVA=0
+─────────────────────────────────────────────────────
+TRASH:       HP=56   ATK=9   DEF=2   ACC=3  EVA=2  → XP: 87
+NORMAL:      HP=98   ATK=14  DEF=4   ACC=4  EVA=3  → XP: 175
+ELITE:       HP=168  ATK=19  DEF=6   ACC=4  EVA=4  → XP: 437
+MINIBOSS:    HP=420  ATK=27  DEF=7   ACC=4  EVA=5  → XP: 875
+```
+
+### Level 10 Player vs Monsters
+```
+PLAYER Lv10: HP=190  ATK=28  DEF=11  ACC=9  EVA=0
+─────────────────────────────────────────────────────
+TRASH:       HP=76   ATK=14  DEF=4   ACC=7  EVA=4  → XP: 162
+NORMAL:      HP=133  ATK=22  DEF=7   ACC=9  EVA=6  → XP: 325
+ELITE:       HP=228  ATK=30  DEF=11  ACC=9  EVA=8  → XP: 812
+MINIBOSS:    HP=570  ATK=42  DEF=14  ACC=10 EVA=10 → XP: 1625
+```
+
+---
+
+## 🎮 XP Reward Formula
+
+```java
+BaseXP = 50
+LevelFactor = 1.0 + (monsterLevel × 0.5)
+TierMultiplier = {0.5, 1.0, 2.5, 5.0}
+
+Total XP = BaseXP × LevelFactor × TierMultiplier
+```
+
+**Examples:**
+- Lv1 TRASH: 50 × 1.5 × 0.5 = **37 XP**
+- Lv1 NORMAL: 50 × 1.5 × 1.0 = **75 XP**
+- Lv5 ELITE: 50 × 3.5 × 2.5 = **437 XP**
+- Lv10 MINIBOSS: 50 × 6.0 × 5.0 = **1625 XP**
+
+---
+
+## 🎨 Visual Features
+
+### Monster Level Badge
+- Position: Top-right of monster sprite
+- Shows "Lv5" text
+- Border colored by tier (gray/green/blue/purple)
+- Always visible (even without hover)
+
+### Tier Indicator
+- Position: Below name tag
+- Shows tier text: "ELITE", "MINIBOSS", etc.
+- NORMAL tier hidden (reduces clutter)
+- Only shown when name tag is visible
+
+### Debug Mode (F3)
+Shows for each monster:
+- AI state
+- Level and tier
+- HP, ATK, DEF, ACC, EVA
+- Hit chance calculation
+
+---
+
+## 🧪 Testing Commands
+
+### Basic Testing
+- **X** - Add 100 XP to player
+- **S** - Show player stats
+- **F3** - Toggle debug mode
+
+### Tier Testing
+- **T** - Show tier comparison table at your level
+- **M** - Spawn NORMAL goblin at your level
+- **E** - Spawn ELITE goblin at your level  
+- **B** - Spawn MINIBOSS at your level
+
+### Testing Workflow
+```
+1. Press S - Check your level
+2. Press T - See all tier stats at your level
+3. Press M - Spawn a NORMAL mob to fight
+4. Press E - Spawn an ELITE for challenge
+5. Press B - Spawn a MINIBOSS (be careful!)
+6. Kill mobs and check XP rewards
+7. Repeat at different player levels
+```
+
+---
+
+## 📈 Balancing Guidelines
+
+### TRASH Tier (0.4 HP, 0.5 ATK)
+- Purpose: Filler mobs, quick kills
+- Use for: Grinding areas, low-risk zones
+- XP: 50% of NORMAL
+
+### NORMAL Tier (0.7 HP, 0.8 ATK)
+- Purpose: Standard challenge
+- Use for: Main leveling content
+- XP: Baseline (1.0x)
+
+### ELITE Tier (1.2 HP, 1.1 ATK)
+- Purpose: Mini-challenge, requires attention
+- Use for: Mixed with NORMAL for variety
+- XP: 2.5x (worth the effort)
+
+### MINIBOSS Tier (3.0 HP, 1.5 ATK)
+- Purpose: Significant challenge
+- Use for: Boss spawns, rare encounters
+- XP: 5.0x (big reward)
+
+---
+
+## 🔮 Spawn Distribution Examples
+
+### Starting Area (Player Lv1-3)
+```java
+// 60% TRASH, 30% NORMAL, 10% ELITE
+addSpawnPoint("Goblin", x, y, 30f, 1, MobTier.TRASH);    // Easy
+addSpawnPoint("Goblin", x, y, 30f, 1, MobTier.TRASH);
+addSpawnPoint("Goblin", x, y, 30f, 1, MobTier.NORMAL);   // Fair
+addSpawnPoint("Goblin", x, y, 30f, 2, MobTier.ELITE);    // Challenge
+addSpawnPoint("GoblinBoss", x, y, 60f, 3, MobTier.MINIBOSS); // Boss
+```
+
+### Mid-Level Area (Player Lv5-8)
+```java
+// 20% TRASH, 60% NORMAL, 20% ELITE
+addSpawnPoint("Bunny", x, y, 30f, 4, MobTier.TRASH);
+addSpawnPoint("Bunny", x, y, 30f, 5, MobTier.NORMAL);
+addSpawnPoint("Bunny", x, y, 30f, 5, MobTier.NORMAL);
+addSpawnPoint("Bunny", x, y, 30f, 6, MobTier.ELITE);
+addSpawnPoint("BunnyBoss", x, y, 60f, 7, MobTier.MINIBOSS);
+```
+
+### High-Level Area (Player Lv10+)
+```java
+// 10% NORMAL, 70% ELITE, 20% MINIBOSS
+addSpawnPoint("Minotaur", x, y, 30f, 10, MobTier.NORMAL);
+addSpawnPoint("Minotaur", x, y, 30f, 11, MobTier.ELITE);
+addSpawnPoint("Minotaur", x, y, 30f, 12, MobTier.ELITE);
+addSpawnPoint("MinotaurBoss", x, y, 60f, 15, MobTier.MINIBOSS);
+```
+
+---
+
+## ✅ Implementation Checklist
+
+- [ ] Create MobTier.java (provided)
+- [ ] Create MobStatFactory.java (provided)
+- [ ] Create MobStats.java
+- [ ] Create MonsterLevel.java
+- [ ] Update EntityFactory.java (new createMonster method)
+- [ ] Update SpawnPoint.java (add level/tier fields)
+- [ ] Update GameState.java (spawn methods)
+- [ ] Update GameLogic.java (XP calculation)
+- [ ] Update Renderer.java (level badges, tier indicators)
+- [ ] Update Engine.java (debug commands)
+- [ ] Test tier comparison (T key)
+- [ ] Test spawning different tiers (M/E/B keys)
+- [ ] Verify XP rewards match expected values
+- [ ] Verify stats scale correctly per level
+- [ ] Check visual display (badges, colors)
+
+---
+
+## 🐛 Common Issues
+
+**Issue:** Monster stats not scaling
+**Fix:** Ensure `MobStatFactory.create()` is called and results applied to Stats
+
+**Issue:** XP rewards seem wrong
+**Fix:** Check that MonsterLevel component exists and calculateXPReward() is being used
+
+**Issue:** Level badges not showing
+**Fix:** Verify MonsterLevel component is added in EntityFactory
+
+**Issue:** Tier colors not displaying
+**Fix:** Check drawMonsterLevelBadge() is being called in renderWorldUI()
+
+---
+
+## 🎯 Design Philosophy
+
+### Why This System?
+1. **Scalable** - Easy to adjust balance with multipliers
+2. **Flexible** - Same monster type at different tiers
+3. **Clear** - Visual indicators show challenge level
+4. **Rewarding** - Higher risk = higher reward
+5. **Predictable** - Stats follow player level curve
+
+### Key Design Decisions
+- NORMAL tier hidden to reduce clutter (most common)
+- ELITE and MINIBOSS highly visible (important info)
+- XP scales quadratically to match player XP curve
+- Monster evasion grows (player evasion doesn't) for late-game challenge
+- Tier colors consistent across UI elements
+
+---
+
+## 📝 Future Enhancements
+
+Easy to add later:
+1. **Dynamic spawning** - Adjust tier based on player level
+2. **Scaling loot** - Better items from higher tiers
+3. **Rare mob variants** - Special versions with bonus stats
+4. **World tier system** - Entire zones at different difficulties
+5. **Monster families** - Different growth curves per type
+6. **Affixes/modifiers** - "Enraged", "Swift", etc. with stat bonuses
