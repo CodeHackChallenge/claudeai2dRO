@@ -1,0 +1,9 @@
+• Skill Name: Heal
+• Unlocked: Level 1 by Fionne
+• Max Level: 10
+• Heal Formula:Heal = MaxHP \times (0.10 + 0.015 \times SkillLevel)
+
+• Cooldown: 6s
+• Mana Cost: 5% Max MP
+• Scaling: Perfect for levels 1–40
+• Purpose: Universal sustain before job change
