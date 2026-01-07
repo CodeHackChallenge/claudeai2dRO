@@ -54,20 +54,31 @@ public class GameLogic {
         state.updateSpawnPoints(delta);  // NEW: Update respawn timers
         state.removeMarkedEntities();
         updateCamera(delta);
-    }
+    } 
     /**
      * Player attacks target entity (called from click or auto-attack)
-     */ 
+     * ☆ FIXED: Clears previous movement path immediately when targeting monster
+     */
     public void playerAttack(Entity target) {
         Entity player = state.getPlayer();
         Combat playerCombat = player.getComponent(Combat.class);
         Position playerPos = player.getComponent(Position.class);
         Position targetPos = target.getComponent(Position.class);
         Movement playerMovement = player.getComponent(Movement.class);
-        Stats playerStats = player.getComponent(Stats.class);  // ☆ NEW
+        Stats playerStats = player.getComponent(Stats.class);
+        Path playerPath = player.getComponent(Path.class);  // ☆ NEW
+        TargetIndicator indicator = player.getComponent(TargetIndicator.class);  // ☆ NEW
         
         if (playerCombat == null || playerStats == null) return;
         if (playerPos == null || targetPos == null) return;
+        
+        // ☆ NEW: Clear any existing movement path/target immediately
+        if (playerPath != null) {
+            playerPath.clear();
+        }
+        if (indicator != null) {
+            indicator.clear();
+        }
         
         // Set as auto-attack target
         state.setAutoAttackTarget(target);
@@ -75,13 +86,14 @@ public class GameLogic {
         // Check distance
         float distance = distance(playerPos.x, playerPos.y, targetPos.x, targetPos.y);
         
-        // ☆ NEW: Check stamina before attacking
         if (distance <= 80f && playerCombat.canAttackWithStamina(playerStats)) {
             // In range and can attack - do it now
             playerMovement.direction = calculateDirection(targetPos.x - playerPos.x, targetPos.y - playerPos.y);
             playerMovement.lastDirection = playerMovement.direction;
             
-            // ☆ NEW: Consume stamina
+            // ☆ Stop moving to old location
+            playerMovement.stopMoving();
+            
             if (playerStats.consumeStaminaForAttack()) {
                 playerCombat.startAttack(target);
             } else {
@@ -89,15 +101,23 @@ public class GameLogic {
             }
         } else if (distance > 80f) {
             // Out of range - will path to target in update loop
+            // ☆ Movement is already cleared, auto-attack will create new path to monster
         } else {
             System.out.println("Not enough stamina to attack!");
         }
-    } 
+    }
     /**
      * Stop auto-attacking (called when moving to new location)
      */
     public void stopAutoAttack() {
         state.clearAutoAttackTarget();
+        
+        // ☆ NEW: Clear target indicator when stopping auto-attack
+        Entity player = state.getPlayer();
+        TargetIndicator indicator = player.getComponent(TargetIndicator.class);
+        if (indicator != null) {
+            indicator.clear();
+        }
     }
     /**
      * Perform attack calculation with crit/evasion

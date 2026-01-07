@@ -172,24 +172,28 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
-            // ★ NEW: Check UI clicks first - if consumed, don't process world clicks
+            // ☆ Check UI clicks first
             boolean uiConsumedClick = gameState.getUIManager().handleClick(screenX, screenY);
             
             if (!uiConsumedClick) {
-                // UI didn't consume the click, process world click
                 float worldX = screenX + gameState.getCameraX();
                 float worldY = screenY + gameState.getCameraY();
                 
                 Entity hoveredEntity = gameState.getHoveredEntity();
                 
+                // ☆ Check if clicking a monster
                 if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
                     Stats stats = hoveredEntity.getComponent(Stats.class);
                     if (stats != null && stats.hp > 0) {
                         gameState.setTargetedEntity(hoveredEntity);
+                        
+                        // ☆ Attack the monster (this will clear old path internally)
                         gameLogic.playerAttack(hoveredEntity);
-                        System.out.println("Auto-attacking " + hoveredEntity.getName());
+                        
+                        System.out.println("Attacking " + hoveredEntity.getName());
                     }
                 } else {
+                    // ☆ Clicking empty ground - stop auto-attack and move to location
                     gameLogic.stopAutoAttack();
                     gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
                 }
@@ -202,14 +206,14 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
-            // ★ NEW: Check UI right clicks - if consumed, don't process world clicks
+            // ☆ Check UI right clicks
             boolean uiConsumedClick = gameState.getUIManager().handleRightClick(screenX, screenY);
             
             if (!uiConsumedClick) {
-                // UI didn't consume the click, process world click
                 float worldX = screenX + gameState.getCameraX();
                 float worldY = screenY + gameState.getCameraY();
                 
+                // ☆ Right-click always stops auto-attack and moves
                 gameLogic.stopAutoAttack();
                 gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             }
