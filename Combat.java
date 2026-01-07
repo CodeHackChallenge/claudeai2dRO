@@ -51,6 +51,14 @@ public class Combat implements Component {
     public boolean canAttack() {
         return attackTimer <= 0 && !isAttacking;
     }
+    // ☆ NEW: Check if can attack (cooldown + stamina)
+    public boolean canAttackWithStamina(Stats stats) {
+        if (!canAttack()) return false;
+        
+        // Check if have enough stamina
+        float staminaCost = stats.getEffectiveStaminaCost(Stats.STAMINA_COST_BASIC_ATTACK);
+        return stats.stamina >= staminaCost;
+    }
     
     public void startAttack(Entity target) {
         isAttacking = true;

@@ -6,7 +6,7 @@ public class Stats implements Component {
     public int baseAttack;
     public int baseDefense;
     public int baseAccuracy;
-    public int baseMaxMana;  // ☆ NEW: Base max mana
+    public int baseMaxMana;
     
     // Current stats (calculated from base + level bonuses)
     public int hp;
@@ -15,15 +15,24 @@ public class Stats implements Component {
     public int defense;
     public int accuracy;
     
-    // ☆ NEW: Mana system
+    // Mana system
     public int mana;
     public int maxMana;
-    public float manaRegenRate;  // MP regen per second
+    public float manaRegenRate;
     
-    // Stamina (doesn't scale with level)
+    // ☆ NEW: Stamina system with multipliers
+    public static final float BASE_MAX_STAMINA = 500f;  // Fixed base, doesn't scale with level
     public float stamina;
     public float maxStamina;
-    public float staminaRegenRate;
+    public float maxStaminaBonus;      // Percentage bonus (0.0 = 0%, 0.5 = 50%)
+    public float staminaRegenBonus;    // Percentage bonus for regen (0.0 = 0%, 0.5 = 50%)
+    public float staminaCostReduction; // Percentage reduction (0.0 = 0%, 0.3 = 30%)
+    
+    // Stamina constants
+    public static final float STAMINA_DRAIN_RUNNING = 10f;   // Per second when running
+    public static final float STAMINA_REGEN_WALKING = 8f;    // Per second when walking
+    public static final float STAMINA_REGEN_IDLE = 15f;      // Per second when idle
+    public static final float STAMINA_COST_BASIC_ATTACK = 20f; // Per basic attack
     
     // Stats that don't grow with level
     public int evasion;
@@ -43,7 +52,7 @@ public class Stats implements Component {
     /**
      * Constructor with base stats (for player at level 1)
      */
-    public Stats(int baseMaxHp, int baseAttack, int baseDefense, int baseAccuracy, float maxStamina, int baseMaxMana) {
+    public Stats(int baseMaxHp, int baseAttack, int baseDefense, int baseAccuracy, int baseMaxMana) {
         // Store base stats
         this.baseMaxHp = baseMaxHp;
         this.baseAttack = baseAttack;
@@ -58,17 +67,20 @@ public class Stats implements Component {
         this.defense = baseDefense;
         this.accuracy = baseAccuracy;
         
-        // ☆ NEW: Initialize mana
+        // Initialize mana
         this.maxMana = baseMaxMana;
         this.mana = baseMaxMana;
-        this.manaRegenRate = baseMaxMana * 0.01f;  // 1% of max mana per second
+        this.manaRegenRate = baseMaxMana * 0.01f;
         
-        // Stamina
-        this.maxStamina = maxStamina;
-        this.stamina = maxStamina;
-        this.staminaRegenRate = 10f;
+        // ☆ NEW: Initialize stamina with multipliers
+        this.maxStaminaBonus = 0f;      // No bonus by default
+        this.staminaRegenBonus = 0f;    // No bonus by default
+        this.staminaCostReduction = 0f; // No reduction by default
         
-        // Non-growing stats
+        calculateMaxStamina();
+        this.stamina = this.maxStamina;
+        
+        // Stats that don't grow with level
         this.evasion = 0;
         this.magicAttack = 0;
         this.magicDefense = 0;
@@ -84,7 +96,7 @@ public class Stats implements Component {
     }
     
     /**
-     * Old constructor for backwards compatibility (monsters, no mana)
+     * Old constructor for backwards compatibility (monsters, no mana/stamina)
      */
     public Stats(int maxHp, float maxStamina, int attack, int defense) {
         this.baseMaxHp = maxHp;
@@ -105,11 +117,14 @@ public class Stats implements Component {
         this.mana = 0;
         this.manaRegenRate = 0f;
         
+        // Stamina (for monsters - simple system)
         this.maxStamina = maxStamina;
         this.stamina = maxStamina;
-        this.staminaRegenRate = 10f;
+        this.maxStaminaBonus = 0f;
+        this.staminaRegenBonus = 0f;
+        this.staminaCostReduction = 0f;
         
-        // Non-growing stats
+        // Stats that don't grow with level
         this.evasion = 0;
         this.magicAttack = 0;
         this.magicDefense = 0;
@@ -125,10 +140,67 @@ public class Stats implements Component {
     }
     
     /**
+     * ☆ NEW: Calculate max stamina with bonuses
+     * Formula: MaxStamina = BaseStamina × (1 + bonus%)
+     */
+    public void calculateMaxStamina() {
+        this.maxStamina = BASE_MAX_STAMINA * (1f + maxStaminaBonus);
+    }
+    
+    /**
+     * ☆ NEW: Get effective stamina regen rate with bonuses
+     * Formula: EffectiveRegen = BaseRegen × (1 + regen%)
+     */
+    public float getEffectiveStaminaRegen(float baseRegen) {
+        return baseRegen * (1f + staminaRegenBonus);
+    }
+    
+    /**
+     * ☆ NEW: Get effective stamina cost with reduction
+     * Formula: EffectiveCost = BaseCost × (1 - reduction%)
+     */
+    public float getEffectiveStaminaCost(float baseCost) {
+        return baseCost * (1f - staminaCostReduction);
+    }
+    
+    /**
+     * ☆ NEW: Consume stamina for basic attack
+     * Returns false if not enough stamina
+     */
+    public boolean consumeStaminaForAttack() {
+        float cost = getEffectiveStaminaCost(STAMINA_COST_BASIC_ATTACK);
+        return consumeStamina(cost);
+    }
+    
+    /**
+     * ☆ NEW: Regenerate stamina based on movement state
+     * @param state "idle", "walking", or "running"
+     */
+    public void regenerateStaminaByState(String state, float delta) {
+        float baseRegen;
+        
+        switch (state) {
+            case "idle":
+                baseRegen = STAMINA_REGEN_IDLE;
+                break;
+            case "walking":
+                baseRegen = STAMINA_REGEN_WALKING;
+                break;
+            case "running":
+                // Running drains stamina
+                float drain = getEffectiveStaminaCost(STAMINA_DRAIN_RUNNING);
+                consumeStamina(drain * delta);
+                return;  // No regen while running
+            default:
+                baseRegen = STAMINA_REGEN_IDLE;
+        }
+        
+        float effectiveRegen = getEffectiveStaminaRegen(baseRegen);
+        stamina = Math.min(maxStamina, stamina + effectiveRegen * delta);
+    }
+    
+    /**
      * Apply level-based stat bonuses from Experience component
-     * Call this after leveling up to recalculate stats
-     * @param exp The experience component
-     * @param fullHeal If true, restore HP, mana, and stamina to full (default for level-ups)
      */
     public void applyLevelStats(Experience exp, boolean fullHeal) {
         // Calculate new max stats
@@ -137,22 +209,28 @@ public class Stats implements Component {
         this.defense = exp.calculateDefense(baseDefense);
         this.accuracy = exp.calculateAccuracy(baseAccuracy);
         
-        // ☆ NEW: Calculate max mana
+        // Calculate max mana
         this.maxMana = exp.calculateMaxMana(baseMaxMana);
-        this.manaRegenRate = maxMana * 0.01f;  // Update regen rate (1% of new max)
+        this.manaRegenRate = maxMana * 0.01f;
         
-        // ☆ FULL HEAL on level up
+        // ☆ Recalculate max stamina (in case bonuses changed)
+        calculateMaxStamina();
+        
+        // Full heal on level up
         if (fullHeal) {
             this.hp = this.maxHp;
             this.stamina = this.maxStamina;
-            this.mana = this.maxMana;  // ☆ NEW: Full mana restore
+            this.mana = this.maxMana;
         } else {
-            // Just cap HP/mana at new max if not healing
+            // Just cap values at new max if not healing
             if (this.hp > this.maxHp) {
                 this.hp = this.maxHp;
             }
             if (this.mana > this.maxMana) {
                 this.mana = this.maxMana;
+            }
+            if (this.stamina > this.maxStamina) {
+                this.stamina = this.maxStamina;
             }
         }
     }
@@ -170,11 +248,11 @@ public class Stats implements Component {
     public void fullHeal() {
         this.hp = this.maxHp;
         this.stamina = this.maxStamina;
-        this.mana = this.maxMana;  // ☆ NEW
+        this.mana = this.maxMana;
     }
     
     /**
-     * ☆ NEW: Consume mana, returns false if not enough
+     * Consume mana, returns false if not enough
      */
     public boolean consumeMana(int amount) {
         if (mana >= amount) {
@@ -185,7 +263,7 @@ public class Stats implements Component {
     }
     
     /**
-     * ☆ NEW: Regenerate mana
+     * Regenerate mana
      */
     public void regenerateMana(float delta) {
         if (mana < maxMana) {
@@ -194,32 +272,27 @@ public class Stats implements Component {
     }
     
     /**
-     * Get hit chance against target
-     * Returns value from 0.0 (never hit) to 1.0 (always hit)
+     * Consume stamina, returns false if not enough
      */
-    public float getHitChance(Stats targetStats) {
-        // Base 95% hit chance, modified by accuracy vs evasion
-        float baseHitChance = 0.95f;
-        float accModifier = this.accuracy * 0.01f; // Each point = +1% hit
-        float evaModifier = targetStats.evasion * 0.01f; // Each point = -1% hit
-        
-        float hitChance = baseHitChance + accModifier - evaModifier;
-        
-        // Clamp between 5% and 100%
-        return Math.max(0.05f, Math.min(1.0f, hitChance));
-    }
-    
-    // Consume stamina, returns false if not enough
     public boolean consumeStamina(float amount) {
         if (stamina >= amount) {
             stamina -= amount;
+            if (stamina < 0) stamina = 0;
             return true;
         }
         return false;
     }
     
-    // Regenerate stamina
-    public void regenerateStamina(float delta) {
-        stamina = Math.min(maxStamina, stamina + staminaRegenRate * delta);
+    /**
+     * Get hit chance against target
+     */
+    public float getHitChance(Stats targetStats) {
+        float baseHitChance = 0.95f;
+        float accModifier = this.accuracy * 0.01f;
+        float evaModifier = targetStats.evasion * 0.01f;
+        
+        float hitChance = baseHitChance + accModifier - evaModifier;
+        
+        return Math.max(0.05f, Math.min(1.0f, hitChance));
     }
 }

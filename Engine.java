@@ -233,76 +233,114 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         // ★ NEW: Handle skill hotkeys
         gameState.getUIManager().handleKeyPress(e.getKeyCode());
         
-        // Debug keys
-        if (e.getKeyCode() == KeyEvent.VK_D) {
+     // ☆ NEW: Enhanced stats display (press S)
+        if (e.getKeyCode() == KeyEvent.VK_S) {
             Entity player = gameState.getPlayer();
+            Experience exp = player.getComponent(Experience.class);
             Stats stats = player.getComponent(Stats.class);
-            if (stats != null) {
-                stats.hp -= 10;
-                if (stats.hp < 0) stats.hp = 0;
-                System.out.println("HP: " + stats.hp + "/" + stats.maxHp);
+            
+            if (exp != null && stats != null) {
+                System.out.println("\n╔═══════════════════════════════════╗");
+                System.out.println("       PLAYER STATS");
+                System.out.println("╠═══════════════════════════════════╣");
+                System.out.println("Level:      " + exp.level);
+                System.out.println("XP:         " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
+                                 " (" + (int)(exp.getXPProgress() * 100) + "%)");
+                System.out.println("───────────────────────────────────");
+                System.out.println("HP:         " + stats.hp + "/" + stats.maxHp);
+                System.out.println("Mana:       " + stats.mana + "/" + stats.maxMana + 
+                                 " (+" + String.format("%.1f", stats.manaRegenRate) + "/s)");
+                System.out.println("Stamina:    " + (int)stats.stamina + "/" + (int)stats.maxStamina);
+                System.out.println("  Max Bonus:    " + (int)(stats.maxStaminaBonus * 100) + "%");
+                System.out.println("  Regen Bonus:  " + (int)(stats.staminaRegenBonus * 100) + "%");
+                System.out.println("  Cost Reduc:   " + (int)(stats.staminaCostReduction * 100) + "%");
+                System.out.println("───────────────────────────────────");
+                System.out.println("Attack:     " + stats.attack);
+                System.out.println("Defense:    " + stats.defense);
+                System.out.println("Accuracy:   " + stats.accuracy);
+                System.out.println("Evasion:    " + stats.evasion);
+                System.out.println("───────────────────────────────────");
+                System.out.println("STAMINA COSTS:");
+                System.out.println("  Basic Attack: " + (int)stats.getEffectiveStaminaCost(Stats.STAMINA_COST_BASIC_ATTACK) + " stamina");
+                System.out.println("  Running Drain: " + (int)stats.getEffectiveStaminaCost(Stats.STAMINA_DRAIN_RUNNING) + "/s");
+                System.out.println("STAMINA REGEN:");
+                System.out.println("  Idle:    " + (int)stats.getEffectiveStaminaRegen(Stats.STAMINA_REGEN_IDLE) + "/s");
+                System.out.println("  Walking: " + (int)stats.getEffectiveStaminaRegen(Stats.STAMINA_REGEN_WALKING) + "/s");
+                System.out.println("╚═══════════════════════════════════╝\n");
             }
         }
         
-        if (e.getKeyCode() == KeyEvent.VK_H) {
+        // ☆ NEW: Test stamina bonuses (press N for "Next bonus")
+        if (e.getKeyCode() == KeyEvent.VK_N) {
             Entity player = gameState.getPlayer();
             Stats stats = player.getComponent(Stats.class);
+            
             if (stats != null) {
-                stats.hp = stats.maxHp;
-                System.out.println("HP: " + stats.hp + "/" + stats.maxHp + " (HEALED)");
-            }
-        }
-     // NEW: F4 to print all monster states
-        if (e.getKeyCode() == KeyEvent.VK_F4) {
-            System.out.println("\n=== MONSTER STATES ===");
-            for (Entity entity : gameState.getEntities()) {
-                if (entity.getType() == EntityType.MONSTER) {
-                    AI ai = entity.getComponent(AI.class);
-                    Position pos = entity.getComponent(Position.class);
-                    Movement move = entity.getComponent(Movement.class);
-                    
-                    if (ai != null && pos != null) {
-                        float distHome = (float)Math.sqrt(
-                            Math.pow(pos.x - ai.homeX, 2) + 
-                            Math.pow(pos.y - ai.homeY, 2)
-                        );
-                        
-                        String movingStatus = (move != null && move.isMoving) ? "MOVING" : "STOPPED";
-                        
-                        System.out.println(entity.getName() + " [ID:" + entity.getID() + "]:");
-                        System.out.println("  State: " + ai.currentState);
-                        System.out.println("  Position: (" + (int)pos.x + ", " + (int)pos.y + ")");
-                        System.out.println("  Home: (" + (int)ai.homeX + ", " + (int)ai.homeY + ")");
-                        System.out.println("  Dist from home: " + (int)distHome);
-                        System.out.println("  Movement: " + movingStatus);
-                        
-                        Path path = entity.getComponent(Path.class);
-                        if (path != null && path.isFollowing) {
-                            System.out.println("  Path: " + path.waypoints.size() + " waypoints, at #" + path.currentWaypoint);
-                        } else {
-                            System.out.println("  Path: NONE");
-                        }
-                    }
+                // Cycle through different bonus configurations
+                if (stats.maxStaminaBonus == 0f) {
+                    // Add 50% max stamina bonus
+                    stats.maxStaminaBonus = 0.5f;
+                    stats.calculateMaxStamina();
+                    System.out.println("DEBUG: Added +50% Max Stamina bonus");
+                    System.out.println("Max Stamina: " + (int)stats.maxStamina);
+                } else if (stats.staminaRegenBonus == 0f) {
+                    // Add 50% regen bonus
+                    stats.staminaRegenBonus = 0.5f;
+                    System.out.println("DEBUG: Added +50% Stamina Regen bonus");
+                } else if (stats.staminaCostReduction == 0f) {
+                    // Add 30% cost reduction
+                    stats.staminaCostReduction = 0.3f;
+                    System.out.println("DEBUG: Added 30% Stamina Cost Reduction");
+                } else {
+                    // Reset all bonuses
+                    stats.maxStaminaBonus = 0f;
+                    stats.staminaRegenBonus = 0f;
+                    stats.staminaCostReduction = 0f;
+                    stats.calculateMaxStamina();
+                    System.out.println("DEBUG: Reset all stamina bonuses");
+                    System.out.println("Max Stamina: " + (int)stats.maxStamina);
                 }
             }
-            System.out.println("======================\n");
         }
         
-     // Add XP for testing (press X)
+        // Full heal command (press F)
+        if (e.getKeyCode() == KeyEvent.VK_F) {
+            Entity player = gameState.getPlayer();
+            Stats stats = player.getComponent(Stats.class);
+            Position pos = player.getComponent(Position.class);
+            
+            if (stats != null) {
+                stats.fullHeal();
+                System.out.println("DEBUG: Full heal!");
+                System.out.println("HP: " + stats.hp + "/" + stats.maxHp);
+                System.out.println("Mana: " + stats.mana + "/" + stats.maxMana);
+                System.out.println("Stamina: " + (int)stats.stamina + "/" + (int)stats.maxStamina);
+                
+                if (pos != null) {
+                    DamageText healText = new DamageText(
+                        "HEALED!",
+                        DamageText.Type.HEAL,
+                        pos.x,
+                        pos.y - 30
+                    );
+                    gameState.addDamageText(healText);
+                }
+            }
+        }
+        
+        // Add XP for testing (press X)
         if (e.getKeyCode() == KeyEvent.VK_X) {
             Entity player = gameState.getPlayer();
             Experience exp = player.getComponent(Experience.class);
             Stats stats = player.getComponent(Stats.class);
             
             if (exp != null && stats != null) {
-                // Add 100 XP for testing
                 int xpGain = 100;
                 System.out.println("DEBUG: Adding " + xpGain + " XP");
                 
                 int levelsGained = exp.addExperience(xpGain);
                 
                 if (levelsGained > 0) {
-                    // ★ Full heal on level up
                     stats.applyLevelStats(exp, true);
                     
                     LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
@@ -320,7 +358,6 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                         );
                         gameState.addDamageText(levelText);
                         
-                        // ★ Add heal text
                         DamageText healText = new DamageText(
                             "FULLY HEALED!",
                             DamageText.Type.HEAL,
@@ -331,50 +368,15 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                     }
                     
                     System.out.println("LEVEL UP to " + exp.level + "!");
-                    System.out.println("HP: " + stats.hp + "/" + stats.maxHp + " (FULL!) | " +
-                                     "Stamina: " + (int)stats.stamina + "/" + (int)stats.maxStamina + " (FULL!)");
-                    System.out.println("ATK: " + stats.attack + " | DEF: " + stats.defense + 
-                                     " | ACC: " + stats.accuracy);
+                    System.out.println("HP: " + stats.hp + "/" + stats.maxHp + " (FULL!)");
+                    System.out.println("Mana: " + stats.mana + "/" + stats.maxMana + " (FULL!)");
+                    System.out.println("Stamina: " + (int)stats.stamina + "/" + (int)stats.maxStamina + " (FULL!)");
                 }
                 
                 System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel);
             }
         }
-
-        // Show stats (press S)
-        if (e.getKeyCode() == KeyEvent.VK_S) {
-            Entity player = gameState.getPlayer();
-            Experience exp = player.getComponent(Experience.class);
-            Stats stats = player.getComponent(Stats.class);
-            
-            if (exp != null && stats != null) {
-                System.out.println("\n═══════════════════════════════");
-                System.out.println("       PLAYER STATS");
-                System.out.println("═══════════════════════════════");
-                System.out.println("Level:      " + exp.level);
-                System.out.println("XP:         " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
-                                 " (" + (int)(exp.getXPProgress() * 100) + "%)");
-                System.out.println("───────────────────────────────");
-                System.out.println("HP:         " + stats.hp + "/" + stats.maxHp);
-                System.out.println("Stamina:    " + (int)stats.stamina + "/" + (int)stats.maxStamina);
-                System.out.println("Attack:     " + stats.attack);
-                System.out.println("Defense:    " + stats.defense);
-                System.out.println("Accuracy:   " + stats.accuracy);
-                System.out.println("Evasion:    " + stats.evasion);
-                System.out.println("───────────────────────────────");
-                System.out.println("Magic ATK:  " + stats.magicAttack);
-                System.out.println("Magic DEF:  " + stats.magicDefense);
-                System.out.println("───────────────────────────────");
-                System.out.println("Fire Res:   " + stats.fireResistance + "%");
-                System.out.println("Light Res:  " + stats.lightningResistance + "%");
-                System.out.println("Poison Res: " + stats.poisonResistance + "%");
-                System.out.println("───────────────────────────────");
-                System.out.println("Silence:    " + stats.silenceResistance + "%");
-                System.out.println("Blind:      " + stats.blindResistance + "%");
-                System.out.println("Curse:      " + stats.curseResistance + "%");
-                System.out.println("═══════════════════════════════\n");
-            }
-        }
+        
      // ☆ NEW: Debug mana consumption (press M)
         if (e.getKeyCode() == KeyEvent.VK_M) {
             Entity player = gameState.getPlayer();

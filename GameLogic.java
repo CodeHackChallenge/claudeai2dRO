@@ -57,18 +57,16 @@ public class GameLogic {
     }
     /**
      * Player attacks target entity (called from click or auto-attack)
-     */
-    /**
-     * Player attacks target entity (called from click or auto-attack)
-     */
+     */ 
     public void playerAttack(Entity target) {
         Entity player = state.getPlayer();
         Combat playerCombat = player.getComponent(Combat.class);
         Position playerPos = player.getComponent(Position.class);
         Position targetPos = target.getComponent(Position.class);
         Movement playerMovement = player.getComponent(Movement.class);
+        Stats playerStats = player.getComponent(Stats.class);  // ☆ NEW
         
-        if (playerCombat == null) return;
+        if (playerCombat == null || playerStats == null) return;
         if (playerPos == null || targetPos == null) return;
         
         // Set as auto-attack target
@@ -77,16 +75,22 @@ public class GameLogic {
         // Check distance
         float distance = distance(playerPos.x, playerPos.y, targetPos.x, targetPos.y);
         
-        if (distance <= 80f && playerCombat.canAttack()) {
+        // ☆ NEW: Check stamina before attacking
+        if (distance <= 80f && playerCombat.canAttackWithStamina(playerStats)) {
             // In range and can attack - do it now
             playerMovement.direction = calculateDirection(targetPos.x - playerPos.x, targetPos.y - playerPos.y);
             playerMovement.lastDirection = playerMovement.direction;
             
-            // ⭐ FIXED: Pass target to startAttack
-            playerCombat.startAttack(target);
-        } else {
+            // ☆ NEW: Consume stamina
+            if (playerStats.consumeStaminaForAttack()) {
+                playerCombat.startAttack(target);
+            } else {
+                System.out.println("Not enough stamina to attack!");
+            }
+        } else if (distance > 80f) {
             // Out of range - will path to target in update loop
-           // System.out.println("Moving to attack range...");
+        } else {
+            System.out.println("Not enough stamina to attack!");
         }
     }
     /*
@@ -264,48 +268,34 @@ public class GameLogic {
             return;
         }
         
-        // ☆ NEW: Regenerate mana
+        // Regenerate mana
         stats.regenerateMana(delta);
         
-        // ⭐ Check if attack animation hit frame reached - apply damage
+        // ☆ NEW: Handle stamina based on movement state
+        String staminaState = "idle";
+        if (movement.isMoving) {
+            if (movement.isRunning) {
+                staminaState = "running";
+                
+                // ☆ Check if out of stamina while running
+                if (stats.stamina <= 0) {
+                    movement.stopRunning();
+                    System.out.println("Out of stamina! Can't run.");
+                }
+            } else {
+                staminaState = "walking";
+            }
+        }
+        stats.regenerateStaminaByState(staminaState, delta);
+        
+        // Check if attack animation hit frame reached - apply damage
         if (combat != null && combat.shouldDealDamage() && combat.attackTarget != null) {
             Position targetPos = combat.attackTarget.getComponent(Position.class);
             if (targetPos != null) {
                 performAttack(player, combat.attackTarget, position, targetPos);
             }
         }
-        /*
-         * ## Visual Timeline Example
-
-**With `hitFrame = 0.5` (50% through animation):**
-```
-Time 0.0s: Click attack
-  └─> Animation starts (sword pulls back)
-  └─> damageApplied = false
-
-Time 0.1s: Progress = 20%
-  └─> Sword still pulling back
-  └─> shouldDealDamage() = false (not at 50% yet)
-
-Time 0.2s: Progress = 40%
-  └─> Sword mid-swing
-  └─> shouldDealDamage() = false (not at 50% yet)
-
-Time 0.25s: Progress = 50% ⭐ HIT FRAME!
-  └─> Sword impacts target (visually)
-  └─> shouldDealDamage() = TRUE! 
-  └─> performAttack() called
-  └─> Damage calculated
-  └─> Damage text spawns: "15" pops up
-  └─> damageApplied = true (mark as done)
-
-Time 0.3s: Progress = 60%
-  └─> Sword follow-through
-  └─> shouldDealDamage() = false (already applied)
-
-Time 0.5s: Progress = 100%
-  └─> Animation complete
-  └─> isAttacking = false*/
+        
         // Auto-attack logic
         Entity autoAttackTarget = state.getAutoAttackTarget();
         if (autoAttackTarget != null) {
@@ -319,7 +309,8 @@ Time 0.5s: Progress = 100%
                     float distance = distance(position.x, position.y, targetPos.x, targetPos.y);
                     
                     if (distance <= 80f) {
-                        if (combat != null && combat.canAttack() && !combat.isAttacking) {
+                        // ☆ NEW: Check stamina before attacking
+                        if (combat != null && combat.canAttackWithStamina(stats) && !combat.isAttacking) {
                             float dx = targetPos.x - position.x;
                             float dy = targetPos.y - position.y;
                             movement.direction = calculateDirection(dx, dy);
@@ -329,8 +320,12 @@ Time 0.5s: Progress = 100%
                             if (path != null) path.clear();
                             if (indicator != null) indicator.clear();
                             
-                            // ⭐ Start attack but DON'T apply damage yet
-                            combat.startAttack(autoAttackTarget);
+                            // ☆ NEW: Consume stamina for attack
+                            if (stats.consumeStaminaForAttack()) {
+                                combat.startAttack(autoAttackTarget);
+                            } else {
+                                System.out.println("Not enough stamina to attack!");
+                            }
                         }
                     } else {
                         if (!movement.isMoving || (path != null && !path.isFollowing)) {
@@ -375,13 +370,6 @@ Time 0.5s: Progress = 100%
         }
         
         if (movement.isMoving) {
-            if (movement.isRunning) {
-                boolean hasStamina = stats.consumeStamina(movement.staminaCostPerSecond * delta);
-                if (!hasStamina) {
-                    movement.stopRunning();
-                }
-            }
-            
             moveTowardsTarget(player, movement, position, delta);
             
             String moveAnim = movement.isRunning 
@@ -395,11 +383,6 @@ Time 0.5s: Progress = 100%
             }
             
             sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
-            stats.regenerateStamina(delta);
-        }
-        
-        if (movement.isMoving && !movement.isRunning) {
-            stats.regenerateStamina(delta);
         }
     }
 	

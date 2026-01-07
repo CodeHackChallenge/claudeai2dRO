@@ -12,24 +12,25 @@ public class EntityFactory {
 	    player.addComponent(new Movement(100f, 200f));
 	    
 	    // ☆ LEVEL 1 BASE STATS:
-	    // baseMaxHp=100, baseAttack=10, baseDefense=2, baseAccuracy=0, maxStamina=500, baseMaxMana=50
-	    Stats stats = new Stats(100, 10, 2, 0, 500f, 50);  // ☆ NEW: Added mana (50)
+	    // baseMaxHp=100, baseAttack=10, baseDefense=2, baseAccuracy=0, baseMaxMana=50
+	    // Stamina is now calculated automatically (500 base)
+	    Stats stats = new Stats(100, 10, 2, 0, 50);  // ☆ Removed stamina parameter
 	    player.addComponent(stats);
 	    
-	    // ☆ ADD EXPERIENCE COMPONENT
+	    // ADD EXPERIENCE COMPONENT
 	    Experience exp = new Experience();
 	    exp.hpGrowth = 10;      // +10 HP per level
 	    exp.attackGrowth = 2;   // +2 Attack per level
 	    exp.defenseGrowth = 1;  // +1 Defense per level
 	    exp.accGrowth = 1;      // +1 Accuracy per level
-	    exp.manaGrowth = 5;     // ☆ NEW: +5 mana per level
+	    exp.manaGrowth = 5;     // +5 mana per level
 	    player.addComponent(exp);
 	    
-	    // ☆ ADD SKILL LEVEL COMPONENT
+	    // ADD SKILL LEVEL COMPONENT
 	    SkillLevel skillLevel = new SkillLevel();
 	    player.addComponent(skillLevel);
 	    
-	    // ☆ APPLY LEVEL 1 STATS
+	    // APPLY LEVEL 1 STATS
 	    stats.applyLevelStats(exp);
 	    
 	    // Combat system
@@ -38,8 +39,8 @@ public class EntityFactory {
 	    // UI Components
 	    player.addComponent(new HealthBar(40, 4, 40));
 	    player.addComponent(new StaminaBar(40, 4, 46));
-	    player.addComponent(new ManaBar(40, 4, 50));     // ☆ NEW: Mana bar
-	    player.addComponent(new XPBar(40, 3, 54));       // ☆ Moved down
+	    player.addComponent(new ManaBar(40, 4, 50));
+	    player.addComponent(new XPBar(40, 3, 54));
 	    
 	    // Collision and movement
 	    player.addComponent(new CollisionBox(-10, -14, 22, 44));
