@@ -27,6 +27,10 @@ public class Skill {
     private int manaCost;
     private int levelRequired;
     
+    // Leveling
+    private int skillLevel;      // Current skill level (1-10)
+    private int maxSkillLevel;   // Maximum level (usually 10)
+    
     // Visual
     private Color iconColor;  // Fallback color if no icon
     
@@ -41,6 +45,10 @@ public class Skill {
         this.manaCost = manaCost;
         this.levelRequired = levelRequired;
         this.iconPath = null;
+        
+        // Leveling - start at level 1
+        this.skillLevel = 1;
+        this.maxSkillLevel = 10;
         
         // Default colors based on type
         switch (type) {
@@ -108,6 +116,58 @@ public class Skill {
         return currentCooldown;
     }
     
+    /**
+     * Calculate upgrade cost for next level
+     * Formula: 1 + (currentLevel / 3)
+     */
+    public int getUpgradeCost() {
+        if (skillLevel >= maxSkillLevel) return 0;
+        return 1 + (skillLevel / 3);  // Integer division (floor)
+    }
+    
+    /**
+     * Upgrade skill level
+     * @return true if upgrade was successful
+     */
+    public boolean upgrade() {
+        if (skillLevel >= maxSkillLevel) {
+            return false;  // Already max level
+        }
+        
+        skillLevel++;
+        return true;
+    }
+    
+    /**
+     * Check if skill can be upgraded
+     */
+    public boolean canUpgrade() {
+        return skillLevel < maxSkillLevel;
+    }
+    
+    /**
+     * Check if skill is max level
+     */
+    public boolean isMaxLevel() {
+        return skillLevel >= maxSkillLevel;
+    }
+    
+    /**
+     * Get heal percent for HEAL type skills
+     * Formula: 0.10 + 0.015 * skillLevel
+     */
+    public double getHealPercent() {
+        return 0.10 + 0.015 * skillLevel;
+    }
+    
+    /**
+     * Calculate heal amount based on max HP
+     */
+    public int calculateHealAmount(int maxHp) {
+        double healPercent = getHealPercent();
+        return (int)(maxHp * healPercent);
+    }
+    
     // Getters
     public String getId() { return id; }
     public String getName() { return name; }
@@ -118,6 +178,8 @@ public class Skill {
     public int getManaCost() { return manaCost; }
     public int getLevelRequired() { return levelRequired; }
     public Color getIconColor() { return iconColor; }
+    public int getSkillLevel() { return skillLevel; }
+    public int getMaxSkillLevel() { return maxSkillLevel; }
     
     // Setters
     public void setIconPath(String iconPath) {
@@ -130,6 +192,6 @@ public class Skill {
     
     @Override
     public String toString() {
-        return name + " (" + type + ")";
+        return name + " Lv" + skillLevel + " (" + type + ")";
     }
 }

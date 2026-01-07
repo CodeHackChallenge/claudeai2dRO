@@ -65,10 +65,13 @@ public class Experience implements Component {
     }
     
     /**
-     * Check if player just leveled up (for triggering effects)
+     * Award skill points based on levels gained
+     * Called after addExperience() in GameLogic
      */
-    public boolean didLevelUp(int levelsGained) {
-        return levelsGained > 0;
+    public void awardSkillPoints(int levelsGained, SkillLevel skillLevel) {
+        if (levelsGained > 0 && skillLevel != null) {
+            skillLevel.awardPoints(levelsGained);  // 1 point per level
+        }
     }
     
     /**

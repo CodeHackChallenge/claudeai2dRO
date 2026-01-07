@@ -17,6 +17,10 @@ public class UISkillSlot extends UIComponent {
     private boolean showCooldown;
     private boolean showKeybind;
     
+    // ☆ NEW: Reference to parent UI manager and slot index
+    private UIManager uiManager;
+    private int slotIndex;
+    
     // Visual properties
     private Color emptyColor;
     private Color hoverColor;
@@ -30,6 +34,8 @@ public class UISkillSlot extends UIComponent {
         this.keyBinding = "";
         this.showCooldown = true;
         this.showKeybind = true;
+        this.uiManager = null;
+        this.slotIndex = -1;
         
         // Default colors
         this.emptyColor = new Color(60, 60, 60, 200);
@@ -67,7 +73,7 @@ public class UISkillSlot extends UIComponent {
             if (skill.getIconPath() != null) {
                 BufferedImage icon = TextureManager.load(skill.getIconPath());
                 if (icon != null) {
-                    g.drawImage(icon, x, y, width, height, null);
+                    g.drawImage(icon, x, y + 1, width, height, null);
                 }
             }
             
@@ -80,6 +86,9 @@ public class UISkillSlot extends UIComponent {
             if (!skill.isReady()) {
                 drawCooldownText(g);
             }
+            
+            // Draw skill level
+            drawSkillLevel(g);
         } else {
             // Draw empty slot indicator
             g.setColor(new Color(150, 150, 150, 100));
@@ -165,6 +174,43 @@ public class UISkillSlot extends UIComponent {
         g.setFont(originalFont);
     }
     
+    private void drawSkillLevel(Graphics2D g) {
+        Font originalFont = g.getFont();
+        Font levelFont = new Font("Arial", Font.BOLD, 10);
+        g.setFont(levelFont);
+        
+        String levelText = "Lv" + skill.getSkillLevel();
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(levelText);
+        int textHeight = fm.getHeight();
+        
+        int bgWidth = textWidth + 6;
+        int bgHeight = textHeight;
+        int bgX = x + width - bgWidth - 2;
+        int bgY = y + 2;
+        
+        // Background
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(bgX, bgY, bgWidth, bgHeight);
+        
+        // Text
+        int textX = bgX + 3;
+        int textY = bgY + textHeight - 3;
+        
+        // Color based on level
+        Color levelColor;
+        if (skill.isMaxLevel()) {
+            levelColor = new Color(255, 215, 0);  // Gold for max level
+        } else {
+            levelColor = Color.WHITE;
+        }
+        
+        g.setColor(levelColor);
+        g.drawString(levelText, textX, textY);
+        
+        g.setFont(originalFont);
+    }
+    
     @Override
     public void update(float delta) {
         if (skill != null) {
@@ -173,17 +219,29 @@ public class UISkillSlot extends UIComponent {
     }
     
     @Override
-    public void onClick() {
-        if (skill != null && skill.isReady()) {
-            useSkill();
+    public boolean onClick() {
+        // ☆ NEW: Execute skill on left-click
+        if (skill != null && uiManager != null && slotIndex >= 0) {
+            if (skill.isReady()) {
+                uiManager.useSkillInSlot(slotIndex);
+                System.out.println("Clicked skill slot " + slotIndex + ": " + skill.getName());
+            } else {
+                System.out.println("Skill on cooldown: " + String.format("%.1f", skill.getRemainingCooldown()) + "s remaining");
+            }
         }
+        return true;  // Consume the click
     }
     
-    private void useSkill() {
-        if (skill != null && skill.use()) {
-            System.out.println("Used skill: " + skill.getName());
-            // TODO: Trigger actual skill effect
+    @Override
+    public boolean onRightClick() {
+        // ☆ NEW: Right-click to upgrade skill
+        if (skill != null && uiManager != null && slotIndex >= 0) {
+            boolean upgraded = uiManager.upgradeSkill(slotIndex);
+            if (upgraded) {
+                System.out.println("Right-clicked to upgrade: " + skill.getName());
+            }
         }
+        return true;  // Consume the click
     }
     
     /**
@@ -195,19 +253,43 @@ public class UISkillSlot extends UIComponent {
         }
         
         StringBuilder sb = new StringBuilder();
-        sb.append(skill.getName()).append("\n");
+        sb.append(skill.getName()).append(" - Level ").append(skill.getSkillLevel());
+        
+        if (skill.isMaxLevel()) {
+            sb.append(" (MAX)");
+        }
+        
+        sb.append("\n");
         sb.append(skill.getDescription()).append("\n");
-        sb.append("─────────────\n");
+        sb.append("────────────\n");
         sb.append("Type: ").append(skill.getType()).append("\n");
         sb.append("Cooldown: ").append(skill.getCooldown()).append("s\n");
         sb.append("Mana: ").append(skill.getManaCost()).append("\n");
-        sb.append("Level Req: ").append(skill.getLevelRequired());
+        sb.append("Level Req: ").append(skill.getLevelRequired()).append("\n");
+        
+        // Show skill-specific stats
+        if (skill.getType() == Skill.SkillType.HEAL) {
+            double healPercent = skill.getHealPercent() * 100;
+            sb.append("Heal Power: ").append(String.format("%.1f", healPercent)).append("%\n");
+        }
+        
+        // Show upgrade info
+        if (!skill.isMaxLevel()) {
+            sb.append("\n");
+            sb.append("Upgrade Cost: ").append(skill.getUpgradeCost()).append(" point(s)");
+        }
         
         if (!keyBinding.isEmpty()) {
             sb.append("\n\nHotkey: [").append(keyBinding).append("]");
         }
         
         return sb.toString();
+    }
+    
+    // ☆ NEW: Set UI manager reference and slot index
+    public void setUIManager(UIManager uiManager, int slotIndex) {
+        this.uiManager = uiManager;
+        this.slotIndex = slotIndex;
     }
     
     // Getters/Setters
@@ -233,5 +315,9 @@ public class UISkillSlot extends UIComponent {
     
     public void setShowKeybind(boolean show) {
         this.showKeybind = show;
+    }
+    
+    public int getSlotIndex() {
+        return slotIndex;
     }
 }

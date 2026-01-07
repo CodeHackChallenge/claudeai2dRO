@@ -1301,12 +1301,14 @@ Time 0.5s: Progress = 100%
     public void setCameraLerpSpeed(float speed) {
         this.cameraLerpSpeed = speed;
     }
+ // Replace these methods in GameLogic.java
+
     /**
      * Calculate XP reward for killing a monster
      * Uses MonsterLevel component if available, otherwise falls back to old formula
      */
     private int calculateMonsterXP(Entity monster) {
-        // NEW: Use MonsterLevel component for XP calculation
+    	// NEW: Use MonsterLevel component for XP calculation
         MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
         if (monsterLevel != null) {
             return monsterLevel.calculateXPReward();
@@ -1327,11 +1329,93 @@ Time 0.5s: Progress = 100%
         return Math.max(10, baseXP);
     }
     /**
+     * Use a skill - handles different skill types
+     */
+    public void useSkill(Entity caster, Skill skill) {
+        if (skill == null || !skill.isReady()) {
+            return;
+        }
+        
+        Stats stats = caster.getComponent(Stats.class);
+        if (stats == null) return;
+        
+        // Check mana cost (for now just check, don't consume)
+        // TODO: Implement mana system
+        
+        // Use the skill (start cooldown)
+        if (!skill.use()) {
+            return;  // Skill not ready
+        }
+        
+        // Apply skill effect based on type
+        switch (skill.getType()) {
+            case HEAL:
+                castHeal(caster, skill, stats);
+                break;
+                
+            case ATTACK:
+                // TODO: Implement attack skills
+                System.out.println("Attack skill used: " + skill.getName());
+                break;
+                
+            case DEFENSE:
+                // TODO: Implement defense skills
+                System.out.println("Defense skill used: " + skill.getName());
+                break;
+                
+            case BUFF:
+                // TODO: Implement buff skills
+                System.out.println("Buff skill used: " + skill.getName());
+                break;
+                
+            case PASSIVE:
+                // Passives don't have active effects
+                break;
+        }
+    }
+
+    /**
+     * Cast heal skill
+     * Formula: Heals (10% + 1.5% * skillLevel) of max HP
+     */
+    private void castHeal(Entity caster, Skill skill, Stats stats) {
+        // Calculate heal amount
+        int healAmount = skill.calculateHealAmount(stats.maxHp);
+        
+        // Apply healing
+        int oldHp = stats.hp;
+        stats.hp = Math.min(stats.maxHp, stats.hp + healAmount);
+        int actualHealed = stats.hp - oldHp;
+        
+        // Visual feedback
+        Position pos = caster.getComponent(Position.class);
+        if (pos != null) {
+            DamageText healText = new DamageText(
+                "+" + actualHealed,
+                DamageText.Type.HEAL,
+                pos.x,
+                pos.y - 30
+            );
+            state.addDamageText(healText);
+        }
+        
+        // Console feedback
+        double healPercent = skill.getHealPercent() * 100;
+        System.out.println("═══════════════════════════════");
+        System.out.println("HEAL CAST!");
+        System.out.println("Skill Level: " + skill.getSkillLevel());
+        System.out.println("Heal Power: " + String.format("%.1f", healPercent) + "%");
+        System.out.println("Healed: " + actualHealed + " HP");
+        System.out.println("HP: " + oldHp + " → " + stats.hp + "/" + stats.maxHp);
+        System.out.println("═══════════════════════════════");
+    }
+    /**
      * Award XP to player and handle level-ups
      */
     private void awardExperience(Entity player, int xpAmount) {
         Experience exp = player.getComponent(Experience.class);
         Stats stats = player.getComponent(Stats.class);
+        SkillLevel skillLevel = player.getComponent(SkillLevel.class);
         LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
         
         if (exp == null || stats == null) return;
@@ -1344,6 +1428,11 @@ Time 0.5s: Progress = 100%
         if (levelsGained > 0) {
             // ★ Recalculate stats with new level AND fully heal
             stats.applyLevelStats(exp, true);  // true = full heal on level up
+            
+            // ★ Award skill points (1 per level)
+            if (skillLevel != null) {
+                exp.awardSkillPoints(levelsGained, skillLevel);
+            }
             
             // Trigger level-up effect
             if (levelUpEffect != null) {
@@ -1369,6 +1458,17 @@ Time 0.5s: Progress = 100%
                     pos.y - 20
                 );
                 state.addDamageText(healText);
+                
+                // ★ NEW: Spawn skill point text
+                if (skillLevel != null) {
+                    DamageText spText = new DamageText(
+                        "+" + levelsGained + " SKILL POINT!",
+                        DamageText.Type.HEAL,
+                        pos.x,
+                        pos.y
+                    );
+                    state.addDamageText(spText);
+                }
             }
             
             System.out.println("╔════════════════════════════════╗");
@@ -1380,6 +1480,9 @@ Time 0.5s: Progress = 100%
             System.out.println("║ Attack:    " + stats.attack);
             System.out.println("║ Defense:   " + stats.defense);
             System.out.println("║ Accuracy:  " + stats.accuracy);
+            if (skillLevel != null) {
+                System.out.println("║ Skill Points: " + skillLevel.availablePoints);
+            }
             System.out.println("╚════════════════════════════════╝");
         }
         
@@ -1387,6 +1490,7 @@ Time 0.5s: Progress = 100%
         System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
                            " (" + (int)(exp.getXPProgress() * 100) + "%)");
     }
+
     /**
      * Handle monster death with tier-based XP
      */
@@ -1444,7 +1548,6 @@ Time 0.5s: Progress = 100%
             sprite.setAnimation(Sprite.ANIM_DEAD);
         }
     }
-
     
 }
 /*

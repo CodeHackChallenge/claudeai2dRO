@@ -1,4 +1,5 @@
 package dev.main;
+ 
 
 import java.awt.Graphics2D;
 import java.util.ArrayList;
@@ -12,15 +13,24 @@ public class UIManager {
     private List<UIPanel> panels;
     private UIComponent hoveredComponent;
     private GameState gameState;
+    private GameLogic gameLogic;  // NEW: Reference to game logic
     
     // Skill bar
     private UIPanel skillBar;
     
     public UIManager(GameState gameState) {
         this.gameState = gameState;
+        this.gameLogic = null;  // Set later via setGameLogic()
         this.panels = new ArrayList<>();
         
         initializeUI();
+    }
+    
+    /**
+     * Set game logic reference (for skill execution)
+     */
+    public void setGameLogic(GameLogic gameLogic) {
+        this.gameLogic = gameLogic;
     }
     
     private void initializeUI() {
@@ -28,6 +38,9 @@ public class UIManager {
         createSkillBar();
     }
     
+    /**
+     * Create the skill bar with 8 skill slots
+     */
     /**
      * Create the skill bar with 8 skill slots
      */
@@ -56,6 +69,10 @@ public class UIManager {
         for (int i = 0; i < numSlots; i++) {
             UISkillSlot slot = new UISkillSlot(0, 0, slotSize, keys[i]);
             slot.setMargin(0);  // No margin needed with gap
+            
+            // ☆ NEW: Set UI manager reference and slot index
+            slot.setUIManager(this, i);
+            
             skillBar.addChild(slot);
         }
         
@@ -88,7 +105,7 @@ public class UIManager {
             8.0f,
             30,
             1
-        );
+        ); 
         
         Skill shield = new Skill(
             "shield",
@@ -149,20 +166,39 @@ public class UIManager {
     
     /**
      * Handle mouse click
+     * @return true if UI consumed the click (don't pass to world)
      */
-    public void handleClick(int mouseX, int mouseY) {
-        for (UIPanel panel : panels) {
-            panel.handleClick(mouseX, mouseY);
+    public boolean handleClick(int mouseX, int mouseY) {
+        // Check panels in reverse order (top-most first)
+        for (int i = panels.size() - 1; i >= 0; i--) {
+            UIPanel panel = panels.get(i);
+            if (!panel.isVisible()) continue;
+            
+            if (panel.handleClick(mouseX, mouseY)) {  
+            	
+                return true;  // UI consumed the click
+            }
         }
+        
+        return false;  // Click not on any UI
     }
     
     /**
      * Handle right click
+     * @return true if UI consumed the click (don't pass to world)
      */
-    public void handleRightClick(int mouseX, int mouseY) {
-        for (UIPanel panel : panels) {
-            panel.handleRightClick(mouseX, mouseY);
+    public boolean handleRightClick(int mouseX, int mouseY) {
+        // Check panels in reverse order (top-most first)
+        for (int i = panels.size() - 1; i >= 0; i--) {
+            UIPanel panel = panels.get(i);
+            if (!panel.isVisible()) continue;
+            
+            if (panel.handleRightClick(mouseX, mouseY)) {
+                return true;  // UI consumed the click
+            }
         }
+        
+        return false;  // Click not on any UI
     }
     
     /**
@@ -178,26 +214,96 @@ public class UIManager {
                 keyCode <= java.awt.event.KeyEvent.VK_8) {
                 int index = keyCode - java.awt.event.KeyEvent.VK_1;
                 if (index < slots.size()) {
-                    ((UISkillSlot)slots.get(index)).onClick();
+                    useSkillInSlot(index);
                 }
             }
             
             // Letter keys Q, E, R, F
             switch (keyCode) {
                 case java.awt.event.KeyEvent.VK_Q:
-                    if (slots.size() > 4) ((UISkillSlot)slots.get(4)).onClick();
+                    if (slots.size() > 4) useSkillInSlot(4);
                     break;
                 case java.awt.event.KeyEvent.VK_E:
-                    if (slots.size() > 5) ((UISkillSlot)slots.get(5)).onClick();
+                    if (slots.size() > 5) useSkillInSlot(5);
                     break;
                 case java.awt.event.KeyEvent.VK_R:
-                    if (slots.size() > 6) ((UISkillSlot)slots.get(6)).onClick();
+                    if (slots.size() > 6) useSkillInSlot(6);
                     break;
                 case java.awt.event.KeyEvent.VK_F:
-                    if (slots.size() > 7) ((UISkillSlot)slots.get(7)).onClick();
+                    if (slots.size() > 7) useSkillInSlot(7);
                     break;
             }
         }
+    } 
+    /**
+     * Use skill in specific slot (called by hotkey OR by clicking slot)
+     */
+    public void useSkillInSlot(int slotIndex) {
+        UISkillSlot slot = getSkillSlot(slotIndex);
+        if (slot != null && slot.getSkill() != null) {
+            Skill skill = slot.getSkill();
+            
+            if (skill.isReady()) {
+                // Execute skill through GameLogic
+                if (gameLogic != null) {
+                    Entity player = gameState.getPlayer();
+                    gameLogic.useSkill(player, skill);
+                } else {
+                    // Fallback: just start cooldown
+                    skill.use();
+                    System.out.println("Used skill: " + skill.getName());
+                }
+            } else {
+                System.out.println("Skill on cooldown: " + String.format("%.1f", skill.getRemainingCooldown()) + "s remaining");
+            }
+        }
+    }
+    
+    /**
+     * Upgrade a skill (spend skill points)
+     */
+    public boolean upgradeSkill(int slotIndex) {
+        Entity player = gameState.getPlayer();
+        SkillLevel skillLevel = player.getComponent(SkillLevel.class);
+        UISkillSlot slot = getSkillSlot(slotIndex);
+        
+        if (slot == null || skillLevel == null) return false;
+        
+        Skill skill = slot.getSkill();
+        if (skill == null) return false;
+        
+        // Check if can upgrade
+        if (!skill.canUpgrade()) {
+            System.out.println("Skill is already max level!");
+            return false;
+        }
+        
+        int cost = skill.getUpgradeCost();
+        
+        // Check if have enough points
+        if (!skillLevel.canAfford(cost)) {
+            System.out.println("Not enough skill points! Need " + cost + ", have " + skillLevel.availablePoints);
+            return false;
+        }
+        
+        // Spend points and upgrade
+        skillLevel.spendPoints(cost);
+        skill.upgrade();
+        
+        System.out.println("╔════════════════════════════════╗");
+        System.out.println("║     SKILL UPGRADED!            ║");
+        System.out.println("╠════════════════════════════════╣");
+        System.out.println("║ " + skill.getName() + " → Level " + skill.getSkillLevel());
+        System.out.println("║ Cost: " + cost + " point(s)");
+        System.out.println("║ Remaining: " + skillLevel.availablePoints + " point(s)");
+        
+        if (skill.getType() == Skill.SkillType.HEAL) {
+            System.out.println("║ Heal Power: " + String.format("%.1f", skill.getHealPercent() * 100) + "%");
+        }
+        
+        System.out.println("╚════════════════════════════════╝");
+        
+        return true;
     }
     
     /**

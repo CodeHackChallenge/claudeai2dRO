@@ -1,27 +1,25 @@
 package dev.main;
 
-  
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
-//map = new TileMap("/maps/map_96x96.txt");
+
 public class GameState {
     
     private TileMap map;
     private List<Entity> entities;
-    private List<Entity> entitiesToRemove;  // NEW: For safe removal
-    private List<DamageText> damageTexts;  // NEW
-    private List<SpawnPoint> spawnPoints;  // NEW
+    private List<Entity> entitiesToRemove;
+    private List<DamageText> damageTexts;
+    private List<SpawnPoint> spawnPoints;
     
     private Entity player;
-    private Entity hoveredEntity;  // NEW
-    private Entity targetedEntity;  // NEW
-    private Entity autoAttackTarget;  // NEW: Auto-attack target
+    private Entity hoveredEntity;
+    private Entity targetedEntity;
+    private Entity autoAttackTarget;
     private Pathfinder pathfinder;
-    //UI
-    private UIManager uiManager;
     
+    // UI
+    private UIManager uiManager;
     
     private float gameTime;
     private float cameraX;
@@ -30,38 +28,42 @@ public class GameState {
     public GameState() {
         entities = new ArrayList<>();
         entitiesToRemove = new ArrayList<>();
-        damageTexts = new ArrayList<>();  // NEW
-        spawnPoints = new ArrayList<>();  // NEW
+        damageTexts = new ArrayList<>();
+        spawnPoints = new ArrayList<>();
         
         gameTime = 0f;
         cameraX = 0f;
         cameraY = 0f;
         
-        // ⭐ NEW: Pass both map image and collision map
+        // Load map
         map = new TileMap("/maps/world_map.png", "/maps/world_collision.txt");
         pathfinder = new Pathfinder(map);
         
         initializeWorld();
         
-        //UI
+        // ☆ Create UI Manager (GameLogic will be set later)
         uiManager = new UIManager(this);
-        
     }
-    // ★ UPDATE initializeWorld() method:
+    
+    /**
+     * ☆ NEW: Set game logic reference for UI Manager
+     * Call this from Engine after creating GameLogic
+     */
+    public void setGameLogic(GameLogic gameLogic) {
+        uiManager.setGameLogic(gameLogic);
+    }
+    
     private void initializeWorld() {
         // Create player
         player = EntityFactory.createPlayer(8 * 64, 5 * 64);
         entities.add(player);
         
-        float normalRespawn = 30f;  // 30 seconds for normal mobs
-        float bossRespawn = 50f;    // 50 seconds for bosses 
-        
-        // Example spawns with level and tier:
+        float normalRespawn = 30f;
+        float bossRespawn = 50f;
         
         // TRASH tier goblins (weak, low XP)
         addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
-        //me
         addSpawnPoint("Goblin", 5 * 64, 5 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 7 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 8 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
@@ -74,13 +76,12 @@ public class GameState {
         // NORMAL tier goblins
         addSpawnPoint("Goblin", 12 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Goblin", 13 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
-        
-        //me
         addSpawnPoint("Goblin", 12 * 64, 2 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Goblin", 13 * 64, 2 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Goblin", 12 * 64, 3 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Goblin", 14 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
-        // ELITE goblin (stronger, more XP)
+        
+        // ELITE goblin
         addSpawnPoint("Goblin", 14 * 64, 10 * 64, normalRespawn, 3, MobTier.ELITE);
         
         // NORMAL bunnies
@@ -88,13 +89,12 @@ public class GameState {
         addSpawnPoint("Bunny", 20 * 64, 21 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Bunny", 21 * 64, 22 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Bunny", 21 * 64, 23 * 64, normalRespawn, 3, MobTier.NORMAL);
-        //me
         addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn, 1, MobTier.NORMAL);
         addSpawnPoint("Bunny", 20 * 64, 22 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Bunny", 22 * 64, 22 * 64, normalRespawn, 2, MobTier.NORMAL);
         addSpawnPoint("Bunny", 23 * 64, 23 * 64, normalRespawn, 3, MobTier.NORMAL);
         
-        // MINIBOSS spawns (high level, great rewards)
+        // MINIBOSS spawns
         addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn, 7, MobTier.MINIBOSS);
@@ -104,16 +104,7 @@ public class GameState {
             spawnMonsterAtPoint(sp);
         }
     }
-    /**
-     * OLD: Backwards compatibility - defaults to level 1, NORMAL tier
-     */
-   // public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay) {
-    //    addSpawnPoint(monsterType, x, y, respawnDelay, 1, MobTier.NORMAL);
-   // }
-
-    /**
-     * NEW: Add spawn point with level and tier
-     */
+    
     public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay, int level, MobTier tier) {
         SpawnPoint sp = new SpawnPoint(monsterType, x, y, respawnDelay, level, tier);
         spawnPoints.add(sp);
@@ -131,7 +122,6 @@ public class GameState {
     }
     
     public void onMonsterDeath(Entity monster) {
-        // Find the spawn point this monster belongs to
         Respawn respawn = monster.getComponent(Respawn.class);
         if (respawn != null) {
             for (SpawnPoint sp : spawnPoints) {
@@ -145,16 +135,13 @@ public class GameState {
     
     public List<SpawnPoint> getSpawnPoints() {
         return spawnPoints;
-    } 
-    /**
-     * Spawn monster at spawn point (uses spawn point's level and tier)
-     */
+    }
+    
     public void spawnMonsterAtPoint(SpawnPoint spawnPoint) {
         if (spawnPoint.isOccupied) {
-            return;  // Already has a monster
+            return;
         }
         
-        // ★ Create monster with spawn point's level and tier
         Entity monster = EntityFactory.createMonster(
             spawnPoint.monsterType, 
             spawnPoint.x, 
@@ -163,7 +150,6 @@ public class GameState {
             spawnPoint.tier
         );
         
-        // Add respawn component so we can track which spawn point this monster belongs to
         monster.addComponent(new Respawn(
             spawnPoint.monsterType, 
             spawnPoint.x, 
@@ -184,15 +170,11 @@ public class GameState {
                          " DEF:" + stats.defense + " ACC:" + stats.accuracy + 
                          " EVA:" + stats.evasion);
     }
-    /**
-     * OLD: Backwards compatibility - spawns level 1 NORMAL monster
-     */
+    
     public void spawnMonster(String type, float x, float y) {
         spawnMonster(type, x, y, 1, MobTier.NORMAL);
     }
-    /**
-     * NEW: Spawn monster directly with level and tier
-     */
+    
     public void spawnMonster(String type, float x, float y, int level, MobTier tier) {
         Entity monster = EntityFactory.createMonster(type, x, y, level, tier);
         entities.add(monster);
@@ -235,7 +217,6 @@ public class GameState {
     }
     
     public void setHoveredEntity(Entity entity) {
-        // Hide previous hover
         if (hoveredEntity != null && hoveredEntity != targetedEntity) {
             NameTag tag = hoveredEntity.getComponent(NameTag.class);
             if (tag != null) tag.hide();
@@ -243,7 +224,6 @@ public class GameState {
         
         this.hoveredEntity = entity;
         
-        // Show new hover
         if (hoveredEntity != null) {
             NameTag tag = hoveredEntity.getComponent(NameTag.class);
             if (tag != null) tag.show();
@@ -255,7 +235,6 @@ public class GameState {
     }
     
     public void setTargetedEntity(Entity entity) {
-        // Hide previous target
         if (targetedEntity != null && targetedEntity != hoveredEntity) {
             NameTag tag = targetedEntity.getComponent(NameTag.class);
             if (tag != null) tag.hide();
@@ -263,18 +242,11 @@ public class GameState {
         
         this.targetedEntity = entity;
         
-        // Show new target
         if (targetedEntity != null) {
             NameTag tag = targetedEntity.getComponent(NameTag.class);
             if (tag != null) tag.show();
         }
     }
-     /*       
-    public void spawnMonster(String type, float x, float y) {
-        Entity monster = EntityFactory.createMonster(type, x, y);
-        entities.add(monster);
-        System.out.println("Spawned " + type + " at (" + x + ", " + y + ")");
-    }*/
     
     public void markForRemoval(Entity entity) {
         if (!entitiesToRemove.contains(entity)) {
@@ -325,38 +297,9 @@ public class GameState {
     public void setCameraPosition(float x, float y) {
         this.cameraX = x;
         this.cameraY = y;
-    }    
-    // Add getter:
+    }
+    
     public UIManager getUIManager() {
         return uiManager;
     }
 }
-/*
-
-## Sprite Sheet Format Expected
-
-Your sprites sheet should look like this:
-```
-[Frame 0][Frame 1][Frame 2][Frame 3]  ← Row 0 (idle)
-[Frame 0][Frame 1][Frame 2][Frame 3]  ← Row 1 (walk down)
-[Frame 0][Frame 1][Frame 2][Frame 3]  ← Row 2 (walk up)
-...
-```
-
-## File Structure
-```
-src/
-  ├── resources/
-  │   └── sprites/
-  │       └── hero_idle.png  (your animated sprites sheet)
-  └── dev/main/
-      ├── Engine.java
-      ├── GameState.java
-      ├── GameLogic.java
-      ├── Renderer.java
-      ├── Entity.java
-      ├── Component.java
-      ├── Position.java
-      ├── Sprite.java
-      └── TextureManager.java
-*/

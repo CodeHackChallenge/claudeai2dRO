@@ -104,9 +104,10 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         // Initialize game systems
         gameState = new GameState();
         gameLogic = new GameLogic(gameState);
-        renderer = new Renderer(gameState, this);  // Pass 'this' (Engine) reference
+        renderer = new Renderer(gameState, this);
         
-        // ★ UI Manager is created inside GameState constructor
+        // ☆ NEW: Connect UI Manager to GameLogic for skill execution
+        gameState.setGameLogic(gameLogic);
         
         System.out.println("Game initialized!");
     }
@@ -171,27 +172,27 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
-            // ★ NEW: Check UI clicks first (UI has priority)
-            gameState.getUIManager().handleClick(screenX, screenY);
+            // ★ NEW: Check UI clicks first - if consumed, don't process world clicks
+            boolean uiConsumedClick = gameState.getUIManager().handleClick(screenX, screenY);
             
-            // Only handle world clicks if not clicking UI
-            // (You might want to add a check here if UI consumed the click)
-            
-            float worldX = screenX + gameState.getCameraX();
-            float worldY = screenY + gameState.getCameraY();
-            
-            Entity hoveredEntity = gameState.getHoveredEntity();
-            
-            if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
-                Stats stats = hoveredEntity.getComponent(Stats.class);
-                if (stats != null && stats.hp > 0) {
-                    gameState.setTargetedEntity(hoveredEntity);
-                    gameLogic.playerAttack(hoveredEntity);
-                    System.out.println("Auto-attacking " + hoveredEntity.getName());
+            if (!uiConsumedClick) {
+                // UI didn't consume the click, process world click
+                float worldX = screenX + gameState.getCameraX();
+                float worldY = screenY + gameState.getCameraY();
+                
+                Entity hoveredEntity = gameState.getHoveredEntity();
+                
+                if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
+                    Stats stats = hoveredEntity.getComponent(Stats.class);
+                    if (stats != null && stats.hp > 0) {
+                        gameState.setTargetedEntity(hoveredEntity);
+                        gameLogic.playerAttack(hoveredEntity);
+                        System.out.println("Auto-attacking " + hoveredEntity.getName());
+                    }
+                } else {
+                    gameLogic.stopAutoAttack();
+                    gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
                 }
-            } else {
-                gameLogic.stopAutoAttack();
-                gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             }
             
             mouse.resetPressed();
@@ -201,14 +202,18 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
-            // ★ NEW: Check UI right clicks
-            gameState.getUIManager().handleRightClick(screenX, screenY);
+            // ★ NEW: Check UI right clicks - if consumed, don't process world clicks
+            boolean uiConsumedClick = gameState.getUIManager().handleRightClick(screenX, screenY);
             
-            float worldX = screenX + gameState.getCameraX();
-            float worldY = screenY + gameState.getCameraY();
+            if (!uiConsumedClick) {
+                // UI didn't consume the click, process world click
+                float worldX = screenX + gameState.getCameraX();
+                float worldY = screenY + gameState.getCameraY();
+                
+                gameLogic.stopAutoAttack();
+                gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
+            }
             
-            gameLogic.stopAutoAttack();
-            gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             mouse.resetPressed();
         }
     }

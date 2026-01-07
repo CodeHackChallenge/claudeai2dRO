@@ -99,12 +99,22 @@ public abstract class UIComponent {
         hovered = false;
     }
     
-    public void onClick() {
+    /**
+     * Called when component is clicked
+     * @return true if click was consumed (don't pass to world)
+     */
+    public boolean onClick() {
         // Override in subclasses
+        return false;  // Default: don't consume click
     }
     
-    public void onRightClick() {
+    /**
+     * Called when component is right-clicked
+     * @return true if click was consumed (don't pass to world)
+     */
+    public boolean onRightClick() {
         // Override in subclasses
+        return false;  // Default: don't consume click
     }
     
     // Getters/Setters

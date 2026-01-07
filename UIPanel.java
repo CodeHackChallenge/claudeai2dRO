@@ -247,28 +247,54 @@ public class UIPanel extends UIComponent {
     
     /**
      * Handle mouse click for children
+     * @return true if any child consumed the click
      */
-    public void handleClick(int mouseX, int mouseY) {
-        for (UIComponent child : children) {
+    public boolean handleClick(int mouseX, int mouseY) {
+        // Check children in reverse order (top-most first)
+        for (int i = children.size() - 1; i >= 0; i--) {
+            UIComponent child = children.get(i);
             if (!child.isVisible() || !child.isEnabled()) continue;
             
-            if (child.contains(mouseX, mouseY)) {
-                child.onClick();
+            if (child.contains(mouseX, mouseY)) { 
+                boolean consumed = child.onClick();
+                if (consumed) { 
+                    return true;  // Click was consumed, stop propagation
+                }
             }
         }
+        
+        // Check if click is on the panel itself (not on children)
+        if (this.contains(mouseX, mouseY)) {
+            return true;  // Panel consumed the click (don't pass to world)
+        }
+        
+        return false;  // Click not on panel or children
     }
     
     /**
      * Handle right click for children
+     * @return true if any child consumed the click
      */
-    public void handleRightClick(int mouseX, int mouseY) {
-        for (UIComponent child : children) {
+    public boolean handleRightClick(int mouseX, int mouseY) {
+        // Check children in reverse order (top-most first)
+        for (int i = children.size() - 1; i >= 0; i--) {
+            UIComponent child = children.get(i);
             if (!child.isVisible() || !child.isEnabled()) continue;
             
             if (child.contains(mouseX, mouseY)) {
-                child.onRightClick();
+                boolean consumed = child.onRightClick();
+                if (consumed) {
+                    return true;  // Click was consumed, stop propagation
+                }
             }
         }
+        
+        // Check if click is on the panel itself (not on children)
+        if (this.contains(mouseX, mouseY)) {
+            return true;  // Panel consumed the click (don't pass to world)
+        }
+        
+        return false;  // Click not on panel or children
     }
     
     // Visual style setters
