@@ -86,15 +86,15 @@ public class UIManager {
      * Add example skills for testing
      */
     private void addExampleSkills() {
-        // Create some test skills
+        // Create some test skills with mana costs
         Skill fireball = new Skill(
             "fireball",
             "Fireball",
             "Launch a blazing fireball at your enemy",
             Skill.SkillType.ATTACK,
-            3.0f,  // 3 second cooldown
-            20,    // 20 mana cost
-            1      // Level 1 required
+            3.0f,   // 3 second cooldown
+            12,     // ☆ 12% of max mana base cost
+            1       // Level 1 required
         );
         
         Skill heal = new Skill(
@@ -103,7 +103,7 @@ public class UIManager {
             "Restore health over time",
             Skill.SkillType.HEAL,
             8.0f,
-            30,
+            12,     // ☆ 12% of max mana base cost
             1
         ); 
         
@@ -113,7 +113,7 @@ public class UIManager {
             "Create a protective barrier",
             Skill.SkillType.DEFENSE,
             12.0f,
-            25,
+            12,     // ☆ 12% of max mana base cost
             3
         );
         
@@ -123,7 +123,7 @@ public class UIManager {
             "Increase movement speed",
             Skill.SkillType.BUFF,
             20.0f,
-            15,
+            12,     // ☆ 12% of max mana base cost
             2
         );
         

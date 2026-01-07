@@ -6,6 +6,7 @@ public class Stats implements Component {
     public int baseAttack;
     public int baseDefense;
     public int baseAccuracy;
+    public int baseMaxMana;  // ☆ NEW: Base max mana
     
     // Current stats (calculated from base + level bonuses)
     public int hp;
@@ -13,6 +14,11 @@ public class Stats implements Component {
     public int attack;
     public int defense;
     public int accuracy;
+    
+    // ☆ NEW: Mana system
+    public int mana;
+    public int maxMana;
+    public float manaRegenRate;  // MP regen per second
     
     // Stamina (doesn't scale with level)
     public float stamina;
@@ -37,12 +43,13 @@ public class Stats implements Component {
     /**
      * Constructor with base stats (for player at level 1)
      */
-    public Stats(int baseMaxHp, int baseAttack, int baseDefense, int baseAccuracy, float maxStamina) {
+    public Stats(int baseMaxHp, int baseAttack, int baseDefense, int baseAccuracy, float maxStamina, int baseMaxMana) {
         // Store base stats
         this.baseMaxHp = baseMaxHp;
         this.baseAttack = baseAttack;
         this.baseDefense = baseDefense;
         this.baseAccuracy = baseAccuracy;
+        this.baseMaxMana = baseMaxMana;
         
         // Initialize current stats to base (will be updated by applyLevelStats)
         this.maxHp = baseMaxHp;
@@ -50,6 +57,11 @@ public class Stats implements Component {
         this.attack = baseAttack;
         this.defense = baseDefense;
         this.accuracy = baseAccuracy;
+        
+        // ☆ NEW: Initialize mana
+        this.maxMana = baseMaxMana;
+        this.mana = baseMaxMana;
+        this.manaRegenRate = baseMaxMana * 0.01f;  // 1% of max mana per second
         
         // Stamina
         this.maxStamina = maxStamina;
@@ -72,7 +84,7 @@ public class Stats implements Component {
     }
     
     /**
-     * Old constructor for backwards compatibility (monsters)
+     * Old constructor for backwards compatibility (monsters, no mana)
      */
     public Stats(int maxHp, float maxStamina, int attack, int defense) {
         this.baseMaxHp = maxHp;
@@ -87,6 +99,11 @@ public class Stats implements Component {
         
         this.baseAccuracy = 0;
         this.accuracy = 0;
+        
+        this.baseMaxMana = 0;
+        this.maxMana = 0;
+        this.mana = 0;
+        this.manaRegenRate = 0f;
         
         this.maxStamina = maxStamina;
         this.stamina = maxStamina;
@@ -111,7 +128,7 @@ public class Stats implements Component {
      * Apply level-based stat bonuses from Experience component
      * Call this after leveling up to recalculate stats
      * @param exp The experience component
-     * @param fullHeal If true, restore HP and stamina to full (default for level-ups)
+     * @param fullHeal If true, restore HP, mana, and stamina to full (default for level-ups)
      */
     public void applyLevelStats(Experience exp, boolean fullHeal) {
         // Calculate new max stats
@@ -120,14 +137,22 @@ public class Stats implements Component {
         this.defense = exp.calculateDefense(baseDefense);
         this.accuracy = exp.calculateAccuracy(baseAccuracy);
         
-        // ★ FULL HEAL on level up
+        // ☆ NEW: Calculate max mana
+        this.maxMana = exp.calculateMaxMana(baseMaxMana);
+        this.manaRegenRate = maxMana * 0.01f;  // Update regen rate (1% of new max)
+        
+        // ☆ FULL HEAL on level up
         if (fullHeal) {
             this.hp = this.maxHp;
             this.stamina = this.maxStamina;
+            this.mana = this.maxMana;  // ☆ NEW: Full mana restore
         } else {
-            // Just cap HP at new max if not healing
+            // Just cap HP/mana at new max if not healing
             if (this.hp > this.maxHp) {
                 this.hp = this.maxHp;
+            }
+            if (this.mana > this.maxMana) {
+                this.mana = this.maxMana;
             }
         }
     }
@@ -140,11 +165,32 @@ public class Stats implements Component {
     }
     
     /**
-     * Fully restore HP and stamina
+     * Fully restore HP, stamina, and mana
      */
     public void fullHeal() {
         this.hp = this.maxHp;
         this.stamina = this.maxStamina;
+        this.mana = this.maxMana;  // ☆ NEW
+    }
+    
+    /**
+     * ☆ NEW: Consume mana, returns false if not enough
+     */
+    public boolean consumeMana(int amount) {
+        if (mana >= amount) {
+            mana -= amount;
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * ☆ NEW: Regenerate mana
+     */
+    public void regenerateMana(float delta) {
+        if (mana < maxMana) {
+            mana = Math.min(maxMana, (int)(mana + manaRegenRate * delta));
+        }
     }
     
     /**

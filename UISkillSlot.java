@@ -73,7 +73,7 @@ public class UISkillSlot extends UIComponent {
             if (skill.getIconPath() != null) {
                 BufferedImage icon = TextureManager.load(skill.getIconPath());
                 if (icon != null) {
-                    g.drawImage(icon, x, y + 1, width, height, null);
+                    g.drawImage(icon, x, y, width, height, null);
                 }
             }
             
@@ -264,7 +264,14 @@ public class UISkillSlot extends UIComponent {
         sb.append("────────────\n");
         sb.append("Type: ").append(skill.getType()).append("\n");
         sb.append("Cooldown: ").append(skill.getCooldown()).append("s\n");
-        sb.append("Mana: ").append(skill.getManaCost()).append("\n");
+        
+        // ☆ NEW: Show mana cost (needs player reference to calculate actual cost)
+        sb.append("Base Mana: ").append(skill.getBaseManaPercent()).append("% of Max MP\n");
+        float reduction = skill.getManaCostReduction() * 100;
+        if (reduction > 0) {
+            sb.append("Cost Reduction: -").append(String.format("%.0f", reduction)).append("%\n");
+        }
+        
         sb.append("Level Req: ").append(skill.getLevelRequired()).append("\n");
         
         // Show skill-specific stats

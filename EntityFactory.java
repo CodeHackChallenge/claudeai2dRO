@@ -4,55 +4,56 @@ public class EntityFactory {
     /**
      * Create a player entity with level system
      */
-    public static Entity createPlayer(float x, float y) {
-        Entity player = new Entity("Player", EntityType.PLAYER);
-        
-        player.addComponent(new Position(x, y));
-        player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
-        player.addComponent(new Movement(100f, 200f));
-        
-        // ☆ LEVEL 1 BASE STATS:
-        // baseMaxHp=100, baseAttack=10, baseDefense=2, baseAccuracy=0, maxStamina=500
-        Stats stats = new Stats(1000, 100, 2, 0, 500f);
-        player.addComponent(stats);
-        
-        // ☆ ADD EXPERIENCE COMPONENT
-        Experience exp = new Experience();
-        // Customize stat growth per level
-        exp.hpGrowth = 10;      // +10 HP per level
-        exp.attackGrowth = 2;   // +2 Attack per level
-        exp.defenseGrowth = 1;  // +1 Defense per level
-        exp.accGrowth = 1;      // +1 Accuracy per level
-        player.addComponent(exp);
-        
-        // ☆ NEW: ADD SKILL LEVEL COMPONENT
-        SkillLevel skillLevel = new SkillLevel();
-        player.addComponent(skillLevel);
-        
-        // ☆ APPLY LEVEL 1 STATS (calculates maxHp, attack, etc.)
-        stats.applyLevelStats(exp);
-        
-        // Combat system
-        player.addComponent(new Combat(1.1f, 0.15f, 0.05f));  // 1.1s cooldown, 15% crit, 5% evasion
-        
-        // UI Components
-        player.addComponent(new HealthBar(40, 4, 40));
-        player.addComponent(new StaminaBar(40, 4, 46));
-        player.addComponent(new XPBar(40, 3, 52));  // ☆ XP bar
-        
-        // Collision and movement
-        player.addComponent(new CollisionBox(-10, -14, 22, 44));
-        player.addComponent(new Path());
-        player.addComponent(new TargetIndicator()); 
-        
-        // Rendering
-        player.addComponent(new Renderable(RenderLayer.ENTITIES));
-        
-        // ☆ Level-up visual effect
-        player.addComponent(new LevelUpEffect());
-        
-        return player;
-    }
+	public static Entity createPlayer(float x, float y) {
+	    Entity player = new Entity("Player", EntityType.PLAYER);
+	    
+	    player.addComponent(new Position(x, y));
+	    player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f));
+	    player.addComponent(new Movement(100f, 200f));
+	    
+	    // ☆ LEVEL 1 BASE STATS:
+	    // baseMaxHp=100, baseAttack=10, baseDefense=2, baseAccuracy=0, maxStamina=500, baseMaxMana=50
+	    Stats stats = new Stats(100, 10, 2, 0, 500f, 50);  // ☆ NEW: Added mana (50)
+	    player.addComponent(stats);
+	    
+	    // ☆ ADD EXPERIENCE COMPONENT
+	    Experience exp = new Experience();
+	    exp.hpGrowth = 10;      // +10 HP per level
+	    exp.attackGrowth = 2;   // +2 Attack per level
+	    exp.defenseGrowth = 1;  // +1 Defense per level
+	    exp.accGrowth = 1;      // +1 Accuracy per level
+	    exp.manaGrowth = 5;     // ☆ NEW: +5 mana per level
+	    player.addComponent(exp);
+	    
+	    // ☆ ADD SKILL LEVEL COMPONENT
+	    SkillLevel skillLevel = new SkillLevel();
+	    player.addComponent(skillLevel);
+	    
+	    // ☆ APPLY LEVEL 1 STATS
+	    stats.applyLevelStats(exp);
+	    
+	    // Combat system
+	    player.addComponent(new Combat(1.1f, 0.15f, 0.05f));
+	    
+	    // UI Components
+	    player.addComponent(new HealthBar(40, 4, 40));
+	    player.addComponent(new StaminaBar(40, 4, 46));
+	    player.addComponent(new ManaBar(40, 4, 50));     // ☆ NEW: Mana bar
+	    player.addComponent(new XPBar(40, 3, 54));       // ☆ Moved down
+	    
+	    // Collision and movement
+	    player.addComponent(new CollisionBox(-10, -14, 22, 44));
+	    player.addComponent(new Path());
+	    player.addComponent(new TargetIndicator()); 
+	    
+	    // Rendering
+	    player.addComponent(new Renderable(RenderLayer.ENTITIES));
+	    
+	    // Level-up visual effect
+	    player.addComponent(new LevelUpEffect());
+	    
+	    return player;
+	}
     
     /**
      * NEW: Create monster with level and tier scaling

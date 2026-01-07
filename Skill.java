@@ -24,7 +24,7 @@ public class Skill {
     // Skill properties
     private float cooldown;
     private float currentCooldown;
-    private int manaCost;
+    private int baseManaPercent;  // ☆ NEW: Base mana cost as % of max mana (e.g., 12 for 12%)
     private int levelRequired;
     
     // Leveling
@@ -35,14 +35,14 @@ public class Skill {
     private Color iconColor;  // Fallback color if no icon
     
     public Skill(String id, String name, String description, SkillType type, 
-                 float cooldown, int manaCost, int levelRequired) {
+                 float cooldown, int baseManaPercent, int levelRequired) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.type = type;
         this.cooldown = cooldown;
         this.currentCooldown = 0;
-        this.manaCost = manaCost;
+        this.baseManaPercent = baseManaPercent;  // ☆ NEW: Store as percentage
         this.levelRequired = levelRequired;
         this.iconPath = null;
         
@@ -117,6 +117,34 @@ public class Skill {
     }
     
     /**
+     * ☆ NEW: Calculate mana cost based on player's max mana and skill level
+     * Formula: ManaCost(s) = MaxMana × BaseCost% × (1 - 0.03s)
+     * where s = skill level (1-10)
+     * Reduction caps at 30% at skill level 10
+     */
+    public int calculateManaCost(int maxMana) {
+        // Base cost as percentage of max mana
+        float baseCost = maxMana * (baseManaPercent / 100f);
+        
+        // Apply skill level reduction: -3% per level
+        float reduction = 0.03f * skillLevel;
+        float multiplier = 1.0f - reduction;
+        
+        // Calculate final cost
+        int finalCost = (int)(baseCost * multiplier);
+        
+        // Minimum cost of 1 mana
+        return Math.max(1, finalCost);
+    }
+    
+    /**
+     * Get mana cost reduction percentage
+     */
+    public float getManaCostReduction() {
+        return Math.min(0.30f, 0.03f * skillLevel);  // Cap at 30%
+    }
+    
+    /**
      * Calculate upgrade cost for next level
      * Formula: 1 + (currentLevel / 3)
      */
@@ -175,7 +203,7 @@ public class Skill {
     public SkillType getType() { return type; }
     public String getIconPath() { return iconPath; }
     public float getCooldown() { return cooldown; }
-    public int getManaCost() { return manaCost; }
+    public int getBaseManaPercent() { return baseManaPercent; }  // ☆ NEW
     public int getLevelRequired() { return levelRequired; }
     public Color getIconColor() { return iconColor; }
     public int getSkillLevel() { return skillLevel; }

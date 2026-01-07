@@ -10,6 +10,7 @@ public class Experience implements Component {
     public int attackGrowth;  // Attack gained per level
     public int defenseGrowth; // Defense gained per level
     public int accGrowth;     // Accuracy gained per level
+    public int manaGrowth;    // ☆ NEW: Mana gained per level
     
     public Experience() {
         this.level = 1;
@@ -21,6 +22,7 @@ public class Experience implements Component {
         this.attackGrowth = 2;
         this.defenseGrowth = 1;
         this.accGrowth = 1;
+        this.manaGrowth = 5;  // ☆ NEW: +5 mana per level
     }
     
     /**
@@ -108,5 +110,12 @@ public class Experience implements Component {
      */
     public int calculateAccuracy(int baseAccuracy) {
         return baseAccuracy + ((level - 1) * accGrowth);
+    }
+    
+    /**
+     * ☆ NEW: Calculate total mana for current level
+     */
+    public int calculateMaxMana(int baseMana) {
+        return baseMana + ((level - 1) * manaGrowth);
     }
 }

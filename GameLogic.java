@@ -264,6 +264,9 @@ public class GameLogic {
             return;
         }
         
+        // ☆ NEW: Regenerate mana
+        stats.regenerateMana(delta);
+        
         // ⭐ Check if attack animation hit frame reached - apply damage
         if (combat != null && combat.shouldDealDamage() && combat.attackTarget != null) {
             Position targetPos = combat.attackTarget.getComponent(Position.class);
@@ -1339,13 +1342,26 @@ Time 0.5s: Progress = 100%
         Stats stats = caster.getComponent(Stats.class);
         if (stats == null) return;
         
-        // Check mana cost (for now just check, don't consume)
-        // TODO: Implement mana system
+        // ☆ NEW: Check mana cost
+        int manaCost = skill.calculateManaCost(stats.maxMana);
+        
+        if (stats.mana < manaCost) {
+            System.out.println("Not enough mana! Need " + manaCost + ", have " + stats.mana);
+            return;
+        }
+        
+        // ☆ NEW: Consume mana
+        if (!stats.consumeMana(manaCost)) {
+            return;  // Failed to consume mana
+        }
         
         // Use the skill (start cooldown)
         if (!skill.use()) {
             return;  // Skill not ready
         }
+        
+        System.out.println("Used " + skill.getName() + " - Cost: " + manaCost + " mana (" + 
+                           stats.mana + "/" + stats.maxMana + " remaining)");
         
         // Apply skill effect based on type
         switch (skill.getType()) {

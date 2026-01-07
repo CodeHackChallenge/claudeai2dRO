@@ -144,7 +144,7 @@ public class Renderer {
 	    
 	    Collections.sort(renderObjects);
 	    
-	    // Render UI elements in same order as entities
+	 // Render UI elements in same order as entities
 	    for (RenderObject ro : renderObjects) {
 	        Entity entity = ro.entity;
 	        Position pos = ro.position;
@@ -198,6 +198,12 @@ public class Renderer {
 	                StaminaBar staminaBar = entity.getComponent(StaminaBar.class);
 	                if (stats != null && staminaBar != null) {
 	                    drawStaminaBar(g, spriteScreenX, spriteScreenY, stats, staminaBar);
+	                }
+	                
+	                // ☆ NEW: Mana bar
+	                ManaBar manaBar = entity.getComponent(ManaBar.class);
+	                if (stats != null && manaBar != null) {
+	                    drawManaBar(g, spriteScreenX, spriteScreenY, stats, manaBar);
 	                }
 	                
 	                // XP bar
@@ -372,6 +378,36 @@ public class Renderer {
     // ===================================================================
     // HELPER DRAWING METHODS
     // ===================================================================
+    /**
+     * ☆ NEW: Draw mana bar
+     */
+    private void drawManaBar(Graphics2D g, int spriteX, int spriteY, Stats stats, ManaBar bar) {
+        Stroke originalStroke = g.getStroke();
+        
+        int barX = spriteX - bar.width / 2;
+        int barY = spriteY + bar.offsetY;
+        
+        float pct = (float) stats.mana / stats.maxMana;
+        pct = Math.max(0f, Math.min(1f, pct));
+        
+        int filledWidth = (int)(bar.width * pct);
+        
+        // Background
+        g.setColor(ManaBar.BG_COLOR);
+        g.fillRect(barX, barY, bar.width, bar.height);
+        
+        // Mana fill
+        g.setColor(ManaBar.MANA_COLOR);
+        g.fillRect(barX, barY, filledWidth, bar.height);
+        
+        // Border
+        g.setColor(Color.BLACK);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barX, barY, bar.width, bar.height);
+        
+        g.setStroke(originalStroke);
+    } 
+    
     private void drawCollisionBox(Graphics2D g, Position pos, CollisionBox box, float cameraX, float cameraY) {
         int boxX = (int)Math.round(box.getLeft(pos.x) - cameraX);
         int boxY = (int)Math.round(box.getTop(pos.y) - cameraY);

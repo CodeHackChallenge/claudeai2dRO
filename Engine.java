@@ -375,7 +375,20 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 System.out.println("═══════════════════════════════\n");
             }
         }
-     
+     // ☆ NEW: Debug mana consumption (press M)
+        if (e.getKeyCode() == KeyEvent.VK_M) {
+            Entity player = gameState.getPlayer();
+            Stats stats = player.getComponent(Stats.class);
+            if (stats != null) {
+                int cost = 10;
+                if (stats.consumeMana(cost)) {
+                    System.out.println("DEBUG: Consumed " + cost + " mana");
+                    System.out.println("Mana: " + stats.mana + "/" + stats.maxMana);
+                } else {
+                    System.out.println("DEBUG: Not enough mana!");
+                }
+            }
+        }
      // ★ NEW: Full heal command (press F)
         if (e.getKeyCode() == KeyEvent.VK_F) {
             Entity player = gameState.getPlayer();
