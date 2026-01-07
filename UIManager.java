@@ -1,5 +1,4 @@
 package dev.main;
- 
 
 import java.awt.Graphics2D;
 import java.util.ArrayList;
@@ -13,14 +12,16 @@ public class UIManager {
     private List<UIPanel> panels;
     private UIComponent hoveredComponent;
     private GameState gameState;
-    private GameLogic gameLogic;  // NEW: Reference to game logic
+    private GameLogic gameLogic;
     
-    // Skill bar
+    // UI Panels
     private UIPanel skillBar;
+    private UIPanel verticalMenu;  // ☆ NEW: Right-side vertical menu
+    private UIPanel inventoryPanel;  // ☆ NEW: Inventory panel (opens when clicked)
     
     public UIManager(GameState gameState) {
         this.gameState = gameState;
-        this.gameLogic = null;  // Set later via setGameLogic()
+        this.gameLogic = null;
         this.panels = new ArrayList<>();
         
         initializeUI();
@@ -34,13 +35,13 @@ public class UIManager {
     }
     
     private void initializeUI() {
-        // Create skill bar at bottom center of screen
+        // Create skill bar at bottom center
         createSkillBar();
+        
+        // ☆ NEW: Create vertical menu on right side
+        createVerticalMenu();
     }
     
-    /**
-     * Create the skill bar with 8 skill slots
-     */
     /**
      * Create the skill bar with 8 skill slots
      */
@@ -68,19 +69,193 @@ public class UIManager {
         String[] keys = {"1", "2", "3", "4", "Q", "E", "R", "F"};
         for (int i = 0; i < numSlots; i++) {
             UISkillSlot slot = new UISkillSlot(0, 0, slotSize, keys[i]);
-            slot.setMargin(0);  // No margin needed with gap
-            
-            // ☆ NEW: Set UI manager reference and slot index
+            slot.setMargin(0);
             slot.setUIManager(this, i);
-            
             skillBar.addChild(slot);
         }
         
-        // Add some example skills for testing
+        // Add example skills
         addExampleSkills();
         
         panels.add(skillBar);
     }
+    
+    /**
+     * ☆ NEW: Create vertical menu on right-center of screen
+     */ 
+    private void createVerticalMenu() {
+        int buttonSize = 48;
+        int gap = 4;
+        int padding = 0;  // No padding - just icons
+        
+        int numButtons = 10;  // Total buttons (9 locked + 1 unlocked)
+        int menuHeight = (buttonSize * numButtons) + (gap * (numButtons - 1)) + (padding * 2);
+        int menuWidth = buttonSize + (padding * 2);
+        
+        // ☆ Position: right side, positioned ABOVE the skill bar
+        int skillBarHeight = 64;  // Height of skill bar (48 + padding)
+        int skillBarMargin = 20;  // Margin from bottom
+        int menuMarginFromSkillBar = 10;  // Space between menu and skill bar
+        
+        int menuX = Engine.WIDTH - menuWidth - 10;
+        int menuY = Engine.HEIGHT - skillBarHeight - skillBarMargin - menuHeight - menuMarginFromSkillBar;
+        
+        verticalMenu = new UIPanel(menuX, menuY, menuWidth, menuHeight);
+        verticalMenu.setLayout(UIPanel.LayoutType.VERTICAL);
+        verticalMenu.setGap(gap);
+        verticalMenu.setPadding(padding);
+        
+        // ☆ No background, no border
+        verticalMenu.setBackgroundColor(null);
+        verticalMenu.setBorderColor(null);
+        verticalMenu.setBorderWidth(0);
+        
+        // Create menu buttons (in order from top to bottom)
+        String[] buttonLabels = {
+            "Settings",
+            "World",
+            "Trade",
+            "Message",
+            "Quest",
+            "Stats",
+            "Character Info",
+            "Skill Tree",
+            "Gear",
+            "Inventory"
+        };
+        
+        String[] buttonIds = {
+            "settings",
+            "world",
+            "trade",
+            "message",
+            "quest",
+            "stats",
+            "character",
+            "skilltree",
+            "gear",
+            "inventory"
+        };
+        
+        for (int i = 0; i < buttonLabels.length; i++) {
+            UIButton button = new UIButton(0, 0, buttonSize, buttonSize, buttonIds[i], buttonLabels[i]);
+            
+            // Set icon paths
+            String iconPath = "/ui/icons/" + buttonIds[i] + ".png";
+            String iconHoverPath = "/ui/icons/" + buttonIds[i] + "_hover.png";
+            String iconLockedPath = "/ui/icons/" + buttonIds[i] + "_locked.png";
+            
+            button.setIcons(iconPath, iconHoverPath, iconLockedPath);
+            
+            // ☆ REFACTORED: All buttons visible, but locked except Inventory
+            if (i < buttonLabels.length - 1) {
+                // Locked buttons (Settings through Gear)
+                button.setLocked(true);
+                button.setVisible(true);  // ☆ Keep visible so layout works correctly
+            } else {
+                // Inventory button - unlocked and visible
+                button.setLocked(false);
+                button.setVisible(true);
+                
+                // Set callback to open inventory
+                button.setOnClick(() -> toggleInventory());
+            }
+            
+            verticalMenu.addChild(button);
+        }
+        
+        panels.add(verticalMenu);
+        
+        System.out.println("Vertical menu created at: (" + menuX + ", " + menuY + ") Size: " + menuWidth + "x" + menuHeight);
+    }
+    
+    /**
+     * ☆ NEW: Toggle inventory panel
+     */
+    private void toggleInventory() {
+        if (inventoryPanel == null) {
+            createInventoryPanel();
+        } else {
+            // Toggle visibility
+            inventoryPanel.setVisible(!inventoryPanel.isVisible());
+        }
+        
+        System.out.println("Inventory " + (inventoryPanel.isVisible() ? "opened" : "closed"));
+    }
+    
+    /**
+     * ☆ NEW: Create inventory panel (placeholder for now)
+     */
+    private void createInventoryPanel() {
+        int panelWidth = 400;
+        int panelHeight = 500;
+        //int panelX = (Engine.WIDTH - panelWidth) / 2;
+        //int panelY = (Engine.HEIGHT - panelHeight) / 2;
+        int panelX = (Engine.WIDTH - panelWidth) - 60 ;
+        int panelY = (Engine.HEIGHT - panelHeight) / 2;
+        inventoryPanel = new UIPanel(panelX, panelY, panelWidth, panelHeight);
+        inventoryPanel.setBackgroundColor(new java.awt.Color(25, 25, 35, 230));
+        inventoryPanel.setBorderColor(new java.awt.Color(100, 100, 150));
+        inventoryPanel.setBorderWidth(3);
+        inventoryPanel.setPadding(16);
+        
+        // TODO: Add inventory slots here
+        // For now, just a placeholder panel
+        
+        panels.add(inventoryPanel);
+    }
+    
+    /**
+     * ☆ NEW: Get a menu button by ID
+     */
+    public UIButton getMenuButton(String id) {
+        if (verticalMenu == null) return null;
+        
+        for (UIComponent child : verticalMenu.getChildren()) {
+            if (child instanceof UIButton) {
+                UIButton button = (UIButton) child;
+                if (button.getId().equals(id)) {
+                    return button;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * ☆ NEW: Unlock a menu button
+     */ 
+    public void unlockMenuButton(String id) {
+        UIButton button = getMenuButton(id);
+        if (button != null) {
+            button.unlock();
+            
+            // ☆ Force panel to relayout (in case positions were wrong)
+            if (verticalMenu != null) {
+                verticalMenu.relayout();
+            }
+            
+            System.out.println("Unlocked: " + button.getLabel());
+        }
+    }
+
+    /**
+     * ☆ UPDATED: Lock a menu button
+     */
+    public void lockMenuButton(String id) {
+        UIButton button = getMenuButton(id);
+        if (button != null) {
+            button.lock();
+            
+            // ☆ Force panel to relayout
+            if (verticalMenu != null) {
+                verticalMenu.relayout();
+            }
+            
+            System.out.println("Locked: " + button.getLabel());
+        }
+    } 
     
     /**
      * Add example skills for testing
@@ -92,9 +267,9 @@ public class UIManager {
             "Fireball",
             "Launch a blazing fireball at your enemy",
             Skill.SkillType.ATTACK,
-            3.0f,   // 3 second cooldown
-            12,     // ☆ 12% of max mana base cost
-            1       // Level 1 required
+            3.0f,
+            12,
+            1
         );
         
         Skill heal = new Skill(
@@ -103,7 +278,7 @@ public class UIManager {
             "Restore health over time",
             Skill.SkillType.HEAL,
             8.0f,
-            12,     // ☆ 12% of max mana base cost
+            12,
             1
         ); 
         
@@ -113,7 +288,7 @@ public class UIManager {
             "Create a protective barrier",
             Skill.SkillType.DEFENSE,
             12.0f,
-            12,     // ☆ 12% of max mana base cost
+            12,
             3
         );
         
@@ -123,7 +298,7 @@ public class UIManager {
             "Increase movement speed",
             Skill.SkillType.BUFF,
             20.0f,
-            12,     // ☆ 12% of max mana base cost
+            12,
             2
         );
         
@@ -133,7 +308,7 @@ public class UIManager {
             ((UISkillSlot)slots.get(0)).setSkill(fireball);
             ((UISkillSlot)slots.get(1)).setSkill(heal);
             ((UISkillSlot)slots.get(2)).setSkill(shield);
-            ((UISkillSlot)slots.get(4)).setSkill(haste);  // Q key
+            ((UISkillSlot)slots.get(4)).setSkill(haste);
         }
     }
     
@@ -142,7 +317,9 @@ public class UIManager {
      */
     public void update(float delta) {
         for (UIPanel panel : panels) {
-            panel.update(delta);
+            if (panel.isVisible()) {
+                panel.update(delta);
+            }
         }
     }
     
@@ -151,7 +328,9 @@ public class UIManager {
      */
     public void render(Graphics2D g) {
         for (UIPanel panel : panels) {
-            panel.render(g);
+            if (panel.isVisible()) {
+                panel.render(g);
+            }
         }
     }
     
@@ -160,13 +339,14 @@ public class UIManager {
      */
     public void handleMouseMove(int mouseX, int mouseY) {
         for (UIPanel panel : panels) {
-            panel.handleMouseMove(mouseX, mouseY);
+            if (panel.isVisible()) {
+                panel.handleMouseMove(mouseX, mouseY);
+            }
         }
     }
     
     /**
      * Handle mouse click
-     * @return true if UI consumed the click (don't pass to world)
      */
     public boolean handleClick(int mouseX, int mouseY) {
         // Check panels in reverse order (top-most first)
@@ -174,33 +354,33 @@ public class UIManager {
             UIPanel panel = panels.get(i);
             if (!panel.isVisible()) continue;
             
-            if (panel.handleClick(mouseX, mouseY)) {  
-            	
-                return true;  // UI consumed the click
+            if (panel.handleClick(mouseX, mouseY)) {
+                return true;
             }
         }
         
-        return false;  // Click not on any UI
+        return false;
     }
     
     /**
      * Handle right click
-     * @return true if UI consumed the click (don't pass to world)
      */
     public boolean handleRightClick(int mouseX, int mouseY) {
-        // Check panels in reverse order (top-most first)
         for (int i = panels.size() - 1; i >= 0; i--) {
             UIPanel panel = panels.get(i);
             if (!panel.isVisible()) continue;
             
             if (panel.handleRightClick(mouseX, mouseY)) {
-                return true;  // UI consumed the click
+                return true;
             }
         }
         
-        return false;  // Click not on any UI
+        return false;
     }
     
+    /**
+     * Handle keyboard input for skill hotkeys
+     */
     /**
      * Handle keyboard input for skill hotkeys
      */
@@ -234,7 +414,14 @@ public class UIManager {
                     break;
             }
         }
-    } 
+        
+        // ☆ Toggle inventory with 'I' key
+        if (keyCode == java.awt.event.KeyEvent.VK_I) {
+            toggleInventory();
+            System.out.println("DEBUG: I key pressed - toggling inventory");
+        }
+    }
+    
     /**
      * Use skill in specific slot (called by hotkey OR by clicking slot)
      */

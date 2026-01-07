@@ -1,8 +1,5 @@
 package dev.main;
-
-import java.util.ArrayList;
-import java.util.List;
-
+ 
 public class PathNode implements Comparable<PathNode> {
     public int x, y;  // Tile coordinates
     

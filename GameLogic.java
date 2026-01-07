@@ -92,37 +92,7 @@ public class GameLogic {
         } else {
             System.out.println("Not enough stamina to attack!");
         }
-    }
-    /*
-    public void playerAttack(Entity target) {
-        Entity player = state.getPlayer();
-        Combat playerCombat = player.getComponent(Combat.class);
-        Position playerPos = player.getComponent(Position.class);
-        Position targetPos = target.getComponent(Position.class);
-        Movement playerMovement = player.getComponent(Movement.class);
-        
-        if (playerCombat == null) return;
-        if (playerPos == null || targetPos == null) return;
-        
-        // Set as auto-attack target
-        state.setAutoAttackTarget(target);
-        
-        // Check distance
-        float distance = distance(playerPos.x, playerPos.y, targetPos.x, targetPos.y);
-        
-        if (distance <= 80f && playerCombat.canAttack()) {
-            // In range and can attack - do it now
-            playerMovement.direction = calculateDirection(targetPos.x - playerPos.x, targetPos.y - playerPos.y);
-            playerMovement.lastDirection = playerMovement.direction;
-            
-            playerCombat.startAttack();
-            performAttack(player, target, playerPos, targetPos);
-        } else {
-            // Out of range - will path to target in update loop
-            System.out.println("Moving to attack range...");
-        }
-    }
-    */
+    } 
     /**
      * Stop auto-attacking (called when moving to new location)
      */
