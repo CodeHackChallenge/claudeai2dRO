@@ -1,0 +1,208 @@
+🌿 Rune Crafting System (Finalized Design)
+
+Core Idea
+
+Runes are magical items created by inscribing symbols into a prepared tablet using special materials.
+They replace potions, provide buffs, resistances, and utility, and are a major part of your game’s identity.
+
+---
+
+🟩 1. Required Base Materials (All Craftable Runes)
+
+Every craftable rune requires these core components:
+
+1. Wooden Tablet
+
+• The base surface where the rune is carved.
+• Common, cheap, sold by NPCs.
+
+
+2. Clay
+
+• Used to bind the carving and stabilize the magic.
+• Common, gathered from the environment.
+
+
+3. Carving Stone
+
+• The tool used to inscribe the rune.
+• Slightly rarer; drops from stone‑type mobs or found in caves.
+
+
+4. Verdant Shards (MOST IMPORTANT)
+
+• The magical catalyst that activates the rune.
+• Determines the power, rarity, and type of rune.
+• The amount required scales with rune tier.
+
+
+5. Rune Essence (Optional, depending on rune type)
+
+This is what you meant by “depending on what rune you want to craft you have to include it.”
+
+Examples:
+
+• Fire Essence → Fire Resistance Rune
+• Strength Essence → Strength Rune
+• Wind Essence → Speed Rune
+• Arcane Essence → Magic Rune
+• Spirit Essence → Healing Rune
+
+
+These essences define the rune’s identity.
+
+---
+
+🟦 2. Verdant Shard Requirements (Rune Tier Scaling)
+
+Verdant Shards are the true bottleneck and the heart of the crafting economy.
+
+Here’s a clean, balanced shard requirement curve:
+
+Rune Tier	Example Rune	Shards Needed	
+Common	Minor Strength, Minor Fortitude	1 shard	
+Uncommon	Strength Rune, Fortitude Rune	3 shards	
+Rare	Major Strength, Major Fortitude	7 shards	
+Epic	Elemental Resistance Rune	15 shards	
+Legendary	High‑tier utility runes	30 shards	
+Mythic (Uncraftable)	Teleport Rune, Divine Rune	Cannot craft	
+
+
+This gives you:
+
+• A clear progression
+• A meaningful grind
+• A reason to hunt mobs and explore
+
+
+---
+
+🟧 3. Craftable vs. Non‑Craftable Runes
+
+Craftable Runes
+
+• Stat runes (ATK, DEF, HP regen, MP regen)
+• Resistance runes (Fire, Ice, Lightning, Poison)
+• Minor utility runes (speed, stamina regen, accuracy)
+
+
+Non‑Craftable Runes
+
+These are special and must be obtained through:
+
+• Grand Trade (gold currency)
+• Rare monster drops
+• Events
+• Bosses
+
+
+Examples:
+
+• Teleport Rune
+• Rune of Return
+• Rune of Invisibility
+• Rune of Divine Protection
+• Rune of Resurrection (if you ever add it)
+
+
+This creates excitement and prestige around rare runes.
+
+---
+
+🟨 4. Rune Acquisition Sources
+
+Local Merchant (Aurels currency)
+
+• Sells Common and some Uncommon runes
+• Sells crafting materials (wooden tablets, clay, carving stones)
+• Sells low‑tier essences
+• Uses Aurels (your NPC‑only currency)
+
+
+Monster Drops
+
+• Chance to drop:• Verdant Shards
+• Essences
+• Uncommon runes
+• Rare runes (low chance)
+
+
+
+Grand Trade (Gold currency)
+
+• Player‑driven marketplace
+• Uses Gold, not Aurels
+• Sells:• Rare runes
+• Epic runes
+• Legendary runes
+• Uncraftable special runes
+• High‑tier essences
+• Bulk Verdant Shards
+
+
+
+This creates a two‑currency economy:
+
+• Aurels → NPC shops
+• Gold → Player economy + Grand Trade
+
+
+This is extremely healthy for an MMO.
+
+---
+
+🟫 5. Example Crafting Recipes
+
+Common Rune: Rune of Minor Strength
+
+• 1 Wooden Tablet
+• 1 Clay
+• 1 Carving Stone
+• 1 Strength Essence
+• 1 Verdant Shard
+
+
+Uncommon Rune: Strength Rune
+
+• 1 Wooden Tablet
+• 1 Clay
+• 1 Carving Stone
+• 2 Strength Essences
+• 3 Verdant Shards
+
+
+Rare Rune: Major Strength Rune
+
+• 1 Wooden Tablet
+• 1 Clay
+• 1 Carving Stone
+• 3 Strength Essences
+• 7 Verdant Shards
+
+
+Epic Rune: Fire Resistance Rune
+
+• 1 Wooden Tablet
+• 1 Clay
+• 1 Carving Stone
+• 1 Fire Essence
+• 1 Greater Fire Essence
+• 15 Verdant Shards
+
+
+Legendary Rune: Rune of Arcane Surge
+
+• 1 Wooden Tablet
+• 1 Clay
+• 1 Carving Stone
+• 1 Arcane Core
+• 30 Verdant Shards
+
+
+Mythic Rune: Rune of Return
+
+• Cannot craft
+• Only from:• Grand Trade
+• Rare events
+• Fionne (tutorial)
+
