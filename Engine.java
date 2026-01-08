@@ -11,7 +11,8 @@ import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.image.BufferStrategy; 
+import java.awt.image.BufferStrategy;
+import java.util.List;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -267,6 +268,39 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             
             System.out.println("DEBUG: Locked all menu buttons except Inventory");
         }
+        // ☆ NEW: Add test item to inventory (press G for "Get item")
+        if (e.getKeyCode() == KeyEvent.VK_G) {
+            boolean added = gameState.getUIManager().addItemToInventory("TestItem");
+            if (added) {
+                System.out.println("DEBUG: Added test item to inventory");
+            } else {
+                System.out.println("DEBUG: Inventory is full!");
+            }
+        }
+        // ☆ NEW: Clear all items from inventory (press C for "Clear")
+        if (e.getKeyCode() == KeyEvent.VK_C) {
+            UIPanel inventoryPanel = gameState.getUIManager().getInventoryPanel();
+            if (inventoryPanel != null) {
+                List<UIComponent> slots = inventoryPanel.getChildren();
+                int cleared = 0;
+                for (UIComponent component : slots) {
+                    if (component instanceof UIInventorySlot) {
+                        UIInventorySlot slot = (UIInventorySlot) component;
+                        if (!slot.isEmpty()) {
+                            slot.removeItem();
+                            cleared++;
+                        }
+                    }
+                }
+                System.out.println("DEBUG: Cleared " + cleared + " items from inventory");
+            }
+        }
+        // ☆ NEW: Toggle gear panel (press K for "eKuipment")
+//        if (e.getKeyCode() == KeyEvent.VK_K) {
+//            gameState.getUIManager().unlockMenuButton("gear");  // Unlock gear button
+//            // Wait a frame, then toggle (or just call directly)
+//            gameState.getUIManager().handleKeyPress(KeyEvent.VK_K);
+//        }
         
         // Debug: Damage player (press D)
         if (e.getKeyCode() == KeyEvent.VK_D) {

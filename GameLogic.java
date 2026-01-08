@@ -121,7 +121,7 @@ public class GameLogic {
     }
     /**
      * Perform attack calculation with crit/evasion
-     */
+     */ 
     private void performAttack(Entity attacker, Entity target, Position attackerPos, Position targetPos) {
         Stats attackerStats = attacker.getComponent(Stats.class);
         Stats targetStats = target.getComponent(Stats.class);
@@ -130,15 +130,11 @@ public class GameLogic {
         
         if (attackerStats == null || targetStats == null) return;
         
-        // ⭐ REMOVED: Don't auto-face target here
-        // Only face target when initiating the attack, not during damage calculation
-        
         // Check evasion
         float evasionRoll = ThreadLocalRandom.current().nextFloat();
         float evasionChance = targetCombat != null ? targetCombat.evasionChance : 0f;
         
         if (evasionRoll < evasionChance) {
-            //System.out.println(attacker.getName() + " attacks " + target.getName() + " - MISS!");
             DamageText missText = new DamageText("MISS", DamageText.Type.MISS, targetPos.x, targetPos.y - 30);
             state.addDamageText(missText);
             return;
@@ -165,12 +161,25 @@ public class GameLogic {
         targetStats.hp -= baseDamage;
         if (targetStats.hp < 0) targetStats.hp = 0;
         
-        // Log
-        String hitType = isCrit ? " - CRITICAL HIT!" : "";
-        //System.out.println(attacker.getName() + " attacks " + target.getName() + " for " + baseDamage + " damage" + hitType);
+        // ☆ REFACTORED: Choose damage text type based on target
+        DamageText.Type textType;
+        
+        if (target.getType() == EntityType.PLAYER) {
+            // ☆ Player taking damage
+            if (isCrit) {
+                textType = DamageText.Type.PLAYER_CRITICAL_DAMAGE;  // Dark orange-red crit
+            } else {
+                textType = DamageText.Type.PLAYER_DAMAGE;  // Dark red normal
+            }
+        } else if (isCrit) {
+            // Monster taking crit - use orange
+            textType = DamageText.Type.CRITICAL;
+        } else {
+            // Monster taking normal damage - use white
+            textType = DamageText.Type.NORMAL;
+        }
         
         // Spawn damage text
-        DamageText.Type textType = isCrit ? DamageText.Type.CRITICAL : DamageText.Type.NORMAL;
         DamageText damageText = new DamageText(String.valueOf(baseDamage), textType, targetPos.x, targetPos.y - 30);
         state.addDamageText(damageText);
         

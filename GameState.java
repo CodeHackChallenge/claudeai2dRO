@@ -61,6 +61,12 @@ public class GameState {
         float normalRespawn = 30f;
         float bossRespawn = 50f;
         
+        //GHOST
+        addSpawnPoint("Ghost", 2 * 64, 2 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Ghost", 3* 64, 6 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Ghost", 5 * 64, 7 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Ghost", 7 * 64, 7 * 64, normalRespawn, 1, MobTier.TRASH);
+        
         // TRASH tier goblins (weak, low XP)
         addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
@@ -103,7 +109,8 @@ public class GameState {
         for (SpawnPoint sp : spawnPoints) {
             spawnMonsterAtPoint(sp);
         }
-    }
+         
+    } 
     
     public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay, int level, MobTier tier) {
         SpawnPoint sp = new SpawnPoint(monsterType, x, y, respawnDelay, level, tier);
