@@ -11,7 +11,9 @@ import java.awt.FontMetrics;
  * Similar visual style to menu buttons but for holding items
  */
 public class UIInventorySlot extends UIComponent {
-    
+	 // ⭐ ADD THIS at the top of the class:
+    private static final Font SLOT_FONT = new Font("Arial", Font.PLAIN, 10);
+   
     private Object item;  // TODO: Replace with actual Item class later
     private int slotIndex;
     private boolean isEmpty;
@@ -33,7 +35,15 @@ public class UIInventorySlot extends UIComponent {
         this.hoverColor = new Color(100, 100, 100, 200);
         this.fillColor = new Color(80, 80, 120, 200);
     }
-    
+    // If you add any text rendering (like slot numbers), use:
+    private void drawSlotNumber(Graphics2D g) {
+        Font originalFont = g.getFont();
+        g.setFont(SLOT_FONT);  // ⭐ Use cached font
+        
+        // ... draw text ...
+        
+        g.setFont(originalFont);
+    }
     @Override
     public void render(Graphics2D g) {
         if (!visible) return;

@@ -4,26 +4,27 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 
 /**
- * Base class for all UI components
+ * OPTIMIZED: Rectangle-free contains() and cached bounds
  */
 public abstract class UIComponent {
-    // Position (relative to parent or screen)
     protected int x, y;
-    
-    // Size
     protected int width, height;
     
-    // Layout properties
     protected int marginTop, marginRight, marginBottom, marginLeft;
     protected int paddingTop, paddingRight, paddingBottom, paddingLeft;
     
-    // State
     protected boolean visible = true;
     protected boolean enabled = true;
     protected boolean hovered = false;
     
-    // Parent reference
     protected UIPanel parent;
+    
+    // ⭐ NEW: Cached bounds
+    private Rectangle cachedBounds = null;
+    private int lastBoundsX = -1;
+    private int lastBoundsY = -1;
+    private int lastBoundsWidth = -1;
+    private int lastBoundsHeight = -1;
     
     public UIComponent(int x, int y, int width, int height) {
         this.x = x;
@@ -31,16 +32,13 @@ public abstract class UIComponent {
         this.width = width;
         this.height = height;
         
-        // Default margins and padding
         this.marginTop = this.marginRight = this.marginBottom = this.marginLeft = 0;
         this.paddingTop = this.paddingRight = this.paddingBottom = this.paddingLeft = 0;
     }
     
-    // Abstract methods to be implemented by subclasses
     public abstract void render(Graphics2D g);
     public abstract void update(float delta);
     
-    // Layout methods
     public void setMargin(int top, int right, int bottom, int left) {
         this.marginTop = top;
         this.marginRight = right;
@@ -63,9 +61,17 @@ public abstract class UIComponent {
         setPadding(all, all, all, all);
     }
     
-    // Bounds methods
+    // ⭐ OPTIMIZED: Cache bounds
     public Rectangle getBounds() {
-        return new Rectangle(x, y, width, height);
+        if (cachedBounds == null || x != lastBoundsX || y != lastBoundsY || 
+            width != lastBoundsWidth || height != lastBoundsHeight) {
+            cachedBounds = new Rectangle(x, y, width, height);
+            lastBoundsX = x;
+            lastBoundsY = y;
+            lastBoundsWidth = width;
+            lastBoundsHeight = height;
+        }
+        return cachedBounds;
     }
     
     public Rectangle getOuterBounds() {
@@ -86,9 +92,10 @@ public abstract class UIComponent {
         );
     }
     
-    // Input handling
+    // ⭐ OPTIMIZED: Rectangle-free contains check
     public boolean contains(int mouseX, int mouseY) {
-        return getBounds().contains(mouseX, mouseY);
+        return mouseX >= x && mouseX <= x + width &&
+               mouseY >= y && mouseY <= y + height;
     }
     
     public void onMouseEnter() {
@@ -99,22 +106,12 @@ public abstract class UIComponent {
         hovered = false;
     }
     
-    /**
-     * Called when component is clicked
-     * @return true if click was consumed (don't pass to world)
-     */
     public boolean onClick() {
-        // Override in subclasses
-        return false;  // Default: don't consume click
+        return false;
     }
     
-    /**
-     * Called when component is right-clicked
-     * @return true if click was consumed (don't pass to world)
-     */
     public boolean onRightClick() {
-        // Override in subclasses
-        return false;  // Default: don't consume click
+        return false;
     }
     
     // Getters/Setters
@@ -126,11 +123,13 @@ public abstract class UIComponent {
     public void setPosition(int x, int y) {
         this.x = x;
         this.y = y;
+        cachedBounds = null;  // ⭐ Invalidate cache
     }
     
     public void setSize(int width, int height) {
         this.width = width;
         this.height = height;
+        cachedBounds = null;  // ⭐ Invalidate cache
     }
     
     public boolean isVisible() { return visible; }

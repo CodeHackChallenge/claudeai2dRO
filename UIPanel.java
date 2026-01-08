@@ -7,20 +7,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Panel that can contain and layout child UI components
+ * OPTIMIZED: Added dirty flag system to prevent unnecessary relayout calls
  */
 public class UIPanel extends UIComponent {
     
     public enum LayoutType {
-        NONE,        // Manual positioning
-        HORIZONTAL,  // Left to right
-        VERTICAL,    // Top to bottom
-        GRID         // Grid layout
+        NONE,
+        HORIZONTAL,
+        VERTICAL,
+        GRID
     }
     
     private List<UIComponent> children;
     private LayoutType layoutType;
-    private int gap;  // Space between children
+    private int gap;
     
     // Grid layout properties
     private int columns;
@@ -31,6 +31,9 @@ public class UIPanel extends UIComponent {
     private Color borderColor;
     private int borderWidth;
     
+    // ⭐ NEW: Dirty flag system
+    private boolean needsRelayout = false;
+    
     public UIPanel(int x, int y, int width, int height) {
         super(x, y, width, height);
         this.children = new ArrayList<>();
@@ -39,72 +42,63 @@ public class UIPanel extends UIComponent {
         this.columns = 1;
         this.rows = 1;
         
-        // Default visual style
         this.backgroundColor = new Color(40, 40, 40, 200);
         this.borderColor = new Color(100, 100, 100, 255);
         this.borderWidth = 2;
+        
+        this.needsRelayout = false;  // ⭐ NEW
     }
     
-    /**
-     * Add a child component
-     */
+    // ⭐ OPTIMIZED: Just mark dirty instead of immediate relayout
     public void addChild(UIComponent child) {
         child.setParent(this);
         children.add(child);
-        relayout();
+        markDirty();  // ⭐ Changed from relayout()
     }
     
-    /**
-     * Remove a child component
-     */
     public void removeChild(UIComponent child) {
         child.setParent(null);
         children.remove(child);
-        relayout();
+        markDirty();  // ⭐ Changed from relayout()
     }
     
-    /**
-     * Clear all children
-     */
     public void clearChildren() {
         for (UIComponent child : children) {
             child.setParent(null);
         }
         children.clear();
+        markDirty();  // ⭐ Changed from relayout()
     }
     
-    /**
-     * Set layout type and recalculate positions
-     */
     public void setLayout(LayoutType layoutType) {
         this.layoutType = layoutType;
-        relayout();
+        markDirty();  // ⭐ Changed from relayout()
     }
     
-    /**
-     * Set gap between children
-     */
     public void setGap(int gap) {
         this.gap = gap;
-        relayout();
+        markDirty();  // ⭐ Changed from relayout()
     }
     
-    /**
-     * Set grid dimensions (only for GRID layout)
-     */
     public void setGridDimensions(int columns, int rows) {
         this.columns = columns;
         this.rows = rows;
         if (layoutType == LayoutType.GRID) {
-            relayout();
+            markDirty();  // ⭐ Changed from relayout()
         }
     }
     
-    /**
-     * Recalculate child positions based on layout
-     */
+    // ⭐ NEW: Mark panel as needing relayout
+    private void markDirty() {
+        needsRelayout = true;
+    }
+    
+    // ⭐ PUBLIC: Allow manual relayout trigger
     public void relayout() {
-        if (children.isEmpty()) return;
+        if (children.isEmpty()) {
+            needsRelayout = false;
+            return;
+        }
         
         Rectangle innerBounds = getInnerBounds();
         int startX = innerBounds.x;
@@ -127,9 +121,10 @@ public class UIPanel extends UIComponent {
                 
             case NONE:
             default:
-                // Manual positioning - do nothing
                 break;
         }
+        
+        needsRelayout = false;  // ⭐ Clear dirty flag
     }
     
     private void layoutHorizontal(int startX, int startY, int availableWidth) {
@@ -138,12 +133,8 @@ public class UIPanel extends UIComponent {
         for (UIComponent child : children) {
             if (!child.isVisible()) continue;
             
-            // Apply child's margin
             currentX += child.marginLeft;
-            
             child.setPosition(currentX, startY + child.marginTop);
-            
-            // Move to next position
             currentX += child.getWidth() + child.marginRight + gap;
         }
     }
@@ -154,12 +145,8 @@ public class UIPanel extends UIComponent {
         for (UIComponent child : children) {
             if (!child.isVisible()) continue;
             
-            // Apply child's margin
             currentY += child.marginTop;
-            
             child.setPosition(startX + child.marginLeft, currentY);
-            
-            // Move to next position
             currentY += child.getHeight() + child.marginBottom + gap;
         }
     }
@@ -167,14 +154,13 @@ public class UIPanel extends UIComponent {
     private void layoutGrid(int startX, int startY, int availableWidth, int availableHeight) {
         if (columns <= 0 || rows <= 0) return;
         
-        // Calculate cell size
         int cellWidth = (availableWidth - (gap * (columns - 1))) / columns;
         int cellHeight = (availableHeight - (gap * (rows - 1))) / rows;
         
         int index = 0;
         for (UIComponent child : children) {
             if (!child.isVisible()) continue;
-            if (index >= columns * rows) break;  // Grid is full
+            if (index >= columns * rows) break;
             
             int col = index % columns;
             int row = index / columns;
@@ -183,18 +169,19 @@ public class UIPanel extends UIComponent {
             int cellY = startY + (row * (cellHeight + gap)) + child.marginTop;
             
             child.setPosition(cellX, cellY);
-            
-            // Optionally resize child to fit cell
-            // child.setSize(cellWidth - child.marginLeft - child.marginRight,
-            //               cellHeight - child.marginTop - child.marginBottom);
-            
             index++;
         }
     }
     
+    // ⭐ OPTIMIZED: Only relayout when actually rendering
     @Override
     public void render(Graphics2D g) {
         if (!visible) return;
+        
+        // ⭐ NEW: Relayout only when dirty and visible
+        if (needsRelayout) {
+            relayout();
+        }
         
         // Draw background
         if (backgroundColor != null) {
@@ -228,9 +215,6 @@ public class UIPanel extends UIComponent {
         }
     }
     
-    /**
-     * Handle mouse input for all children
-     */
     public void handleMouseMove(int mouseX, int mouseY) {
         for (UIComponent child : children) {
             if (!child.isVisible() || !child.isEnabled()) continue;
@@ -245,12 +229,7 @@ public class UIPanel extends UIComponent {
         }
     }
     
-    /**
-     * Handle mouse click for children
-     * @return true if any child consumed the click
-     */
     public boolean handleClick(int mouseX, int mouseY) {
-        // Check children in reverse order (top-most first)
         for (int i = children.size() - 1; i >= 0; i--) {
             UIComponent child = children.get(i);
             if (!child.isVisible() || !child.isEnabled()) continue;
@@ -258,25 +237,19 @@ public class UIPanel extends UIComponent {
             if (child.contains(mouseX, mouseY)) { 
                 boolean consumed = child.onClick();
                 if (consumed) { 
-                    return true;  // Click was consumed, stop propagation
+                    return true;
                 }
             }
         }
         
-        // Check if click is on the panel itself (not on children)
         if (this.contains(mouseX, mouseY)) {
-            return true;  // Panel consumed the click (don't pass to world)
+            return true;
         }
         
-        return false;  // Click not on panel or children
+        return false;
     }
     
-    /**
-     * Handle right click for children
-     * @return true if any child consumed the click
-     */
     public boolean handleRightClick(int mouseX, int mouseY) {
-        // Check children in reverse order (top-most first)
         for (int i = children.size() - 1; i >= 0; i--) {
             UIComponent child = children.get(i);
             if (!child.isVisible() || !child.isEnabled()) continue;
@@ -284,17 +257,16 @@ public class UIPanel extends UIComponent {
             if (child.contains(mouseX, mouseY)) {
                 boolean consumed = child.onRightClick();
                 if (consumed) {
-                    return true;  // Click was consumed, stop propagation
+                    return true;
                 }
             }
         }
         
-        // Check if click is on the panel itself (not on children)
         if (this.contains(mouseX, mouseY)) {
-            return true;  // Panel consumed the click (don't pass to world)
+            return true;
         }
         
-        return false;  // Click not on panel or children
+        return false;
     }
     
     // Visual style setters

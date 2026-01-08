@@ -113,9 +113,12 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         System.out.println("Game initialized!");
     }
     
+ // ⭐ Call handleMouseHover() in update() ONLY when mouse moved
     public void update(float delta) {
-        // Check mouse hover
-        handleMouseHover();
+        // ⭐ Only check mouse hover when needed
+        if (mouse.hasMoved()) {
+            handleMouseHover();
+        }
         
         // Handle input
         handleInput();
@@ -123,11 +126,17 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         // Update game logic
         gameLogic.update(delta);
         
-        // ★ NEW: Update UI
+        // Update UI
         gameState.getUIManager().update(delta);
     }
     
+ // ⭐ Also optimize handleMouseHover() - only check when mouse moves
     private void handleMouseHover() {
+        // ⭐ NEW: Only check when mouse actually moved
+        if (!mouse.hasMoved()) {
+            return;
+        }
+        
         int screenX = mouse.getX();
         int screenY = mouse.getY();
         
@@ -166,6 +175,9 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         } else {
             setCursor(defaultCursor);
         }
+        
+        // ⭐ Reset movement flag
+        mouse.resetMoved();
     }
     
     private void handleInput() {
@@ -294,14 +306,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 }
                 System.out.println("DEBUG: Cleared " + cleared + " items from inventory");
             }
-        }
-        // ☆ NEW: Toggle gear panel (press K for "eKuipment")
-//        if (e.getKeyCode() == KeyEvent.VK_K) {
-//            gameState.getUIManager().unlockMenuButton("gear");  // Unlock gear button
-//            // Wait a frame, then toggle (or just call directly)
-//            gameState.getUIManager().handleKeyPress(KeyEvent.VK_K);
-//        }
-        
+        } 
         // Debug: Damage player (press D)
         if (e.getKeyCode() == KeyEvent.VK_D) {
             Entity player = gameState.getPlayer();
@@ -652,7 +657,12 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             }
 
             // ★ NEW: Update UI hover states
-            gameState.getUIManager().handleMouseMove(mouse.getX(), mouse.getY());
+            // ⭐ Only check UI hover when mouse actually moved
+            if (mouse.hasMoved()) {
+                gameState.getUIManager().handleMouseMove(mouse.getX(), mouse.getY());
+                mouse.resetMoved();
+            }
+
             // Prevent CPU maxing
             try {
                 Thread.sleep(1);

@@ -5,26 +5,30 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * OPTIMIZED: Cached current animation to eliminate HashMap lookups every frame
+ */
 public class Sprite implements Component {
-	// Idle animation constants
-	public static final String ANIM_IDLE_DOWN = "idle_down";
-	public static final String ANIM_IDLE_UP = "idle_up";
-	public static final String ANIM_IDLE_LEFT = "idle_left";
-	public static final String ANIM_IDLE_RIGHT = "idle_right";
-	public static final String ANIM_IDLE_DOWN_LEFT = "idle_down_left";
-	public static final String ANIM_IDLE_DOWN_RIGHT = "idle_down_right";
-	public static final String ANIM_IDLE_UP_LEFT = "idle_up_left";
-	public static final String ANIM_IDLE_UP_RIGHT = "idle_up_right";
-	//run
-	public static final String ANIM_RUN_DOWN = "run_down";
-	public static final String ANIM_RUN_UP = "run_up";
-	public static final String ANIM_RUN_LEFT = "run_left";
-	public static final String ANIM_RUN_RIGHT = "run_right";
-	public static final String ANIM_RUN_DOWN_LEFT = "run_down_left";
-	public static final String ANIM_RUN_DOWN_RIGHT = "run_down_right";
-	public static final String ANIM_RUN_UP_LEFT = "run_up_left";
-	public static final String ANIM_RUN_UP_RIGHT = "run_up_right";
-	
+    // Idle animation constants
+    public static final String ANIM_IDLE_DOWN = "idle_down";
+    public static final String ANIM_IDLE_UP = "idle_up";
+    public static final String ANIM_IDLE_LEFT = "idle_left";
+    public static final String ANIM_IDLE_RIGHT = "idle_right";
+    public static final String ANIM_IDLE_DOWN_LEFT = "idle_down_left";
+    public static final String ANIM_IDLE_DOWN_RIGHT = "idle_down_right";
+    public static final String ANIM_IDLE_UP_LEFT = "idle_up_left";
+    public static final String ANIM_IDLE_UP_RIGHT = "idle_up_right";
+    
+    // Run
+    public static final String ANIM_RUN_DOWN = "run_down";
+    public static final String ANIM_RUN_UP = "run_up";
+    public static final String ANIM_RUN_LEFT = "run_left";
+    public static final String ANIM_RUN_RIGHT = "run_right";
+    public static final String ANIM_RUN_DOWN_LEFT = "run_down_left";
+    public static final String ANIM_RUN_DOWN_RIGHT = "run_down_right";
+    public static final String ANIM_RUN_UP_LEFT = "run_up_left";
+    public static final String ANIM_RUN_UP_RIGHT = "run_up_right";
+    
     private BufferedImage spriteSheet;
     private int frameWidth;
     private int frameHeight;
@@ -32,11 +36,13 @@ public class Sprite implements Component {
     // Animation state
     private int currentFrame;
     private float animationTimer;
-    private float frameDuration;  // seconds per frame
+    private float frameDuration;
     
     // Current animation
     private String currentAnimation;
-    private boolean loopAnimation;  // NEW: Control looping
+    private boolean loopAnimation;
+    private Animation cachedAnimation;  // ⭐ NEW: Cache current animation
+    
     // Animation definitions
     private Map<String, Animation> animations;
     
@@ -52,7 +58,7 @@ public class Sprite implements Component {
     public static final String ANIM_WALK_UP_RIGHT = "walk_up_right";
     public static final String ANIM_ATTACK = "attack";
     public static final String ANIM_DEAD = "dead";
-        
+    
     // Inner class to hold animation data
     private static class Animation {
         int row;
@@ -72,31 +78,28 @@ public class Sprite implements Component {
         this.currentFrame = 0;
         this.animationTimer = 0;
         this.animations = new HashMap<>();
-        this.loopAnimation = true;  // Most animations loop
+        this.loopAnimation = true;
+        this.cachedAnimation = null;  // ⭐ NEW
         
-        // Setup animations - ADJUST THESE TO MATCH YOUR SPRITE SHEET
         setupAnimations();
         
         // Start with idle animation
         this.currentAnimation = "idle_down";
+        this.cachedAnimation = animations.get(this.currentAnimation);  // ⭐ NEW: Cache initial
     }
     
     private void setupAnimations() {
-        // Define your animations: (row, frameCount)
-        // ADJUST THESE NUMBERS TO MATCH YOUR SPRITE SHEET LAYOUT
+        // Idle animations
+        animations.put("idle_down", new Animation(24, 2));
+        animations.put("idle_up", new Animation(22, 2));
+        animations.put("idle_left", new Animation(23, 2));
+        animations.put("idle_right", new Animation(25, 2));
+        animations.put("idle_down_left", new Animation(23, 2));
+        animations.put("idle_down_right", new Animation(25, 2));
+        animations.put("idle_up_left", new Animation(23, 2));
+        animations.put("idle_up_right", new Animation(25, 2));
         
-        // Idle animations - 2 frames each, 8 directions (rows 0-7)      
-        animations.put("idle_down", new Animation(24, 2));   // Row 0, 2 frames
-        animations.put("idle_up", new Animation(22, 2));     // Row 1, 2 frames
-        animations.put("idle_left", new Animation(23, 2));   // Row 2, 2 frames
-        animations.put("idle_right", new Animation(25, 2));  // Row 3, 2 frames
-        animations.put("idle_down_left", new Animation(23, 2));      // Southwest
-        animations.put("idle_down_right", new Animation(25, 2));     // Southeast
-        animations.put("idle_up_left", new Animation(23, 2));        // Northwest
-        animations.put("idle_up_right", new Animation(25, 2));       // Northeas
-        
-        
-        // Walk animations - 5 frames each, 8 directions (rows 8-15)
+        // Walk animations
         animations.put(ANIM_WALK_DOWN, new Animation(10, 9));
         animations.put(ANIM_WALK_UP, new Animation(8, 9));
         animations.put(ANIM_WALK_LEFT, new Animation(9, 9));
@@ -105,11 +108,10 @@ public class Sprite implements Component {
         animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(11, 9));
         animations.put(ANIM_WALK_UP_LEFT, new Animation(9, 9));
         animations.put(ANIM_WALK_UP_RIGHT, new Animation(11, 9));
-        // Attack animation - different frame count (example: 6 frames, row 16)
-        animations.put(ANIM_ATTACK, new Animation(16, 6));//TODO: does this do anything
         
+        animations.put(ANIM_ATTACK, new Animation(16, 6));
         
-        // Run animations - 8 directions, adjust frame count to your sheet
+        // Run animations
         animations.put("run_down", new Animation(40, 8));
         animations.put("run_up", new Animation(38, 8));
         animations.put("run_left", new Animation(39, 8));
@@ -119,9 +121,8 @@ public class Sprite implements Component {
         animations.put("run_up_left", new Animation(39, 8));
         animations.put("run_up_right", new Animation(41, 8));
         
-        
-        // Attack animations - 8 directions (adjust row numbers to your sheet)
-        animations.put("attack_down", new Animation(14, 6));      
+        // Attack animations
+        animations.put("attack_down", new Animation(14, 6));
         animations.put("attack_up", new Animation(12, 6));
         animations.put("attack_left", new Animation(13, 6));
         animations.put("attack_right", new Animation(15, 6));
@@ -129,15 +130,13 @@ public class Sprite implements Component {
         animations.put("attack_down_right", new Animation(15, 6));
         animations.put("attack_up_left", new Animation(13, 6));
         animations.put("attack_up_right", new Animation(15, 6));
-        // Death animation - single animation (adjust row and frame count)
-        animations.put("dead", new Animation(20, 6));   
         
-        
+        animations.put("dead", new Animation(20, 6));
     }
     
+    // ⭐ OPTIMIZED: Use cached animation instead of HashMap lookup
     public void update(float delta) {
-        Animation anim = animations.get(currentAnimation);
-        if (anim == null) return;
+        if (cachedAnimation == null) return;  // ⭐ Use cache
         
         animationTimer += delta;
         
@@ -145,24 +144,21 @@ public class Sprite implements Component {
             animationTimer -= frameDuration;
             
             if (loopAnimation) {
-                currentFrame = (currentFrame + 1) % anim.frameCount;
+                currentFrame = (currentFrame + 1) % cachedAnimation.frameCount;  // ⭐ Use cache
             } else {
-                // Don't loop - stop at last frame
-                if (currentFrame < anim.frameCount - 1) {
+                if (currentFrame < cachedAnimation.frameCount - 1) {  // ⭐ Use cache
                     currentFrame++;
                 }
             }
         }
     }
     
+    // ⭐ OPTIMIZED: Use cached animation
     public void renderAtPixel(Graphics2D g, int screenX, int screenY) {
-        if (spriteSheet == null) return;
-        
-        Animation anim = animations.get(currentAnimation);
-        if (anim == null) return;
+        if (spriteSheet == null || cachedAnimation == null) return;  // ⭐ Use cache
         
         int srcX = currentFrame * frameWidth;
-        int srcY = anim.row * frameHeight;
+        int srcY = cachedAnimation.row * frameHeight;  // ⭐ Use cache
         
         int destX = screenX - frameWidth / 2;
         int destY = screenY - frameHeight / 2;
@@ -176,13 +172,10 @@ public class Sprite implements Component {
     }
     
     public void render(Graphics2D g, float x, float y, float cameraX, float cameraY) {
-        if (spriteSheet == null) return;
-        
-        Animation anim = animations.get(currentAnimation);
-        if (anim == null) return;
+        if (spriteSheet == null || cachedAnimation == null) return;  // ⭐ Use cache
         
         int srcX = currentFrame * frameWidth;
-        int srcY = anim.row * frameHeight;
+        int srcY = cachedAnimation.row * frameHeight;  // ⭐ Use cache
         
         int destX = (int)Math.round(x - cameraX - frameWidth / 2f);
         int destY = (int)Math.round(y - cameraY - frameHeight / 2f);
@@ -195,23 +188,20 @@ public class Sprite implements Component {
         );
     }
     
-    // Set animation by name
+    // ⭐ OPTIMIZED: Cache animation on change
     public void setAnimation(String animationName) {
         if (!animationName.equals(currentAnimation)) {
             this.currentAnimation = animationName;
+            this.cachedAnimation = animations.get(animationName);  // ⭐ Cache lookup
             this.currentFrame = 0;
             this.animationTimer = 0;
-            
-            // Death animation doesn't loop
             this.loopAnimation = !animationName.equals("dead");
         }
     }
     
     public boolean isAnimationFinished() {
-        Animation anim = animations.get(currentAnimation);
-        if (anim == null) return true;
-        
-        return !loopAnimation && currentFrame >= anim.frameCount - 1;
+        if (cachedAnimation == null) return true;  // ⭐ Use cache
+        return !loopAnimation && currentFrame >= cachedAnimation.frameCount - 1;  // ⭐ Use cache
     }
     
     public String getCurrentAnimation() {

@@ -9,7 +9,9 @@ import java.awt.FontMetrics;
  * UI component representing a gear/equipment slot
  */
 public class UIGearSlot extends UIComponent {
-    
+	 // ⭐ ADD THIS at the top of the class:
+    private static final Font LABEL_FONT = new Font("Arial", Font.PLAIN, 9);
+   
     public enum SlotType {
         HEAD,
         TOP_ARMOR,
@@ -88,10 +90,10 @@ public class UIGearSlot extends UIComponent {
     /**
      * Draw slot type label
      */
+    // ⭐ UPDATE drawSlotLabel() to use cached font:
     private void drawSlotLabel(Graphics2D g) {
         Font originalFont = g.getFont();
-        Font labelFont = new Font("Arial", Font.PLAIN, 9);
-        g.setFont(labelFont);
+        g.setFont(LABEL_FONT);  // ⭐ Use cached font (was: new Font(...))
         
         String label = getSlotLabel();
         FontMetrics fm = g.getFontMetrics();

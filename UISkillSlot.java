@@ -8,16 +8,20 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
 /**
- * UI component representing a skill slot
+ * OPTIMIZED: Cached Font objects to eliminate per-frame Font creation
  */
 public class UISkillSlot extends UIComponent {
     
-    private Skill skill;  // Can be null (empty slot)
-    private String keyBinding;  // e.g., "1", "Q", "E"
+    // ⭐ NEW: Cached fonts (created once, reused forever)
+    private static final Font COOLDOWN_FONT = new Font("Arial", Font.BOLD, 16);
+    private static final Font KEYBIND_FONT = new Font("Arial", Font.BOLD, 12);
+    private static final Font LEVEL_FONT = new Font("Arial", Font.BOLD, 10);
+    
+    private Skill skill;
+    private String keyBinding;
     private boolean showCooldown;
     private boolean showKeybind;
     
-    // ☆ NEW: Reference to parent UI manager and slot index
     private UIManager uiManager;
     private int slotIndex;
     
@@ -37,7 +41,6 @@ public class UISkillSlot extends UIComponent {
         this.uiManager = null;
         this.slotIndex = -1;
         
-        // Default colors
         this.emptyColor = new Color(60, 60, 60, 200);
         this.hoverColor = new Color(100, 100, 100, 255);
         this.cooldownColor = new Color(0, 0, 0, 150);
@@ -55,10 +58,8 @@ public class UISkillSlot extends UIComponent {
         
         // Draw slot background
         if (skill == null) {
-            // Empty slot
             g.setColor(hovered ? hoverColor : emptyColor);
         } else {
-            // Filled slot - use skill color
             g.setColor(skill.getIconColor());
         }
         g.fillRect(x, y, width, height);
@@ -69,7 +70,7 @@ public class UISkillSlot extends UIComponent {
         g.drawRect(x, y, width, height);
         
         if (skill != null) {
-            // Draw skill icon (if available)
+            // Draw skill icon
             if (skill.getIconPath() != null) {
                 BufferedImage icon = TextureManager.load(skill.getIconPath());
                 if (icon != null) {
@@ -119,10 +120,10 @@ public class UISkillSlot extends UIComponent {
         g.fillRect(x, y, width, overlayHeight);
     }
     
+    // ⭐ OPTIMIZED: Use cached font
     private void drawCooldownText(Graphics2D g) {
         Font originalFont = g.getFont();
-        Font cooldownFont = new Font("Arial", Font.BOLD, 16);
-        g.setFont(cooldownFont);
+        g.setFont(COOLDOWN_FONT);  // ⭐ Use cached font
         
         String cooldownText = String.format("%.1f", skill.getRemainingCooldown());
         FontMetrics fm = g.getFontMetrics();
@@ -143,10 +144,10 @@ public class UISkillSlot extends UIComponent {
         g.setFont(originalFont);
     }
     
+    // ⭐ OPTIMIZED: Use cached font
     private void drawKeybind(Graphics2D g) {
         Font originalFont = g.getFont();
-        Font keybindFont = new Font("Arial", Font.BOLD, 12);
-        g.setFont(keybindFont);
+        g.setFont(KEYBIND_FONT);  // ⭐ Use cached font
         
         FontMetrics fm = g.getFontMetrics();
         int textWidth = fm.stringWidth(keyBinding);
@@ -174,10 +175,10 @@ public class UISkillSlot extends UIComponent {
         g.setFont(originalFont);
     }
     
+    // ⭐ OPTIMIZED: Use cached font
     private void drawSkillLevel(Graphics2D g) {
         Font originalFont = g.getFont();
-        Font levelFont = new Font("Arial", Font.BOLD, 10);
-        g.setFont(levelFont);
+        g.setFont(LEVEL_FONT);  // ⭐ Use cached font
         
         String levelText = "Lv" + skill.getSkillLevel();
         FontMetrics fm = g.getFontMetrics();
@@ -197,10 +198,9 @@ public class UISkillSlot extends UIComponent {
         int textX = bgX + 3;
         int textY = bgY + textHeight - 3;
         
-        // Color based on level
         Color levelColor;
         if (skill.isMaxLevel()) {
-            levelColor = new Color(255, 215, 0);  // Gold for max level
+            levelColor = new Color(255, 215, 0);
         } else {
             levelColor = Color.WHITE;
         }
@@ -220,33 +220,22 @@ public class UISkillSlot extends UIComponent {
     
     @Override
     public boolean onClick() {
-        // ☆ NEW: Execute skill on left-click
         if (skill != null && uiManager != null && slotIndex >= 0) {
             if (skill.isReady()) {
                 uiManager.useSkillInSlot(slotIndex);
-                System.out.println("Clicked skill slot " + slotIndex + ": " + skill.getName());
-            } else {
-                System.out.println("Skill on cooldown: " + String.format("%.1f", skill.getRemainingCooldown()) + "s remaining");
             }
         }
-        return true;  // Consume the click
+        return true;
     }
     
     @Override
     public boolean onRightClick() {
-        // ☆ NEW: Right-click to upgrade skill
         if (skill != null && uiManager != null && slotIndex >= 0) {
-            boolean upgraded = uiManager.upgradeSkill(slotIndex);
-            if (upgraded) {
-                System.out.println("Right-clicked to upgrade: " + skill.getName());
-            }
+            uiManager.upgradeSkill(slotIndex);
         }
-        return true;  // Consume the click
+        return true;
     }
     
-    /**
-     * Get tooltip text for this slot
-     */
     public String getTooltipText() {
         if (skill == null) {
             return "Empty Slot" + (keyBinding.isEmpty() ? "" : " [" + keyBinding + "]");
@@ -264,9 +253,8 @@ public class UISkillSlot extends UIComponent {
         sb.append("────────────\n");
         sb.append("Type: ").append(skill.getType()).append("\n");
         sb.append("Cooldown: ").append(skill.getCooldown()).append("s\n");
-        
-        // ☆ NEW: Show mana cost (needs player reference to calculate actual cost)
         sb.append("Base Mana: ").append(skill.getBaseManaPercent()).append("% of Max MP\n");
+        
         float reduction = skill.getManaCostReduction() * 100;
         if (reduction > 0) {
             sb.append("Cost Reduction: -").append(String.format("%.0f", reduction)).append("%\n");
@@ -274,13 +262,11 @@ public class UISkillSlot extends UIComponent {
         
         sb.append("Level Req: ").append(skill.getLevelRequired()).append("\n");
         
-        // Show skill-specific stats
         if (skill.getType() == Skill.SkillType.HEAL) {
             double healPercent = skill.getHealPercent() * 100;
             sb.append("Heal Power: ").append(String.format("%.1f", healPercent)).append("%\n");
         }
         
-        // Show upgrade info
         if (!skill.isMaxLevel()) {
             sb.append("\n");
             sb.append("Upgrade Cost: ").append(skill.getUpgradeCost()).append(" point(s)");
@@ -293,38 +279,17 @@ public class UISkillSlot extends UIComponent {
         return sb.toString();
     }
     
-    // ☆ NEW: Set UI manager reference and slot index
     public void setUIManager(UIManager uiManager, int slotIndex) {
         this.uiManager = uiManager;
         this.slotIndex = slotIndex;
     }
     
     // Getters/Setters
-    public Skill getSkill() {
-        return skill;
-    }
-    
-    public void setSkill(Skill skill) {
-        this.skill = skill;
-    }
-    
-    public String getKeyBinding() {
-        return keyBinding;
-    }
-    
-    public void setKeyBinding(String keyBinding) {
-        this.keyBinding = keyBinding;
-    }
-    
-    public void setShowCooldown(boolean show) {
-        this.showCooldown = show;
-    }
-    
-    public void setShowKeybind(boolean show) {
-        this.showKeybind = show;
-    }
-    
-    public int getSlotIndex() {
-        return slotIndex;
-    }
+    public Skill getSkill() { return skill; }
+    public void setSkill(Skill skill) { this.skill = skill; }
+    public String getKeyBinding() { return keyBinding; }
+    public void setKeyBinding(String keyBinding) { this.keyBinding = keyBinding; }
+    public void setShowCooldown(boolean show) { this.showCooldown = show; }
+    public void setShowKeybind(boolean show) { this.showKeybind = show; }
+    public int getSlotIndex() { return slotIndex; }
 }

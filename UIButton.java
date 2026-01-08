@@ -1,5 +1,6 @@
 package dev.main;
 
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
@@ -8,6 +9,10 @@ import java.awt.image.BufferedImage;
  * Changes image on hover, supports locked/unlocked states
  */
 public class UIButton extends UIComponent {
+    
+	 // ⭐ ADD THIS at the top of the class:
+    private static final Font LABEL_FONT = new Font("Arial", Font.PLAIN, 12);
+    
     
     private String id;
     private String label;
@@ -113,6 +118,20 @@ public class UIButton extends UIComponent {
             g.setColor(locked ? new java.awt.Color(150, 150, 150) : java.awt.Color.WHITE);
             g.drawString(label, x + 5, y + height / 2 + 5);
         }
+        
+        // When drawing label text, replace:
+        // Font originalFont = g.getFont();
+        // Font labelFont = new Font("Arial", Font.PLAIN, 12);
+        // g.setFont(labelFont);
+        
+        // WITH:
+        Font originalFont = g.getFont();
+        g.setFont(LABEL_FONT);  // ⭐ Use cached font
+        
+        // ... draw label text ...
+        
+        g.setFont(originalFont);
+        
     }
 
     /**
