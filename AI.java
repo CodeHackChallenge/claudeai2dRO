@@ -67,7 +67,7 @@ public class AI implements Component {
             attackTimer -= delta;
         }
         
-        if (currentState == State.VICTORY_IDLE) {
+        if (currentState == State.VICTORY_IDLE) {  
             victoryIdleTimer += delta;
         }
     }

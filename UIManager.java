@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Manages all UI panels and handles input routing
+ * FIXED: Tabs now work properly with click and hover
  */
 public class UIManager {
     
@@ -14,39 +14,32 @@ public class UIManager {
     private GameState gameState;
     private GameLogic gameLogic;
     
-    // UI Panels
     private UIPanel skillBar;
-    private UIPanel verticalMenu;  // ☆ NEW: Right-side vertical menu
-    private UIPanel inventoryPanel;  // ☆ NEW: Inventory panel (opens when clicked)
-    private UIPanel gearPanel;  // ☆ NEW: Add to class fields
+    private UIPanel verticalMenu;
+    private UIPanel inventoryPanel;
+    private UIPanel gearPanel;
     
+    private String currentInventoryTab = "Misc";
+    private List<UIInventoryTab> inventoryTabs;  // ⭐ Store tabs directly
     
     public UIManager(GameState gameState) {
         this.gameState = gameState;
         this.gameLogic = null;
         this.panels = new ArrayList<>();
+        this.inventoryTabs = new ArrayList<>();
         
         initializeUI();
     }
     
-    /**
-     * Set game logic reference (for skill execution)
-     */
     public void setGameLogic(GameLogic gameLogic) {
         this.gameLogic = gameLogic;
     }
     
     private void initializeUI() {
-        // Create skill bar at bottom center
         createSkillBar();
-        
-        // ☆ NEW: Create vertical menu on right side
         createVerticalMenu();
     }
     
-    /**
-     * Create the skill bar with 8 skill slots
-     */
     private void createSkillBar() {
         int slotSize = 48;
         int numSlots = 8;
@@ -67,7 +60,6 @@ public class UIManager {
         skillBar.setBorderColor(new java.awt.Color(100, 100, 100, 255));
         skillBar.setBorderWidth(2);
         
-        // Add 8 skill slots with keybindings
         String[] keys = {"1", "2", "3", "4", "Q", "E", "R", "F"};
         for (int i = 0; i < numSlots; i++) {
             UISkillSlot slot = new UISkillSlot(0, 0, slotSize, keys[i]);
@@ -76,28 +68,22 @@ public class UIManager {
             skillBar.addChild(slot);
         }
         
-        // Add example skills
         addExampleSkills();
-        
         panels.add(skillBar);
     }
     
-    /**
-     * ☆ NEW: Create vertical menu on right-center of screen
-     */ 
     private void createVerticalMenu() {
         int buttonSize = 48;
         int gap = 4;
-        int padding = 0;  // No padding - just icons
+        int padding = 0;
         
-        int numButtons = 10;  // Total buttons (9 locked + 1 unlocked)
+        int numButtons = 10;
         int menuHeight = (buttonSize * numButtons) + (gap * (numButtons - 1)) + (padding * 2);
         int menuWidth = buttonSize + (padding * 2);
         
-        // ☆ Position: right side, positioned ABOVE the skill bar
-        int skillBarHeight = 64;  // Height of skill bar (48 + padding)
-        int skillBarMargin = 20;  // Margin from bottom
-        int menuMarginFromSkillBar = 10;  // Space between menu and skill bar
+        int skillBarHeight = 64;
+        int skillBarMargin = 20;
+        int menuMarginFromSkillBar = 10;
         
         int menuX = Engine.WIDTH - menuWidth - 10;
         int menuY = Engine.HEIGHT - skillBarHeight - skillBarMargin - menuHeight - menuMarginFromSkillBar;
@@ -106,58 +92,37 @@ public class UIManager {
         verticalMenu.setLayout(UIPanel.LayoutType.VERTICAL);
         verticalMenu.setGap(gap);
         verticalMenu.setPadding(padding);
-        
-        // ☆ No background, no border
         verticalMenu.setBackgroundColor(null);
         verticalMenu.setBorderColor(null);
         verticalMenu.setBorderWidth(0);
         
-        // Create menu buttons (in order from top to bottom)
         String[] buttonLabels = {
-            "Settings",
-            "World",
-            "Trade",
-            "Message",
-            "Quest",
-            "Stats",
-            "Character Info",
-            "Skill Tree",
-            "Gear",
-            "Inventory"
+            "Settings", "World", "Trade", "Message", "Quest",
+            "Stats", "Character Info", "Skill Tree", "Rune", "Inventory"
         };
         
         String[] buttonIds = {
-            "settings",
-            "world",
-            "trade",
-            "message",
-            "quest",
-            "stats",
-            "character",
-            "skilltree",
-            "gear",
-            "inventory"
+            "settings", "world", "trade", "message", "quest",
+            "stats", "character", "skilltree", "rune", "inventory"
         };
         
         for (int i = 0; i < buttonLabels.length; i++) {
             UIButton button = new UIButton(0, 0, buttonSize, buttonSize, buttonIds[i], buttonLabels[i]);
             
-            // Set icon paths
             String iconPath = "/ui/icons/" + buttonIds[i] + ".png";
             String iconHoverPath = "/ui/icons/" + buttonIds[i] + "_hover.png";
             String iconLockedPath = "/ui/icons/" + buttonIds[i] + "_locked.png";
             
             button.setIcons(iconPath, iconHoverPath, iconLockedPath);
             
-            // ☆ Set callbacks based on button type
             if (buttonIds[i].equals("inventory")) {
                 button.setLocked(false);
                 button.setVisible(true);
-                button.setOnClick(() -> toggleInventory());
-            } else if (buttonIds[i].equals("gear")) {
+                button.setOnClick(() -> toggleInventoryAndGear());
+            } else if (buttonIds[i].equals("rune")) {
                 button.setLocked(true);
                 button.setVisible(true);
-                button.setOnClick(() -> toggleGear());  // ☆ Uses toggleGear()
+                button.setOnClick(() -> toggleInventoryAndGear());
             } else {
                 button.setLocked(true);
                 button.setVisible(true);
@@ -167,295 +132,134 @@ public class UIManager {
         }
         
         panels.add(verticalMenu);
+    }
+    
+    private void toggleInventoryAndGear() {
+        if (inventoryPanel == null) {
+            createInventoryPanel();
+        }
+        if (gearPanel == null) {
+            createGearPanel();
+        }
         
-        System.out.println("Vertical menu created at: (" + menuX + ", " + menuY + ") Size: " + menuWidth + "x" + menuHeight);
+        boolean newVisibility = !inventoryPanel.isVisible();
+        inventoryPanel.setVisible(newVisibility);
+        gearPanel.setVisible(newVisibility);
+        
+        System.out.println("Inventory & Gear " + (newVisibility ? "opened" : "closed"));
     }
     
     /**
-     * ☆ NEW: Toggle inventory panel
-     */
-    private void toggleInventory() {
-        if (inventoryPanel == null) {
-            createInventoryPanel();
-        } else {
-            // Toggle visibility
-            inventoryPanel.setVisible(!inventoryPanel.isVisible());
-        }
-        
-        System.out.println("Inventory " + (inventoryPanel.isVisible() ? "opened" : "closed"));
-    }
-    /**
-     * ☆ FIXED: Create inventory panel (5x10 grid beside menu, aligned with settings button)
+     * ⭐ REDESIGNED: Simpler structure with tabs added directly to main panel
      */
     private void createInventoryPanel() {
         int slotSize = 48;
         int columns = 5;
-        int rows = 10;
+        int rows = 4;
         int gap = 4;
         int padding = 8;
+        int tabBarHeight = 32;
         
         int panelWidth = (slotSize * columns) + (gap * (columns - 1)) + (padding * 2);
-        int panelHeight = (slotSize * rows) + (gap * (rows - 1)) + (padding * 2);
+        int slotsHeight = (slotSize * rows) + (gap * (rows - 1)) + (padding * 2);
+        int panelHeight = slotsHeight + tabBarHeight;
         
-        // ☆ FIXED: Position to the LEFT of vertical menu, aligned with SETTINGS button (top)
         UIButton settingsButton = getMenuButton("settings");
         int panelX;
         int panelY;
         
-        if (verticalMenu != null && settingsButton != null) {
-            // Align to left of vertical menu
-            panelX = verticalMenu.getX() - panelWidth - 10;
-            
-            // ☆ FIXED: Align top with settings button (first button in menu)
-            panelY = settingsButton.getY();
+        if (settingsButton != null) {
+            panelX = settingsButton.getX() - panelWidth - 10;
+            int gearPanelHeight = 400;
+            panelY = settingsButton.getY() + gearPanelHeight + 10;
         } else {
-            // Fallback: use menu position if settings button not found
-            if (verticalMenu != null) {
-                panelX = verticalMenu.getX() - panelWidth - 10;
-                panelY = verticalMenu.getY();
-            } else {
-                // Last resort fallback
-                panelX = Engine.WIDTH - panelWidth - 70;
-                panelY = 100;
-            }
+            panelX = Engine.WIDTH - panelWidth - 70;
+            panelY = 100;
         }
         
+        // ⭐ Main panel with NONE layout (manual positioning)
         inventoryPanel = new UIPanel(panelX, panelY, panelWidth, panelHeight);
-        inventoryPanel.setLayout(UIPanel.LayoutType.GRID);
-        inventoryPanel.setGridDimensions(columns, rows);
-        inventoryPanel.setGap(gap);
-        inventoryPanel.setPadding(padding);
-        
-        // Dark background with border
+        inventoryPanel.setLayout(UIPanel.LayoutType.NONE);
+        inventoryPanel.setPadding(0);
         inventoryPanel.setBackgroundColor(new java.awt.Color(20, 20, 30, 230));
         inventoryPanel.setBorderColor(new java.awt.Color(100, 100, 120));
         inventoryPanel.setBorderWidth(2);
         
-        // Create 50 inventory slots (5x10 = 50)
-        for (int i = 0; i < columns * rows; i++) {
-            UIInventorySlot slot = new UIInventorySlot(0, 0, slotSize, i);
-            inventoryPanel.addChild(slot);
+        // ⭐ Create tabs DIRECTLY in main panel (not nested)
+        String[] tabNames = {"Misc", "Weap", "Arm", "Acc", "Rune"};
+        int tabWidth = (panelWidth - (padding * 2) - (gap * 4)) / 5;
+        
+        inventoryTabs.clear();
+        
+        for (int i = 0; i < tabNames.length; i++) {
+            int tabX = panelX + padding + (i * (tabWidth + gap));
+            int tabY = panelY + padding;
+            
+            UIInventoryTab tab = new UIInventoryTab(tabX, tabY, tabWidth, tabBarHeight - (padding * 2), tabNames[i]);
+            final String tabName = tabNames[i];
+            tab.setOnClick(() -> switchInventoryTab(tabName));
+            
+            if (tabNames[i].equals(currentInventoryTab)) {
+                tab.setActive(true);
+            }
+            
+            inventoryTabs.add(tab);
+            inventoryPanel.addChild(tab);  // ⭐ Add directly to main panel
         }
         
-        // Add some test items to first few slots
-        addTestItems();
+        // ⭐ Create inventory slots DIRECTLY in main panel
+        int gridStartY = tabBarHeight;
+        int slotStartX = panelX + padding;
+        int slotStartY = panelY + gridStartY + padding;
+        
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                int slotX = slotStartX + (col * (slotSize + gap));
+                int slotY = slotStartY + (row * (slotSize + gap));
+                int slotIndex = row * columns + col;
+                
+                UIInventorySlot slot = new UIInventorySlot(slotX, slotY, slotSize, slotIndex);
+                inventoryPanel.addChild(slot);  // ⭐ Add directly to main panel
+            }
+        }
         
         panels.add(inventoryPanel);
         
-        System.out.println("Inventory created: 5x10 grid (50 slots)");
+        System.out.println("Inventory created: 5x4 grid (20 slots) with tabs");
         System.out.println("Position: (" + panelX + ", " + panelY + ") Size: " + panelWidth + "x" + panelHeight);
-        System.out.println("Aligned with: Settings button (top of menu)");
-    }
-
-    /**
-     * ☆ NEW: Add test items for demonstration
-     */
-    private void addTestItems() {
-        if (inventoryPanel == null) return;
-        
-        List<UIComponent> slots = inventoryPanel.getChildren();
-        
-        // Add placeholder items to first 5 slots for testing
-        for (int i = 0; i < Math.min(5, slots.size()); i++) {
-            if (slots.get(i) instanceof UIInventorySlot) {
-                UIInventorySlot slot = (UIInventorySlot) slots.get(i);
-                slot.setItem("TestItem" + i);  // Placeholder item
-            }
-        }
-    } 
-
-    /**
-     * ☆ NEW: Get inventory slot by index
-     */
-    public UIInventorySlot getInventorySlot(int index) {
-        if (inventoryPanel == null) return null;
-        
-        List<UIComponent> slots = inventoryPanel.getChildren();
-        if (index >= 0 && index < slots.size() && slots.get(index) instanceof UIInventorySlot) {
-            return (UIInventorySlot) slots.get(index);
-        }
-        
-        return null;
-    }
-
-    /**
-     * ☆ NEW: Add item to first empty inventory slot
-     */
-    public boolean addItemToInventory(Object item) {
-        if (inventoryPanel == null) {
-            createInventoryPanel();
-        }
-        
-        List<UIComponent> slots = inventoryPanel.getChildren();
-        
-        // Find first empty slot
-        for (UIComponent component : slots) {
-            if (component instanceof UIInventorySlot) {
-                UIInventorySlot slot = (UIInventorySlot) component;
-                if (slot.isEmpty()) {
-                    slot.setItem(item);
-                    System.out.println("Added item to slot " + slot.getSlotIndex());
-                    return true;
-                }
-            }
-        }
-        
-        System.out.println("Inventory full! Cannot add item.");
-        return false;  // Inventory full
-    }
-
-    /**
-     * ☆ NEW: Remove item from inventory slot
-     */
-    public void removeItemFromSlot(int slotIndex) {
-        UIInventorySlot slot = getInventorySlot(slotIndex);
-        if (slot != null) {
-            slot.removeItem();
-            System.out.println("Removed item from slot " + slotIndex);
-        }
-    }
-
-    /**
-     * ☆ NEW: Get inventory panel reference
-     */
-    public UIPanel getInventoryPanel() {
-        return inventoryPanel;
     }
     
-    /**
-     * ☆ NEW: Get a menu button by ID
-     */
-    public UIButton getMenuButton(String id) {
-        if (verticalMenu == null) return null;
+    private void switchInventoryTab(String tabName) {
+        currentInventoryTab = tabName;
         
-        for (UIComponent child : verticalMenu.getChildren()) {
-            if (child instanceof UIButton) {
-                UIButton button = (UIButton) child;
-                if (button.getId().equals(id)) {
-                    return button;
-                }
-            }
+        // Update tab visuals
+        for (UIInventoryTab tab : inventoryTabs) {
+            tab.setActive(tab.getTabName().equals(tabName));
         }
         
-        return null;
+        System.out.println("Switched to tab: " + tabName);
     }
     
-    /**
-     * ☆ NEW: Unlock a menu button
-     */ 
-    public void unlockMenuButton(String id) {
-        UIButton button = getMenuButton(id);
-        if (button != null) {
-            button.unlock();
-            
-            // ☆ Force panel to relayout (in case positions were wrong)
-            if (verticalMenu != null) {
-                verticalMenu.relayout();
-            }
-            
-            System.out.println("Unlocked: " + button.getLabel());
-        }
-    }
-
-    /**
-     * ☆ UPDATED: Lock a menu button
-     */
-    public void lockMenuButton(String id) {
-        UIButton button = getMenuButton(id);
-        if (button != null) {
-            button.lock();
-            
-            // ☆ Force panel to relayout
-            if (verticalMenu != null) {
-                verticalMenu.relayout();
-            }
-            
-            System.out.println("Locked: " + button.getLabel());
-        }
-    } 
-    
-    /**
-     * Add example skills for testing
-     */
-    private void addExampleSkills() {
-        // Create some test skills with mana costs
-        Skill fireball = new Skill(
-            "fireball",
-            "Fireball",
-            "Launch a blazing fireball at your enemy",
-            Skill.SkillType.ATTACK,
-            3.0f,
-            12,
-            1
-        );
-        
-        Skill heal = new Skill(
-            "heal",
-            "Heal",
-            "Restore health over time",
-            Skill.SkillType.HEAL,
-            8.0f,
-            12,
-            1
-        ); 
-        
-        Skill shield = new Skill(
-            "shield",
-            "Shield",
-            "Create a protective barrier",
-            Skill.SkillType.DEFENSE,
-            12.0f,
-            12,
-            3
-        );
-        
-        Skill haste = new Skill(
-            "haste",
-            "Haste",
-            "Increase movement speed",
-            Skill.SkillType.BUFF,
-            20.0f,
-            12,
-            2
-        );
-        
-        // Assign skills to slots
-        List<UIComponent> slots = skillBar.getChildren();
-        if (slots.size() >= 4) {
-            ((UISkillSlot)slots.get(0)).setSkill(fireball);
-            ((UISkillSlot)slots.get(1)).setSkill(heal);
-            ((UISkillSlot)slots.get(2)).setSkill(shield);
-            ((UISkillSlot)slots.get(4)).setSkill(haste);
-        }
-    } 
- 
-
- // ==================== GEAR PANEL METHODS ====================
- 
-    /**
-     * ☆ Create gear/equipment panel with correct absolute positioning
-     */
     private void createGearPanel() {
         int slotWidth = 48;
         int slotHeight = 48;
         int gap = 4;
         int padding = 8;
-        int centerWidth = 80;
         
-        int panelWidth = slotWidth + gap + centerWidth + gap + slotWidth + (padding * 2);
+        int inventorySlotSize = 48;
+        int inventoryColumns = 5;
+        int inventoryGap = 4;
+        int inventoryPadding = 8;
+        int panelWidth = (inventorySlotSize * inventoryColumns) + (inventoryGap * (inventoryColumns - 1)) + (inventoryPadding * 2);
         
-        if (inventoryPanel == null) {
-            createInventoryPanel();
-        }
-        int inventoryHeight = inventoryPanel.getHeight();
-        int panelHeight = (int)(inventoryHeight * 0.7f);
+        int panelHeight = 400;
         
         UIButton settingsButton = getMenuButton("settings");
         int panelX;
         int panelY;
         
-        if (inventoryPanel != null && settingsButton != null) {
-            panelX = inventoryPanel.getX() - panelWidth - 10;
+        if (settingsButton != null) {
+            panelX = settingsButton.getX() - panelWidth - 10;
             panelY = settingsButton.getY();
         } else {
             panelX = Engine.WIDTH - panelWidth - 320;
@@ -469,9 +273,11 @@ public class UIManager {
         gearPanel.setBorderColor(new java.awt.Color(100, 100, 120));
         gearPanel.setBorderWidth(2);
         
+        int sideColumnWidth = slotWidth + padding;
+        int centerWidth = panelWidth - (sideColumnWidth * 2) - (padding * 2);
         int slotSpacing = (panelHeight - (padding * 2) - (slotHeight * 6)) / 5;
         
-        // Left column - use helper method
+        // Left column
         addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 0, slotWidth, slotHeight, UIGearSlot.SlotType.HEAD);
         addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 1, slotWidth, slotHeight, UIGearSlot.SlotType.TOP_ARMOR);
         addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 2, slotWidth, slotHeight, UIGearSlot.SlotType.GLOVES);
@@ -479,11 +285,12 @@ public class UIManager {
         addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 4, slotWidth, slotHeight, UIGearSlot.SlotType.PANTS);
         addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 5, slotWidth, slotHeight, UIGearSlot.SlotType.SHOES);
         
-        // Center character preview
-        addCharacterPreviewRelative(padding + slotWidth + gap, padding, centerWidth, panelHeight - (padding * 2));
+        // Center preview
+        int centerX = padding + slotWidth + gap;
+        addCharacterPreviewRelative(centerX, padding, centerWidth, panelHeight - (padding * 2));
         
         // Right column
-        int rightOffset = padding + slotWidth + gap + centerWidth + gap;
+        int rightOffset = panelWidth - padding - slotWidth;
         addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 0, slotWidth, slotHeight, UIGearSlot.SlotType.TIARA);
         addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 1, slotWidth, slotHeight, UIGearSlot.SlotType.EARRINGS);
         addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 2, slotWidth, slotHeight, UIGearSlot.SlotType.NECKLACE);
@@ -494,22 +301,16 @@ public class UIManager {
         addTestEquipment();
         panels.add(gearPanel);
         
-        System.out.println("Gear panel created at: (" + panelX + ", " + panelY + ")");
+        System.out.println("Gear panel created at: (" + panelX + ", " + panelY + ") - Width: " + panelWidth);
     }
-
-    /**
-     * ☆ Helper method to add gear slot with relative positioning
-     */
+    
     private void addGearSlotRelative(int relX, int relY, int width, int height, UIGearSlot.SlotType slotType) {
         int absoluteX = gearPanel.getX() + relX;
         int absoluteY = gearPanel.getY() + relY;
         UIGearSlot slot = new UIGearSlot(absoluteX, absoluteY, width, height, slotType);
         gearPanel.addChild(slot);
     }
-
-    /**
-     * ☆ Helper method to add character preview with relative positioning
-     */
+    
     private void addCharacterPreviewRelative(int relX, int relY, int width, int height) {
         int absoluteX = gearPanel.getX() + relX;
         int absoluteY = gearPanel.getY() + relY;
@@ -519,10 +320,7 @@ public class UIManager {
         previewPanel.setBorderWidth(1);
         gearPanel.addChild(previewPanel);
     }
-
-    /**
-     * ☆ Add test equipment to gear slots
-     */
+    
     private void addTestEquipment() {
         if (gearPanel == null) return;
         
@@ -536,53 +334,42 @@ public class UIManager {
                 equipped++;
             }
         }
-    } 
-    /**
-     * ☆ Get gear slot by type
-     */
-    public UIGearSlot getGearSlot(UIGearSlot.SlotType slotType) {
-        if (gearPanel == null) return null;
-        
-        for (UIComponent component : gearPanel.getChildren()) {
-            if (component instanceof UIGearSlot) {
-                UIGearSlot slot = (UIGearSlot) component;
-                if (slot.getSlotType() == slotType) {
-                    return slot;
-                }
-            }
-        }
-        
-        return null;
     }
-
-    /**
-     * ☆ Equip item to gear slot
-     */
-    public boolean equipItem(UIGearSlot.SlotType slotType, Object item) {
-        UIGearSlot slot = getGearSlot(slotType);
-        if (slot != null) {
-            slot.equipItem(item);
-            System.out.println("Equipped item to " + slotType);
-            return true;
+    
+    private void addExampleSkills() {
+        Skill fireball = new Skill("fireball", "Fireball", "Launch a blazing fireball", 
+            Skill.SkillType.ATTACK, 3.0f, 12, 1);
+        Skill heal = new Skill("heal", "Heal", "Restore health", 
+            Skill.SkillType.HEAL, 8.0f, 12, 1);
+        Skill shield = new Skill("shield", "Shield", "Create a barrier", 
+            Skill.SkillType.DEFENSE, 12.0f, 12, 3);
+        Skill haste = new Skill("haste", "Haste", "Increase speed", 
+            Skill.SkillType.BUFF, 20.0f, 12, 2);
+        
+        List<UIComponent> slots = skillBar.getChildren();
+        if (slots.size() >= 4) {
+            ((UISkillSlot)slots.get(0)).setSkill(fireball);
+            ((UISkillSlot)slots.get(1)).setSkill(heal);
+            ((UISkillSlot)slots.get(2)).setSkill(shield);
+            ((UISkillSlot)slots.get(4)).setSkill(haste);
         }
-        return false;
-    } 
- 
- 
-    /**
-     * Update all UI components
-     */
+    }
+    
     public void update(float delta) {
         for (UIPanel panel : panels) {
             if (panel.isVisible()) {
                 panel.update(delta);
             }
         }
+        
+        // ⭐ Update tabs separately since they're not in a child panel
+        for (UIInventoryTab tab : inventoryTabs) {
+            if (inventoryPanel != null && inventoryPanel.isVisible()) {
+                tab.update(delta);
+            }
+        }
     }
     
-    /**
-     * Render all UI panels
-     */
     public void render(Graphics2D g) {
         for (UIPanel panel : panels) {
             if (panel.isVisible()) {
@@ -591,9 +378,6 @@ public class UIManager {
         }
     }
     
-    /**
-     * Handle mouse movement
-     */
     public void handleMouseMove(int mouseX, int mouseY) {
         for (UIPanel panel : panels) {
             if (panel.isVisible()) {
@@ -602,11 +386,7 @@ public class UIManager {
         }
     }
     
-    /**
-     * Handle mouse click
-     */
     public boolean handleClick(int mouseX, int mouseY) {
-        // Check panels in reverse order (top-most first)
         for (int i = panels.size() - 1; i >= 0; i--) {
             UIPanel panel = panels.get(i);
             if (!panel.isVisible()) continue;
@@ -615,13 +395,9 @@ public class UIManager {
                 return true;
             }
         }
-        
         return false;
     }
     
-    /**
-     * Handle right click
-     */
     public boolean handleRightClick(int mouseX, int mouseY) {
         for (int i = panels.size() - 1; i >= 0; i--) {
             UIPanel panel = panels.get(i);
@@ -631,19 +407,13 @@ public class UIManager {
                 return true;
             }
         }
-        
         return false;
     }
-      
-    /**
-     * Handle keyboard input for skill hotkeys
-     */
+    
     public void handleKeyPress(int keyCode) {
-        // Map keycodes to skill slots
         if (skillBar != null) {
             List<UIComponent> slots = skillBar.getChildren();
             
-            // Number keys 1-8
             if (keyCode >= java.awt.event.KeyEvent.VK_1 && 
                 keyCode <= java.awt.event.KeyEvent.VK_8) {
                 int index = keyCode - java.awt.event.KeyEvent.VK_1;
@@ -652,7 +422,6 @@ public class UIManager {
                 }
             }
             
-            // Letter keys Q, E, R, F
             switch (keyCode) {
                 case java.awt.event.KeyEvent.VK_Q:
                     if (slots.size() > 4) useSkillInSlot(4);
@@ -669,70 +438,28 @@ public class UIManager {
             }
         }
         
-        // Toggle inventory with 'I' key
         if (keyCode == java.awt.event.KeyEvent.VK_I) {
-            toggleInventory();
-        }
-        
-        // ☆ FIXED: Toggle gear with 'K' key - auto-unlock if needed
-        if (keyCode == java.awt.event.KeyEvent.VK_K) {
-            // Check if gear button is locked
-            UIButton gearButton = getMenuButton("gear");
-            if (gearButton != null && gearButton.isLocked()) {
-                // Unlock it first (but don't relayout during this frame)
-                gearButton.setLocked(false);
-                gearButton.setEnabled(true);
-                System.out.println("Auto-unlocked Gear button");
-            }
-            
-            // Toggle the gear panel
-            toggleGear();
+            toggleInventoryAndGear();
         }
     }
-    /**
-     * ☆ Toggle gear panel
-     */
-    private void toggleGear() {
-        try {
-            if (gearPanel == null) {
-                createGearPanel();
-            } else {
-                gearPanel.setVisible(!gearPanel.isVisible());
-            }
-            
-            System.out.println("Gear panel " + (gearPanel != null && gearPanel.isVisible() ? "opened" : "closed"));
-        } catch (Exception e) {
-            System.err.println("Error toggling gear panel: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    /**
-     * Use skill in specific slot (called by hotkey OR by clicking slot)
-     */
+    
     public void useSkillInSlot(int slotIndex) {
         UISkillSlot slot = getSkillSlot(slotIndex);
         if (slot != null && slot.getSkill() != null) {
             Skill skill = slot.getSkill();
             
             if (skill.isReady()) {
-                // Execute skill through GameLogic
                 if (gameLogic != null) {
                     Entity player = gameState.getPlayer();
                     gameLogic.useSkill(player, skill);
                 } else {
-                    // Fallback: just start cooldown
                     skill.use();
                     System.out.println("Used skill: " + skill.getName());
                 }
-            } else {
-                System.out.println("Skill on cooldown: " + String.format("%.1f", skill.getRemainingCooldown()) + "s remaining");
             }
         }
     }
     
-    /**
-     * Upgrade a skill (spend skill points)
-     */
     public boolean upgradeSkill(int slotIndex) {
         Entity player = gameState.getPlayer();
         SkillLevel skillLevel = player.getComponent(SkillLevel.class);
@@ -743,7 +470,6 @@ public class UIManager {
         Skill skill = slot.getSkill();
         if (skill == null) return false;
         
-        // Check if can upgrade
         if (!skill.canUpgrade()) {
             System.out.println("Skill is already max level!");
             return false;
@@ -751,56 +477,30 @@ public class UIManager {
         
         int cost = skill.getUpgradeCost();
         
-        // Check if have enough points
         if (!skillLevel.canAfford(cost)) {
-            System.out.println("Not enough skill points! Need " + cost + ", have " + skillLevel.availablePoints);
+            System.out.println("Not enough skill points!");
             return false;
         }
         
-        // Spend points and upgrade
         skillLevel.spendPoints(cost);
         skill.upgrade();
         
-        System.out.println("╔════════════════════════════════╗");
-        System.out.println("║     SKILL UPGRADED!            ║");
-        System.out.println("╠════════════════════════════════╣");
-        System.out.println("║ " + skill.getName() + " → Level " + skill.getSkillLevel());
-        System.out.println("║ Cost: " + cost + " point(s)");
-        System.out.println("║ Remaining: " + skillLevel.availablePoints + " point(s)");
-        
-        if (skill.getType() == Skill.SkillType.HEAL) {
-            System.out.println("║ Heal Power: " + String.format("%.1f", skill.getHealPercent() * 100) + "%");
-        }
-        
-        System.out.println("╚════════════════════════════════╝");
-        
+        System.out.println("Upgraded " + skill.getName() + " to level " + skill.getSkillLevel());
         return true;
     }
     
-    /**
-     * Add a panel to the manager
-     */
     public void addPanel(UIPanel panel) {
         panels.add(panel);
     }
     
-    /**
-     * Remove a panel from the manager
-     */
     public void removePanel(UIPanel panel) {
         panels.remove(panel);
     }
     
-    /**
-     * Get the skill bar
-     */
     public UIPanel getSkillBar() {
         return skillBar;
     }
     
-    /**
-     * Get a skill slot by index
-     */
     public UISkillSlot getSkillSlot(int index) {
         if (skillBar == null) return null;
         
@@ -808,28 +508,117 @@ public class UIManager {
         if (index >= 0 && index < slots.size()) {
             return (UISkillSlot)slots.get(index);
         }
-        
         return null;
     }
     
-    /**
-     * Equip a skill to a specific slot
-     */
     public void equipSkill(Skill skill, int slotIndex) {
         UISkillSlot slot = getSkillSlot(slotIndex);
         if (slot != null) {
             slot.setSkill(skill);
-            System.out.println("Equipped " + skill.getName() + " to slot " + (slotIndex + 1));
         }
     }
     
-    /**
-     * Clear a skill slot
-     */
     public void clearSkillSlot(int slotIndex) {
         UISkillSlot slot = getSkillSlot(slotIndex);
         if (slot != null) {
             slot.setSkill(null);
         }
+    }
+    
+    public UIButton getMenuButton(String id) {
+        if (verticalMenu == null) return null;
+        
+        for (UIComponent child : verticalMenu.getChildren()) {
+            if (child instanceof UIButton) {
+                UIButton button = (UIButton) child;
+                if (button.getId().equals(id)) {
+                    return button;
+                }
+            }
+        }
+        return null;
+    }
+    
+    public void unlockMenuButton(String id) {
+        UIButton button = getMenuButton(id);
+        if (button != null) {
+            button.unlock();
+            if (verticalMenu != null) {
+                verticalMenu.relayout();
+            }
+            System.out.println("Unlocked: " + button.getLabel());
+        }
+    }
+    
+    public void lockMenuButton(String id) {
+        UIButton button = getMenuButton(id);
+        if (button != null) {
+            button.lock();
+            if (verticalMenu != null) {
+                verticalMenu.relayout();
+            }
+            System.out.println("Locked: " + button.getLabel());
+        }
+    }
+    
+    public UIPanel getInventoryPanel() {
+        return inventoryPanel;
+    }
+    
+    public UIInventorySlot getInventorySlot(int index) {
+        if (inventoryPanel == null) return null;
+        
+        for (UIComponent component : inventoryPanel.getChildren()) {
+            if (component instanceof UIInventorySlot) {
+                UIInventorySlot slot = (UIInventorySlot) component;
+                if (slot.getSlotIndex() == index) {
+                    return slot;
+                }
+            }
+        }
+        return null;
+    }
+    
+    public boolean addItemToInventory(Object item) {
+        if (inventoryPanel == null) {
+            createInventoryPanel();
+        }
+        
+        for (UIComponent component : inventoryPanel.getChildren()) {
+            if (component instanceof UIInventorySlot) {
+                UIInventorySlot slot = (UIInventorySlot) component;
+                if (slot.isEmpty()) {
+                    slot.setItem(item);
+                    System.out.println("Added item to slot " + slot.getSlotIndex());
+                    return true;
+                }
+            }
+        }
+        
+        System.out.println("Inventory full!");
+        return false;
+    }
+    
+    public UIGearSlot getGearSlot(UIGearSlot.SlotType slotType) {
+        if (gearPanel == null) return null;
+        
+        for (UIComponent component : gearPanel.getChildren()) {
+            if (component instanceof UIGearSlot) {
+                UIGearSlot slot = (UIGearSlot) component;
+                if (slot.getSlotType() == slotType) {
+                    return slot;
+                }
+            }
+        }
+        return null;
+    }
+    
+    public boolean equipItem(UIGearSlot.SlotType slotType, Object item) {
+        UIGearSlot slot = getGearSlot(slotType);
+        if (slot != null) {
+            slot.equipItem(item);
+            return true;
+        }
+        return false;
     }
 }

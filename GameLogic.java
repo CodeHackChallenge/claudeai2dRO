@@ -445,7 +445,7 @@ public class GameLogic {
         
         // AI State Machine
         switch (ai.currentState) {
-            case IDLE:
+            case IDLE: 
                 handleIdleState(monster, ai, movement, sprite, playerPos, delta);
                 break;
                 
@@ -465,7 +465,7 @@ public class GameLogic {
                 handleAttackingState(monster, ai, movement, sprite, playerPos, stats, delta);
                 break;
                 
-            case VICTORY_IDLE:
+            case VICTORY_IDLE:  
                 handleVictoryIdleState(monster, ai, movement, sprite, delta);
                 break;
         }
@@ -673,27 +673,8 @@ public class GameLogic {
                 sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
             }
         }
-    }
-    /**
-     * 
-	## The Key Logic
-	
-	**Before (buggy):**
-	```
-	Mob outside range + player nearby:
-	CHASING → (too far from home) → RETURNING
-	RETURNING → (player detected) → CHASING
-	CHASING → (too far from home) → RETURNING
-	(infinite loop)
-	```
-	
-	**After (fixed):**
-	```
-	Mob outside range + player nearby:
-	CHASING → (too far from home) → RETURNING
-	RETURNING → (ignore player completely) → reaches home → IDLE
-(clean behavior)
-     *      */
+    } 
+    
     private void handleChasingState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, Position playerPos, float delta) {
         if (playerPos == null || movement == null || position == null) {
             transitionAIState(monster, ai, AI.State.RETURNING);

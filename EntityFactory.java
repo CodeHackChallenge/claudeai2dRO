@@ -144,7 +144,17 @@ public class EntityFactory {
                 monster.addComponent(new Alert(-40));
                 monster.addComponent(new Renderable(RenderLayer.ENTITIES));
                 break;
-                
+                //me
+            case "Orc":
+                monster.addComponent(new Sprite("/sprites/ro_orc.png", 95, 129, 0.15f));
+                monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
+                monster.addComponent(new Movement(80f, 160f));
+                monster.addComponent(new CollisionBox(-17, -14, 36, 42));
+                monster.addComponent(new AI("passive", x, y, 500f, 4f));
+                monster.addComponent(new NameTag("Orc", -20));
+                monster.addComponent(new Alert(-40));
+                monster.addComponent(new Renderable(RenderLayer.ENTITIES));
+                break;
             default:
                 // Default monster setup
                 monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f));

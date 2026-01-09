@@ -61,12 +61,15 @@ public class GameState {
         float normalRespawn = 30f;
         float bossRespawn = 50f;
         
+        addSpawnPoint("Orc", 1 * 64, 2 * 64, normalRespawn, 1, MobTier.NORMAL);
+        
+      
         //GHOST
         addSpawnPoint("Ghost", 2 * 64, 2 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Ghost", 3* 64, 6 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Ghost", 5 * 64, 7 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Ghost", 7 * 64, 7 * 64, normalRespawn, 1, MobTier.TRASH);
-        
+        /*
         // TRASH tier goblins (weak, low XP)
         addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
@@ -104,7 +107,7 @@ public class GameState {
         addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn, 7, MobTier.MINIBOSS);
-        
+        */
         // Initial spawn of all monsters
         for (SpawnPoint sp : spawnPoints) {
             spawnMonsterAtPoint(sp);
