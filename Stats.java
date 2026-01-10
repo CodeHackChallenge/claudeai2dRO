@@ -49,6 +49,9 @@ public class Stats implements Component {
     public int blindResistance;
     public int curseResistance;
     
+    //  Add dirty flag
+    private boolean staminaDirty = true;
+    
     /**
      * Constructor with base stats (for player at level 1)
      */
@@ -95,6 +98,20 @@ public class Stats implements Component {
         this.curseResistance = 0;
     }
     
+    public void setMaxStaminaBonus(float bonus) {
+        if (this.maxStaminaBonus != bonus) {
+            this.maxStaminaBonus = bonus;
+            staminaDirty = true;
+        }
+    }
+    
+    public float getMaxStamina() {
+        if (staminaDirty) {
+            calculateMaxStamina();
+            staminaDirty = false;
+        }
+        return maxStamina;
+    }
     /**
      * Old constructor for backwards compatibility (monsters, no mana/stamina)
      */
@@ -232,6 +249,12 @@ public class Stats implements Component {
             if (this.stamina > this.maxStamina) {
                 this.stamina = this.maxStamina;
             }
+        }
+        
+        staminaDirty = true;  // ★ Mark for recalc
+        if (fullHeal) {
+            calculateMaxStamina();  // Recalc now if healing
+            staminaDirty = false;
         }
     }
     

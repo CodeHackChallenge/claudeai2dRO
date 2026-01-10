@@ -1,13 +1,18 @@
 package dev.main;
 
 import java.awt.Graphics2D;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * FIXED: Tabs now work properly with click and hover
+ * UI Manager with fixed layout:
+ * Top: [Left Gear] [Hero Preview] [Right Gear]
+ * Middle: [Inventory Tabs]
+ * Bottom: [5x10 Scrollable Inventory Grid]
  */
-public class UIManager {
+public class UIManager implements MouseWheelListener {
     
     private List<UIPanel> panels;
     private UIComponent hoveredComponent;
@@ -16,11 +21,12 @@ public class UIManager {
     
     private UIPanel skillBar;
     private UIPanel verticalMenu;
-    private UIPanel inventoryPanel;
-    private UIPanel gearPanel;
+    private UIPanel inventoryContainer;
+    private UIScrollableInventoryPanel inventoryGrid;
+    private UIPanel heroPreviewPanel;
     
     private String currentInventoryTab = "Misc";
-    private List<UIInventoryTab> inventoryTabs;  // ⭐ Store tabs directly
+    private List<UIInventoryTab> inventoryTabs;
     
     public UIManager(GameState gameState) {
         this.gameState = gameState;
@@ -118,11 +124,11 @@ public class UIManager {
             if (buttonIds[i].equals("inventory")) {
                 button.setLocked(false);
                 button.setVisible(true);
-                button.setOnClick(() -> toggleInventoryAndGear());
+                button.setOnClick(() -> toggleInventory());
             } else if (buttonIds[i].equals("rune")) {
                 button.setLocked(true);
                 button.setVisible(true);
-                button.setOnClick(() -> toggleInventoryAndGear());
+                button.setOnClick(() -> toggleInventory());
             } else {
                 button.setLocked(true);
                 button.setVisible(true);
@@ -134,68 +140,145 @@ public class UIManager {
         panels.add(verticalMenu);
     }
     
-    private void toggleInventoryAndGear() {
-        if (inventoryPanel == null) {
-            createInventoryPanel();
-        }
-        if (gearPanel == null) {
-            createGearPanel();
+    private void toggleInventory() {
+        if (inventoryContainer == null) {
+            createInventorySystem();
         }
         
-        boolean newVisibility = !inventoryPanel.isVisible();
-        inventoryPanel.setVisible(newVisibility);
-        gearPanel.setVisible(newVisibility);
+        boolean newVisibility = !inventoryContainer.isVisible();
+        inventoryContainer.setVisible(newVisibility);
         
-        System.out.println("Inventory & Gear " + (newVisibility ? "opened" : "closed"));
+        System.out.println("Inventory " + (newVisibility ? "opened" : "closed"));
     }
     
     /**
-     * ⭐ REDESIGNED: Simpler structure with tabs added directly to main panel
+     * Create inventory system with tabs ABOVE the inventory grid
      */
-    private void createInventoryPanel() {
+    private void createInventorySystem() {
         int slotSize = 48;
-        int columns = 5;
-        int rows = 4;
         int gap = 4;
         int padding = 8;
-        int tabBarHeight = 32;
+        int tabHeight = 28;
         
-        int panelWidth = (slotSize * columns) + (gap * (columns - 1)) + (padding * 2);
-        int slotsHeight = (slotSize * rows) + (gap * (rows - 1)) + (padding * 2);
-        int panelHeight = slotsHeight + tabBarHeight;
+        int columnWidth = slotSize;
         
+        // Inventory grid: 5 columns, 10 total rows, 4 visible rows
+        int inventoryColumns = 5;
+        int inventoryTotalRows = 10;
+        int inventoryVisibleRows = 4;
+        
+        // Total width = 5 columns (inventory width)
+        int totalWidth = (columnWidth * inventoryColumns) + (gap * (inventoryColumns - 1)) + (padding * 2) + 12;
+        
+        // Top section: gear slots + hero preview
+        int gearColumnHeight = (slotSize * 4) + (gap * 3);
+        int heroPreviewHeight = gearColumnHeight;
+        
+        // Middle section: tabs
+        int tabSectionHeight = tabHeight + gap;
+        
+        // Bottom section: inventory
+        int inventoryGridHeight = (slotSize * inventoryVisibleRows) + (gap * (inventoryVisibleRows - 1)) + (padding * 2);
+        
+        // Total height = top section + tabs + inventory + padding
+        int totalHeight = gearColumnHeight + tabSectionHeight + inventoryGridHeight + (padding * 3);
+        
+        // Position
         UIButton settingsButton = getMenuButton("settings");
-        int panelX;
-        int panelY;
+        int containerX;
+        int containerY;
         
         if (settingsButton != null) {
-            panelX = settingsButton.getX() - panelWidth - 10;
-            int gearPanelHeight = 400;
-            panelY = settingsButton.getY() + gearPanelHeight + 10;
+            containerX = settingsButton.getX() - totalWidth - 10;
+            containerY = settingsButton.getY();
         } else {
-            panelX = Engine.WIDTH - panelWidth - 70;
-            panelY = 100;
+            containerX = Engine.WIDTH - totalWidth - 70;
+            containerY = 100;
         }
         
-        // ⭐ Main panel with NONE layout (manual positioning)
-        inventoryPanel = new UIPanel(panelX, panelY, panelWidth, panelHeight);
-        inventoryPanel.setLayout(UIPanel.LayoutType.NONE);
-        inventoryPanel.setPadding(0);
-        inventoryPanel.setBackgroundColor(new java.awt.Color(20, 20, 30, 230));
-        inventoryPanel.setBorderColor(new java.awt.Color(100, 100, 120));
-        inventoryPanel.setBorderWidth(2);
+        // Main container
+        inventoryContainer = new UIPanel(containerX, containerY, totalWidth, totalHeight);
+        inventoryContainer.setLayout(UIPanel.LayoutType.NONE);
+        inventoryContainer.setPadding(0);
+        inventoryContainer.setBackgroundColor(new java.awt.Color(20, 20, 30, 230));
+        inventoryContainer.setBorderColor(new java.awt.Color(100, 100, 120));
+        inventoryContainer.setBorderWidth(2);
         
-        // ⭐ Create tabs DIRECTLY in main panel (not nested)
+        int currentY = containerY + padding;
+        
+        // TOP SECTION - Calculate hero preview width and gear columns
+        // Left and right gear columns use `columnWidth`; hero preview takes remaining center space
+        int heroWidth = totalWidth - (padding * 2) - (columnWidth * 2) - (gap * 2);
+        
+        // LEFT GEAR COLUMN
+        int leftGearX = containerX + padding;
+        int leftGearY = currentY;
+        
+        addGearSlotToContainer(leftGearX, leftGearY + (slotSize + gap) * 0, columnWidth, slotSize, UIGearSlot.SlotType.EARRINGS);
+        addGearSlotToContainer(leftGearX, leftGearY + (slotSize + gap) * 1, columnWidth, slotSize, UIGearSlot.SlotType.TOP_ARMOR);
+        addGearSlotToContainer(leftGearX, leftGearY + (slotSize + gap) * 2, columnWidth, slotSize, UIGearSlot.SlotType.PANTS);
+        addGearSlotToContainer(leftGearX, leftGearY + (slotSize + gap) * 3, columnWidth, slotSize, UIGearSlot.SlotType.HEAD);
+        
+        // CENTER HERO PREVIEW
+        int heroX = leftGearX + columnWidth + gap;
+        int heroY = currentY;
+        
+        heroPreviewPanel = new UIPanel(heroX, heroY, heroWidth, heroPreviewHeight);
+        heroPreviewPanel.setBackgroundColor(new java.awt.Color(30, 30, 40, 180));
+        heroPreviewPanel.setBorderColor(new java.awt.Color(80, 80, 100));
+        heroPreviewPanel.setBorderWidth(1);
+        inventoryContainer.addChild(heroPreviewPanel);
+        
+        // RIGHT GEAR COLUMN (flush to right edge)
+        int rightGearX = containerX + totalWidth - padding - columnWidth;
+        int rightGearY = currentY;
+        
+        addGearSlotToContainer(rightGearX, rightGearY + (slotSize + gap) * 0, columnWidth, slotSize, UIGearSlot.SlotType.TIARA);
+        addGearSlotToContainer(rightGearX, rightGearY + (slotSize + gap) * 1, columnWidth, slotSize, UIGearSlot.SlotType.GLOVES);
+        addGearSlotToContainer(rightGearX, rightGearY + (slotSize + gap) * 2, columnWidth, slotSize, UIGearSlot.SlotType.SHOES);
+        addGearSlotToContainer(rightGearX, rightGearY + (slotSize + gap) * 3, columnWidth, slotSize, UIGearSlot.SlotType.RING_1);
+        
+        // Move to next section (tabs)
+        currentY += gearColumnHeight + padding;
+        
+        // MIDDLE SECTION - TABS (above inventory)
+        createInventoryTabs(containerX, currentY, totalWidth, padding, gap);
+        
+        // Move to next section (inventory)
+        currentY += tabSectionHeight;
+        
+        // BOTTOM SECTION - SCROLLABLE INVENTORY GRID
+        int inventoryGridX = containerX + padding;
+        
+        inventoryGrid = new UIScrollableInventoryPanel(
+            inventoryGridX, currentY,
+            totalWidth - (padding * 2), inventoryGridHeight,
+            inventoryColumns, inventoryTotalRows, inventoryVisibleRows
+        );
+        inventoryContainer.addChild(inventoryGrid);
+        // Ensure the inventory grid shows the currently selected tab
+        inventoryGrid.switchToTab(currentInventoryTab);
+        
+        panels.add(inventoryContainer);
+        
+        System.out.println("Inventory system created:");
+        System.out.println("  Total size: " + totalWidth + "x" + totalHeight);
+        System.out.println("  Layout: [Gear] -> [Tabs] -> [Inventory]");
+        System.out.println("  Inventory: 5x10 grid (50 total slots, 4 visible rows)");
+    }
+    
+    private void createInventoryTabs(int containerX, int containerY, int containerWidth, int padding, int gap) {
         String[] tabNames = {"Misc", "Weap", "Arm", "Acc", "Rune"};
-        int tabWidth = (panelWidth - (padding * 2) - (gap * 4)) / 5;
+        int tabWidth = (containerWidth - (padding * 2) - (gap * 4)) / 5;
+        int tabHeight = 24;
         
         inventoryTabs.clear();
         
         for (int i = 0; i < tabNames.length; i++) {
-            int tabX = panelX + padding + (i * (tabWidth + gap));
-            int tabY = panelY + padding;
+            int tabX = containerX + padding + (i * (tabWidth + gap));
+            int tabY = containerY;
             
-            UIInventoryTab tab = new UIInventoryTab(tabX, tabY, tabWidth, tabBarHeight - (padding * 2), tabNames[i]);
+            UIInventoryTab tab = new UIInventoryTab(tabX, tabY, tabWidth, tabHeight, tabNames[i]);
             final String tabName = tabNames[i];
             tab.setOnClick(() -> switchInventoryTab(tabName));
             
@@ -204,135 +287,26 @@ public class UIManager {
             }
             
             inventoryTabs.add(tab);
-            inventoryPanel.addChild(tab);  // ⭐ Add directly to main panel
+            inventoryContainer.addChild(tab);
         }
-        
-        // ⭐ Create inventory slots DIRECTLY in main panel
-        int gridStartY = tabBarHeight;
-        int slotStartX = panelX + padding;
-        int slotStartY = panelY + gridStartY + padding;
-        
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < columns; col++) {
-                int slotX = slotStartX + (col * (slotSize + gap));
-                int slotY = slotStartY + (row * (slotSize + gap));
-                int slotIndex = row * columns + col;
-                
-                UIInventorySlot slot = new UIInventorySlot(slotX, slotY, slotSize, slotIndex);
-                inventoryPanel.addChild(slot);  // ⭐ Add directly to main panel
-            }
-        }
-        
-        panels.add(inventoryPanel);
-        
-        System.out.println("Inventory created: 5x4 grid (20 slots) with tabs");
-        System.out.println("Position: (" + panelX + ", " + panelY + ") Size: " + panelWidth + "x" + panelHeight);
+    }
+    
+    private void addGearSlotToContainer(int x, int y, int width, int height, UIGearSlot.SlotType slotType) {
+        UIGearSlot slot = new UIGearSlot(x, y, width, height, slotType);
+        inventoryContainer.addChild(slot);
     }
     
     private void switchInventoryTab(String tabName) {
         currentInventoryTab = tabName;
         
-        // Update tab visuals
         for (UIInventoryTab tab : inventoryTabs) {
             tab.setActive(tab.getTabName().equals(tabName));
         }
         
         System.out.println("Switched to tab: " + tabName);
-    }
-    
-    private void createGearPanel() {
-        int slotWidth = 48;
-        int slotHeight = 48;
-        int gap = 4;
-        int padding = 8;
-        
-        int inventorySlotSize = 48;
-        int inventoryColumns = 5;
-        int inventoryGap = 4;
-        int inventoryPadding = 8;
-        int panelWidth = (inventorySlotSize * inventoryColumns) + (inventoryGap * (inventoryColumns - 1)) + (inventoryPadding * 2);
-        
-        int panelHeight = 400;
-        
-        UIButton settingsButton = getMenuButton("settings");
-        int panelX;
-        int panelY;
-        
-        if (settingsButton != null) {
-            panelX = settingsButton.getX() - panelWidth - 10;
-            panelY = settingsButton.getY();
-        } else {
-            panelX = Engine.WIDTH - panelWidth - 320;
-            panelY = 100;
-        }
-        
-        gearPanel = new UIPanel(panelX, panelY, panelWidth, panelHeight);
-        gearPanel.setLayout(UIPanel.LayoutType.NONE);
-        gearPanel.setPadding(0);
-        gearPanel.setBackgroundColor(new java.awt.Color(20, 20, 30, 230));
-        gearPanel.setBorderColor(new java.awt.Color(100, 100, 120));
-        gearPanel.setBorderWidth(2);
-        
-        int sideColumnWidth = slotWidth + padding;
-        int centerWidth = panelWidth - (sideColumnWidth * 2) - (padding * 2);
-        int slotSpacing = (panelHeight - (padding * 2) - (slotHeight * 6)) / 5;
-        
-        // Left column
-        addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 0, slotWidth, slotHeight, UIGearSlot.SlotType.HEAD);
-        addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 1, slotWidth, slotHeight, UIGearSlot.SlotType.TOP_ARMOR);
-        addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 2, slotWidth, slotHeight, UIGearSlot.SlotType.GLOVES);
-        addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 3, slotWidth, slotHeight, UIGearSlot.SlotType.BELT);
-        addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 4, slotWidth, slotHeight, UIGearSlot.SlotType.PANTS);
-        addGearSlotRelative(padding, padding + (slotHeight + slotSpacing) * 5, slotWidth, slotHeight, UIGearSlot.SlotType.SHOES);
-        
-        // Center preview
-        int centerX = padding + slotWidth + gap;
-        addCharacterPreviewRelative(centerX, padding, centerWidth, panelHeight - (padding * 2));
-        
-        // Right column
-        int rightOffset = panelWidth - padding - slotWidth;
-        addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 0, slotWidth, slotHeight, UIGearSlot.SlotType.TIARA);
-        addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 1, slotWidth, slotHeight, UIGearSlot.SlotType.EARRINGS);
-        addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 2, slotWidth, slotHeight, UIGearSlot.SlotType.NECKLACE);
-        addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 3, slotWidth, slotHeight, UIGearSlot.SlotType.BRACELET);
-        addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 4, slotWidth, slotHeight, UIGearSlot.SlotType.RING_1);
-        addGearSlotRelative(rightOffset, padding + (slotHeight + slotSpacing) * 5, slotWidth, slotHeight, UIGearSlot.SlotType.RING_2);
-        
-        addTestEquipment();
-        panels.add(gearPanel);
-        
-        System.out.println("Gear panel created at: (" + panelX + ", " + panelY + ") - Width: " + panelWidth);
-    }
-    
-    private void addGearSlotRelative(int relX, int relY, int width, int height, UIGearSlot.SlotType slotType) {
-        int absoluteX = gearPanel.getX() + relX;
-        int absoluteY = gearPanel.getY() + relY;
-        UIGearSlot slot = new UIGearSlot(absoluteX, absoluteY, width, height, slotType);
-        gearPanel.addChild(slot);
-    }
-    
-    private void addCharacterPreviewRelative(int relX, int relY, int width, int height) {
-        int absoluteX = gearPanel.getX() + relX;
-        int absoluteY = gearPanel.getY() + relY;
-        UIPanel previewPanel = new UIPanel(absoluteX, absoluteY, width, height);
-        previewPanel.setBackgroundColor(new java.awt.Color(40, 40, 50, 150));
-        previewPanel.setBorderColor(new java.awt.Color(80, 80, 90));
-        previewPanel.setBorderWidth(1);
-        gearPanel.addChild(previewPanel);
-    }
-    
-    private void addTestEquipment() {
-        if (gearPanel == null) return;
-        
-        List<UIComponent> children = gearPanel.getChildren();
-        int equipped = 0;
-        
-        for (UIComponent component : children) {
-            if (component instanceof UIGearSlot && equipped < 3) {
-                UIGearSlot slot = (UIGearSlot) component;
-                slot.equipItem("Test" + slot.getSlotType());
-                equipped++;
-            }
+        // Update inventory grid to show the selected tab
+        if (inventoryGrid != null) {
+            inventoryGrid.switchToTab(tabName);
         }
     }
     
@@ -362,11 +336,16 @@ public class UIManager {
             }
         }
         
-        // ⭐ Update tabs separately since they're not in a child panel
+        // Update tabs
         for (UIInventoryTab tab : inventoryTabs) {
-            if (inventoryPanel != null && inventoryPanel.isVisible()) {
+            if (inventoryContainer != null && inventoryContainer.isVisible()) {
                 tab.update(delta);
             }
+        }
+        
+        // Update scrollable inventory
+        if (inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
+            inventoryGrid.update(delta);
         }
     }
     
@@ -378,11 +357,17 @@ public class UIManager {
         }
     }
     
-    public void handleMouseMove(int mouseX, int mouseY) {
+    // Updated to accept pressed state for drag handling
+    public void handleMouseMove(int mouseX, int mouseY, boolean pressed) {
         for (UIPanel panel : panels) {
             if (panel.isVisible()) {
-                panel.handleMouseMove(mouseX, mouseY);
+                panel.handleMouseMove(mouseX, mouseY, pressed);
             }
+        }
+        
+        // Handle inventory grid hover/drag
+        if (inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
+            inventoryGrid.handleMouseMove(mouseX, mouseY, pressed);
         }
     }
     
@@ -408,6 +393,18 @@ public class UIManager {
             }
         }
         return false;
+    }
+    
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        if (inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
+            int mouseX = e.getX();
+            int mouseY = e.getY();
+            
+            if (inventoryGrid.contains(mouseX, mouseY)) {
+                inventoryGrid.handleScroll(e.getWheelRotation());
+            }
+        }
     }
     
     public void handleKeyPress(int keyCode) {
@@ -439,7 +436,7 @@ public class UIManager {
         }
         
         if (keyCode == java.awt.event.KeyEvent.VK_I) {
-            toggleInventoryAndGear();
+            toggleInventory();
         }
     }
     
@@ -562,47 +559,35 @@ public class UIManager {
     }
     
     public UIPanel getInventoryPanel() {
-        return inventoryPanel;
+        return inventoryContainer;
     }
     
     public UIInventorySlot getInventorySlot(int index) {
-        if (inventoryPanel == null) return null;
-        
-        for (UIComponent component : inventoryPanel.getChildren()) {
-            if (component instanceof UIInventorySlot) {
-                UIInventorySlot slot = (UIInventorySlot) component;
-                if (slot.getSlotIndex() == index) {
-                    return slot;
-                }
-            }
-        }
-        return null;
+        if (inventoryGrid == null) return null;
+        return inventoryGrid.getSlot(index);
     }
     
     public boolean addItemToInventory(Object item) {
-        if (inventoryPanel == null) {
-            createInventoryPanel();
+        if (inventoryContainer == null) {
+            createInventorySystem();
         }
         
-        for (UIComponent component : inventoryPanel.getChildren()) {
-            if (component instanceof UIInventorySlot) {
-                UIInventorySlot slot = (UIInventorySlot) component;
-                if (slot.isEmpty()) {
-                    slot.setItem(item);
-                    System.out.println("Added item to slot " + slot.getSlotIndex());
-                    return true;
-                }
+        if (inventoryGrid != null) {
+            boolean added = inventoryGrid.addItemToCurrentTab(item);
+            if (added) {
+                System.out.println("Added item to inventory (tab=" + currentInventoryTab + ")");
+                return true;
             }
         }
-        
+
         System.out.println("Inventory full!");
         return false;
     }
     
     public UIGearSlot getGearSlot(UIGearSlot.SlotType slotType) {
-        if (gearPanel == null) return null;
+        if (inventoryContainer == null) return null;
         
-        for (UIComponent component : gearPanel.getChildren()) {
+        for (UIComponent component : inventoryContainer.getChildren()) {
             if (component instanceof UIGearSlot) {
                 UIGearSlot slot = (UIGearSlot) component;
                 if (slot.getSlotType() == slotType) {
@@ -620,5 +605,9 @@ public class UIManager {
             return true;
         }
         return false;
+    }
+    
+    public UIPanel getHeroPreviewPanel() {
+        return heroPreviewPanel;
     }
 }

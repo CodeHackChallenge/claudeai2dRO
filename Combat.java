@@ -91,19 +91,21 @@ public class Combat implements Component {
      // Example: 0.25 seconds into 0.5 second animation = 0.5 (50% done)
     }
     
+    // FIX:
     public boolean shouldDealDamage() {
-        // Deal damage once when we pass the hit frame
-        if (!isAttacking || damageApplied) return false;  // Not attacking or already hit
+        if (!isAttacking || damageApplied) return false;
         
+        // Store previous progress to detect crossing
+        float prevProgress = Math.max(0, 
+            (attackAnimationTimer - (1f / Engine.UPS)) / attackAnimationDuration);
+        float currProgress = getAttackProgress();
         
-        float progress = getAttackProgress(); // Where are we in animation? (0.0-1.0)
-        
-        if (progress >= hitFrame) {  // Have we passed the hit point? (default 0.5 = 50%)
-            damageApplied = true;    // ⭐ Mark as done (only hit once!)
-            return true;             // ⭐ YES! Deal damage NOW!
+        // Check if we crossed the hit frame THIS update
+        if (prevProgress < hitFrame && currProgress >= hitFrame) {
+            damageApplied = true;
+            return true;
         }
-        
-        return false; // Not yet, keep waiting
+        return false;
     }
     /*
      * **Example Timeline:**

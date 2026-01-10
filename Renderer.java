@@ -113,9 +113,11 @@ public class Renderer {
     private void renderEffects(Graphics2D g, float cameraX, float cameraY) {
         drawDamageTexts(g, cameraX, cameraY);
     }
-    
+    /*
     // ⭐ OPTIMIZED: Use pre-sorted list (no re-sorting!)
     private void renderWorldUI(Graphics2D g, float cameraX, float cameraY) {
+    	 
+        
         for (RenderObject ro : sortedRenderObjects) {
             Entity entity = ro.entity;
             Position pos = ro.position;
@@ -176,7 +178,150 @@ public class Renderer {
             }
         }
     }
-    
+    */
+ // ★★★ OPTIMIZED: BATCHED RENDERING BY FONT TYPE ★★★
+    private void renderWorldUI(Graphics2D g, float cameraX, float cameraY) {
+        Font originalFont = g.getFont();
+        
+        // ========================================
+        // BATCH 1: ALERTS (if any active)
+        // ========================================
+        boolean hasAlerts = false;
+        for (RenderObject ro : sortedRenderObjects) {
+            Alert alert = ro.entity.getComponent(Alert.class);
+            if (alert != null && alert.active) {
+                hasAlerts = true;
+                break;
+            }
+        }
+        
+        if (hasAlerts) {
+            g.setFont(ALERT_FONT);
+            for (RenderObject ro : sortedRenderObjects) {
+                Dead dead = ro.entity.getComponent(Dead.class);
+                if (dead != null) continue;
+                
+                Alert alert = ro.entity.getComponent(Alert.class);
+                if (alert != null && alert.active) {
+                    int screenX = (int)Math.round(ro.position.x - cameraX);
+                    int screenY = (int)Math.round(ro.position.y - cameraY);
+                    drawAlertOnly(g, screenX, screenY, alert);
+                }
+            }
+        }
+        
+        // ========================================
+        // BATCH 2: LEVEL BADGES
+        // ========================================
+        g.setFont(LEVEL_BADGE_FONT);
+        
+        for (RenderObject ro : sortedRenderObjects) {
+            Dead dead = ro.entity.getComponent(Dead.class);
+            if (dead != null) continue;
+            
+            int screenX = (int)Math.round(ro.position.x - cameraX);
+            int screenY = (int)Math.round(ro.position.y - cameraY);
+            
+            // Monster level badges
+            if (ro.entity.getType() == EntityType.MONSTER) {
+                MonsterLevel monsterLevel = ro.entity.getComponent(MonsterLevel.class);
+                NameTag nameTag = ro.entity.getComponent(NameTag.class);
+                
+                if (monsterLevel != null && nameTag != null && nameTag.visible) {
+                    drawMonsterLevelBadgeOnly(g, screenX, screenY, monsterLevel);
+                }
+            }
+            // Player level badges
+            else if (ro.entity.getType() == EntityType.PLAYER) {
+                Experience exp = ro.entity.getComponent(Experience.class);
+                if (exp != null) {
+                    drawLevelBadgeOnly(g, screenX, screenY, exp.level);
+                }
+            }
+        }
+        
+        // ========================================
+        // BATCH 3: NAME TAGS
+        // ========================================
+        g.setFont(NAME_FONT);
+        
+        for (RenderObject ro : sortedRenderObjects) {
+            Dead dead = ro.entity.getComponent(Dead.class);
+            if (dead != null) continue;
+            
+            NameTag nameTag = ro.entity.getComponent(NameTag.class);
+            if (nameTag != null && nameTag.visible) {
+                int screenX = (int)Math.round(ro.position.x - cameraX);
+                int screenY = (int)Math.round(ro.position.y - cameraY);
+                drawNameTagOnly(g, screenX, screenY, nameTag, ro.entity);
+            }
+        }
+        
+        // ========================================
+        // BATCH 4: HEALTH/STAMINA/MANA BARS (NO FONT NEEDED)
+        // ========================================
+        for (RenderObject ro : sortedRenderObjects) {
+            Dead dead = ro.entity.getComponent(Dead.class);
+            if (dead != null) continue;
+            
+            int screenX = (int)Math.round(ro.position.x - cameraX);
+            int screenY = (int)Math.round(ro.position.y - cameraY);
+            
+            Stats stats = ro.entity.getComponent(Stats.class);
+            
+            // Health bar
+            HealthBar hpBar = ro.entity.getComponent(HealthBar.class);
+            if (stats != null && hpBar != null) {
+                drawHealthBar(g, screenX, screenY, stats, hpBar);
+            }
+            
+            // Player-specific bars
+            if (ro.entity.getType() == EntityType.PLAYER) {
+                StaminaBar staminaBar = ro.entity.getComponent(StaminaBar.class);
+                if (stats != null && staminaBar != null) {
+                    drawStaminaBar(g, screenX, screenY, stats, staminaBar);
+                }
+                
+                ManaBar manaBar = ro.entity.getComponent(ManaBar.class);
+                if (stats != null && manaBar != null) {
+                    drawManaBar(g, screenX, screenY, stats, manaBar);
+                }
+                
+                Experience exp = ro.entity.getComponent(Experience.class);
+                if (exp != null) {
+                    drawXPBar(g, screenX, screenY, exp);
+                }
+            }
+        }
+        
+        // ========================================
+        // BATCH 5: LEVEL-UP EFFECTS
+        // ========================================
+        boolean hasLevelUps = false;
+        for (RenderObject ro : sortedRenderObjects) {
+            LevelUpEffect levelUpEffect = ro.entity.getComponent(LevelUpEffect.class);
+            if (levelUpEffect != null && levelUpEffect.active) {
+                hasLevelUps = true;
+                break;
+            }
+        }
+        
+        if (hasLevelUps) {
+            g.setFont(LEVELUP_FONT);
+            for (RenderObject ro : sortedRenderObjects) {
+                if (ro.entity.getType() == EntityType.PLAYER) {
+                    LevelUpEffect levelUpEffect = ro.entity.getComponent(LevelUpEffect.class);
+                    if (levelUpEffect != null && levelUpEffect.active) {
+                        int screenX = (int)Math.round(ro.position.x - cameraX);
+                        int screenY = (int)Math.round(ro.position.y - cameraY);
+                        drawLevelUpEffectOnly(g, screenX, screenY, levelUpEffect);
+                    }
+                }
+            }
+        }
+        
+        g.setFont(originalFont);
+    }
     private void renderScreenUI(Graphics2D g, float cameraX, float cameraY) {
         // Screen-space UI
     }
@@ -216,7 +361,135 @@ public class Renderer {
             }
         }
     }
+ // ========================================
+    // INDIVIDUAL DRAWING METHODS (NO FONT SETTING)
+    // ========================================
     
+    private void drawMonsterLevelBadgeOnly(Graphics2D g, int spriteX, int spriteY, MonsterLevel monsterLevel) {
+        // Font already set to LEVEL_BADGE_FONT
+        String levelText = "Lv" + monsterLevel.level;
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(levelText);
+        
+        int badgeX = spriteX + 20;
+        int badgeY = spriteY - 30;
+        
+        Color tierColor = getTierColor(monsterLevel.tier);
+        
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillOval(badgeX - 10, badgeY - 6, 20, 12);
+        
+        g.setColor(tierColor);
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawOval(badgeX - 10, badgeY - 6, 20, 12);
+        
+        g.setColor(Color.WHITE);
+        g.drawString(levelText, badgeX - textWidth/2, badgeY + 3);
+    }
+    
+    private void drawNameTagOnly(Graphics2D g, int spriteX, int spriteY, NameTag tag, Entity entity) {
+        // Font already set to NAME_FONT
+        String displayName = tag.displayName;
+        Color nameColor = Color.WHITE;
+        
+        if (entity.getType() == EntityType.MONSTER) {
+            MonsterLevel monsterLevel = entity.getComponent(MonsterLevel.class);
+            if (monsterLevel != null) {
+                String tierPrefix = getTierPrefix(monsterLevel.tier);
+                if (tierPrefix != null) {
+                    displayName = tierPrefix + displayName;
+                }
+                nameColor = getTierColor(monsterLevel.tier);
+            }
+        }
+        
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(displayName);
+        
+        int textX = spriteX - textWidth / 2;
+        int textY = (int)(spriteY + tag.offsetY);
+        
+        g.setColor(Color.BLACK);
+        g.drawString(displayName, textX + 1, textY + 1);
+        
+        g.setColor(nameColor);
+        g.drawString(displayName, textX, textY);
+    }
+    
+    private void drawLevelBadgeOnly(Graphics2D g, int spriteX, int spriteY, int level) {
+        // Font already set to LEVEL_BADGE_FONT
+        String levelText = "Lv" + level;
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(levelText);
+        
+        int badgeX = spriteX - 25;
+        int badgeY = spriteY - 35;
+        
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillOval(badgeX - 12, badgeY - 8, 24, 16);
+        
+        g.setColor(new Color(255, 215, 0));
+        g.setStroke(new BasicStroke(2));
+        g.drawOval(badgeX - 12, badgeY - 8, 24, 16);
+        
+        g.setColor(Color.WHITE);
+        g.drawString(levelText, badgeX - textWidth/2, badgeY + 4);
+    }
+    
+    private void drawLevelUpEffectOnly(Graphics2D g, int spriteX, int spriteY, LevelUpEffect effect) {
+        // Font already set to LEVELUP_FONT
+        if (!effect.active) return;
+        
+        float alpha = effect.getAlpha();
+        int alphaVal = (int)(alpha * 200);
+        
+        int radius = (int)(30 + (1 - alpha) * 20);
+        g.setColor(new Color(255, 255, 0, alphaVal / 2));
+        g.fillOval(spriteX - radius, spriteY - radius, radius * 2, radius * 2);
+        
+        g.setColor(new Color(255, 215, 0, alphaVal));
+        g.setStroke(new BasicStroke(3));
+        g.drawOval(spriteX - radius, spriteY - radius, radius * 2, radius * 2);
+        
+        String text = "LEVEL " + effect.newLevel;
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        
+        int textY = spriteY - 50 - (int)((1 - alpha) * 20);
+        
+        g.setColor(new Color(0, 0, 0, alphaVal));
+        g.drawString(text, spriteX - textWidth/2 + 2, textY + 2);
+        
+        g.setColor(new Color(255, 215, 0, alphaVal));
+        g.drawString(text, spriteX - textWidth/2, textY);
+    }
+    
+    private void drawAlertOnly(Graphics2D g, int spriteX, int spriteY, Alert alert) {
+        // Font already set to ALERT_FONT
+        if (!alert.active) return;
+        
+        Stroke originalStroke = g.getStroke();
+        
+        int alertX = spriteX;
+        int alertY = (int)(spriteY + alert.offsetY + alert.bounceOffset);
+        
+        String exclamation = "!";
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(exclamation);
+        int textHeight = fm.getHeight();
+        
+        int textX = alertX - textWidth / 2;
+        int textY = alertY + textHeight / 4;
+        
+        g.setColor(new Color(0, 0, 0, 150));
+        g.drawString(exclamation, textX + 1, textY + 1);
+        
+        g.setColor(new Color(255, 0, 0, 255));
+        g.drawString(exclamation, textX, textY);
+        
+        g.setStroke(originalStroke);
+    }
+    /////////////////////////
     // ⭐ OPTIMIZED: Use cached font
     private void drawMonsterLevelBadge(Graphics2D g, int spriteX, int spriteY, MonsterLevel monsterLevel) {
         Font originalFont = g.getFont();
@@ -401,7 +674,95 @@ public class Renderer {
         
         g.setStroke(originalStroke);
     }
+    /*
+    // ⭐ OPTIMIZED: Use cached fonts
+    private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
+        Font originalFont = g.getFont();
+        
+        for (DamageText dt : gameState.getDamageTexts()) {
+            int screenX = (int)(dt.worldX - cameraX);
+            int screenY = (int)(dt.worldY - cameraY);
+            
+            // ⭐ Use cached fonts
+            if (dt.type == DamageText.Type.CRITICAL) {
+                g.setFont(DAMAGE_CRIT_FONT);
+            } else {
+                g.setFont(DAMAGE_FONT);
+            }
+            
+            FontMetrics fm = g.getFontMetrics();
+            int textWidth = fm.stringWidth(dt.text);
+            
+            int textX = screenX - textWidth / 2;
+            int textY = screenY;
+            
+            int alpha = (int)(dt.getAlpha() * 255);
+            
+            g.setColor(new Color(0, 0, 0, alpha));
+            g.drawString(dt.text, textX + 2, textY + 2);
+            
+            Color textColor = new Color(
+                dt.color.getRed(),
+                dt.color.getGreen(),
+                dt.color.getBlue(),
+                alpha
+            );
+            g.setColor(textColor);
+            g.drawString(dt.text, textX, textY);
+        }
+        
+        g.setFont(originalFont);
+    }
+    */
+    // ★★★ OPTIMIZED: Batched damage text rendering
+    private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
+        Font originalFont = g.getFont();
+        
+        // Draw all normal damage texts
+        g.setFont(DAMAGE_FONT);
+        for (DamageText dt : gameState.getDamageTexts()) {
+            if (dt.type != DamageText.Type.CRITICAL && 
+                dt.type != DamageText.Type.PLAYER_CRITICAL_DAMAGE) {
+                drawSingleDamageText(g, dt, cameraX, cameraY);
+            }
+        }
+        
+        // Draw all critical damage texts
+        g.setFont(DAMAGE_CRIT_FONT);
+        for (DamageText dt : gameState.getDamageTexts()) {
+            if (dt.type == DamageText.Type.CRITICAL || 
+                dt.type == DamageText.Type.PLAYER_CRITICAL_DAMAGE) {
+                drawSingleDamageText(g, dt, cameraX, cameraY);
+            }
+        }
+        
+        g.setFont(originalFont);
+    }
     
+    private void drawSingleDamageText(Graphics2D g, DamageText dt, float cameraX, float cameraY) {
+        int screenX = (int)(dt.worldX - cameraX);
+        int screenY = (int)(dt.worldY - cameraY);
+        
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(dt.text);
+        
+        int textX = screenX - textWidth / 2;
+        int textY = screenY;
+        
+        int alpha = (int)(dt.getAlpha() * 255);
+        
+        g.setColor(new Color(0, 0, 0, alpha));
+        g.drawString(dt.text, textX + 2, textY + 2);
+        
+        Color textColor = new Color(
+            dt.color.getRed(),
+            dt.color.getGreen(),
+            dt.color.getBlue(),
+            alpha
+        );
+        g.setColor(textColor);
+        g.drawString(dt.text, textX, textY);
+    }
     // ⭐ OPTIMIZED: Use cached font
     private void drawLevelBadge(Graphics2D g, int spriteX, int spriteY, int level) {
         Font originalFont = g.getFont();
@@ -487,45 +848,6 @@ public class Renderer {
         g.drawString(exclamation, textX, textY);
         
         g.setStroke(originalStroke);
-        g.setFont(originalFont);
-    }
-    
-    // ⭐ OPTIMIZED: Use cached fonts
-    private void drawDamageTexts(Graphics2D g, float cameraX, float cameraY) {
-        Font originalFont = g.getFont();
-        
-        for (DamageText dt : gameState.getDamageTexts()) {
-            int screenX = (int)(dt.worldX - cameraX);
-            int screenY = (int)(dt.worldY - cameraY);
-            
-            // ⭐ Use cached fonts
-            if (dt.type == DamageText.Type.CRITICAL) {
-                g.setFont(DAMAGE_CRIT_FONT);
-            } else {
-                g.setFont(DAMAGE_FONT);
-            }
-            
-            FontMetrics fm = g.getFontMetrics();
-            int textWidth = fm.stringWidth(dt.text);
-            
-            int textX = screenX - textWidth / 2;
-            int textY = screenY;
-            
-            int alpha = (int)(dt.getAlpha() * 255);
-            
-            g.setColor(new Color(0, 0, 0, alpha));
-            g.drawString(dt.text, textX + 2, textY + 2);
-            
-            Color textColor = new Color(
-                dt.color.getRed(),
-                dt.color.getGreen(),
-                dt.color.getBlue(),
-                alpha
-            );
-            g.setColor(textColor);
-            g.drawString(dt.text, textX, textY);
-        }
-        
         g.setFont(originalFont);
     }
     

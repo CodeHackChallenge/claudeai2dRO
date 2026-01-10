@@ -1,5 +1,6 @@
 package dev.main;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class AI implements Component {
@@ -13,6 +14,11 @@ public class AI implements Component {
         DEAD,
         VICTORY_IDLE  // NEW: Idle after player dies
     }
+    
+    // AI.java - Add caching fields
+    public List<int[]> cachedPath;
+    public float pathUpdateTimer;
+    public float pathUpdateInterval = 0.5f; // Update every 0.5s
     
     public State currentState;
     public String behaviorType;

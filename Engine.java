@@ -34,6 +34,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     private boolean isRunning = false;
     private Thread thread;
     private BufferStrategy bufferStrategy;
+    private boolean lastMousePressed = false;
     
     // Input
     private MouseInput mouse;
@@ -65,7 +66,54 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         window.setVisible(true);
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        /*
+        // VS Code
+        // Setup cursors
+        defaultCursor = Cursor.getDefaultCursor();
+        // Create attack cursor (you can replace with custom image)
+        try {
+            // Placeholder: Use built-in crosshair cursor
+           // attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
+            
+            // To use custom cursor image: load from classpath (safer than using bare paths)
+            Toolkit toolkit = Toolkit.getDefaultToolkit();
+            try {
+                java.net.URL cursorUrl = getClass().getResource("/dev/main/resources/icon/sword.png");
+                if (cursorUrl == null) {
+                    // fallback to .cur if present
+                    cursorUrl = getClass().getResource("/dev/main/resources/icon/sword2.cur");
+                }
 
+                if (cursorUrl != null) {
+                    System.out.println("Loading cursor from: " + cursorUrl);
+                    java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(cursorUrl);
+                    if (cursorImg != null) {
+                        attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
+                        System.out.println("Custom attack cursor created.");
+                    } else {
+                        System.out.println("Cursor resource found but failed to read image; using default cursor.");
+                        attackCursor = defaultCursor;
+                    }
+                } else {
+                    System.out.println("Cursor resource not found on classpath; trying local file fallback.");
+                    // Last-resort: try relative file path (useful during IDE runs)
+                    java.io.File f = new java.io.File("bin/dev/main/resources/icon/sword.png");
+                    if (f.exists()) {
+                        java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(f);
+                        attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
+                    } else {
+                        attackCursor = defaultCursor;
+                    }
+                }
+            } catch (Exception ex) {
+                attackCursor = defaultCursor;
+            }
+        } catch (Exception e) {
+            attackCursor = defaultCursor;
+        }
+        */
+
+        //eclpise 
         // Setup cursors
         defaultCursor = Cursor.getDefaultCursor();
         // Create attack cursor (you can replace with custom image)
@@ -80,16 +128,17 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         } catch (Exception e) {
             attackCursor = defaultCursor;
         }
-        
+             
         // Input
         mouse = new MouseInput();
         addMouseListener(mouse);
         addMouseMotionListener(mouse);
-        addMouseListener(mouse);
-        addMouseMotionListener(mouse);
+        // Mouse wheel listener will be added after UI is initialized (gameSetup)
+
         addKeyListener(this);  // Add key listener
-        
-        requestFocus();
+        setFocusable(true);
+        // Prefer requesting focus in window after the frame is visible
+        requestFocusInWindow();
 
         // Buffer strategy
         createBufferStrategy(2);
@@ -97,7 +146,11 @@ public class Engine extends Canvas implements Runnable, KeyListener {
 
         // Initialize game
         gameSetup();
-        
+
+        // Attach mouse wheel listener to UIManager now that UI exists
+        if (gameState != null && gameState.getUIManager() != null) {
+            addMouseWheelListener(gameState.getUIManager());
+        }
         
     }
 
@@ -107,7 +160,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         gameLogic = new GameLogic(gameState);
         renderer = new Renderer(gameState, this);
         
-        // ☆ NEW: Connect UI Manager to GameLogic for skill execution
+        // Connect UI Manager to GameLogic for skill execution
         gameState.setGameLogic(gameLogic);
         
         System.out.println("Game initialized!");
@@ -168,16 +221,13 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         
         // Update hover state
         gameState.setHoveredEntity(hoveredMonster);
-        
+
         // Change cursor
         if (hoveredMonster != null) {
             setCursor(attackCursor);
         } else {
             setCursor(defaultCursor);
         }
-        
-        // ⭐ Reset movement flag
-        mouse.resetMoved();
     }
     
     private void handleInput() {
@@ -520,12 +570,14 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 deltaF--;
             }
 
-            // ★ NEW: Update UI hover states
-            // ⭐ Only check UI hover when mouse actually moved
-            if (mouse.hasMoved()) {
-                gameState.getUIManager().handleMouseMove(mouse.getX(), mouse.getY());
-                mouse.resetMoved();
-            }
+                // ⭐ NEW: Update UI hover states
+                // Call handleMouseMove when mouse moved OR when pressed state changed
+                boolean currentPressed = mouse.isPressed();
+                if (mouse.hasMoved() || currentPressed != lastMousePressed) {
+                    gameState.getUIManager().handleMouseMove(mouse.getX(), mouse.getY(), currentPressed);
+                    mouse.resetMoved();
+                }
+                lastMousePressed = currentPressed;
 
             // Prevent CPU maxing
             try {

@@ -190,6 +190,26 @@ public class GameLogic {
                 if (target.getType() == EntityType.MONSTER) {
                     handleMonsterDeath(target, target.getComponent(Sprite.class));
                 } else if (target.getType() == EntityType.PLAYER) {
+                    // If a monster killed the player, put the monster into VICTORY_IDLE
+                    if (attacker.getType() == EntityType.MONSTER) {
+                        AI killerAI = attacker.getComponent(AI.class);
+                        Sprite killerSprite = attacker.getComponent(Sprite.class);
+                        Movement killerMovement = attacker.getComponent(Movement.class);
+
+                        if (killerAI != null) {
+                            killerAI.currentState = AI.State.VICTORY_IDLE;
+                            killerAI.victoryIdleTimer = 0f;
+                        }
+
+                        if (killerSprite != null) {
+                            String victoryAnim = Sprite.ANIM_VICTORY_IDLE_DOWN;
+                            if (killerMovement != null) {
+                                victoryAnim = getVictoryAnimationForDirection(killerMovement.lastDirection);
+                            }
+                            killerSprite.setAnimation(victoryAnim);
+                        }
+                    }
+
                     handlePlayerDeath(target, target.getComponent(Sprite.class));
                 }
             }
@@ -486,7 +506,7 @@ public class GameLogic {
 	private void handleVictoryIdleState(Entity monster, AI ai, Movement movement, Sprite sprite, float delta) {
 	    // Play idle animation
 	    if (sprite != null && movement != null) {
-	        sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
+        sprite.setAnimation(getVictoryAnimationForDirection(movement.lastDirection));
 	    }
 	    
 	    // Debug output
@@ -675,7 +695,10 @@ public class GameLogic {
         }
     } 
     
-    private void handleChasingState(Entity monster, AI ai, Movement movement, Position position, Path path, Sprite sprite, Position playerPos, float delta) {
+    private void handleChasingState(Entity monster, AI ai, Movement movement, 
+            Position position, Path path, Sprite sprite, 
+            Position playerPos, float delta) {
+    	
         if (playerPos == null || movement == null || position == null) {
             transitionAIState(monster, ai, AI.State.RETURNING);
             return;
@@ -714,21 +737,26 @@ public class GameLogic {
         }
         
         // PRIORITY 4: Chase player - update path periodically
-        if (!movement.isMoving || (path != null && !path.isFollowing)) {
+        // ★ OPTIMIZED: Only recalculate path periodically
+        ai.pathUpdateTimer += delta;
+        
+        if (!movement.isMoving || ai.pathUpdateTimer >= ai.pathUpdateInterval) {
+            ai.pathUpdateTimer = 0;
+            
             int startTileX = (int)(position.x / TileMap.TILE_SIZE);
             int startTileY = (int)(position.y / TileMap.TILE_SIZE);
             int goalTileX = (int)(playerPos.x / TileMap.TILE_SIZE);
             int goalTileY = (int)(playerPos.y / TileMap.TILE_SIZE);
             
-            List<int[]> foundPath = state.getPathfinder().findPath(startTileX, startTileY, goalTileX, goalTileY);
+            List<int[]> foundPath = state.getPathfinder().findPath(
+                startTileX, startTileY, goalTileX, goalTileY);
             
             if (foundPath != null && path != null) {
+                ai.cachedPath = foundPath;  // ★ Cache it
                 path.setPath(foundPath);
                 movement.isRunning = true;
             } else {
-                // Can't find path to player, return home
                 transitionAIState(monster, ai, AI.State.RETURNING);
-                //System.out.println(monster.getName() + " can't path to player - returning");
             }
         }
         
@@ -1051,6 +1079,29 @@ public class GameLogic {
                 return Sprite.ANIM_IDLE_DOWN;
         }
     }
+
+        private String getVictoryAnimationForDirection(int direction) {
+            switch(direction) {
+                case Movement.DIR_EAST:
+                    return Sprite.ANIM_VICTORY_IDLE_RIGHT;
+                case Movement.DIR_SOUTH_EAST:
+                    return Sprite.ANIM_VICTORY_IDLE_DOWN_RIGHT;
+                case Movement.DIR_SOUTH:
+                    return Sprite.ANIM_VICTORY_IDLE_DOWN;
+                case Movement.DIR_SOUTH_WEST:
+                    return Sprite.ANIM_VICTORY_IDLE_DOWN_LEFT;
+                case Movement.DIR_WEST:
+                    return Sprite.ANIM_VICTORY_IDLE_LEFT;
+                case Movement.DIR_NORTH_WEST:
+                    return Sprite.ANIM_VICTORY_IDLE_UP_LEFT;
+                case Movement.DIR_NORTH:
+                    return Sprite.ANIM_VICTORY_IDLE_UP;
+                case Movement.DIR_NORTH_EAST:
+                    return Sprite.ANIM_VICTORY_IDLE_UP_RIGHT;
+                default:
+                    return Sprite.ANIM_VICTORY_IDLE_DOWN;
+            }
+        }
     
     private void moveTowardsTarget(Entity entity, Movement movement, Position position, float delta) {
         float dx = movement.targetX - position.x;
@@ -1275,9 +1326,9 @@ public class GameLogic {
      */
     private int calculateMonsterXP(Entity monster) {
     	// NEW: Use MonsterLevel component for XP calculation
-        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
+    	MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
         if (monsterLevel != null) {
-            return monsterLevel.calculateXPReward();
+            return monsterLevel.getXPReward();  // ★ Use getter, not calculate
         }
         
         // OLD: Fallback for monsters without MonsterLevel component

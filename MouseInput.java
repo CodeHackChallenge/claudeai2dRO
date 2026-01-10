@@ -44,7 +44,8 @@ public class MouseInput implements MouseListener, MouseMotionListener {
     
     @Override
     public void mouseReleased(MouseEvent e) {
-        // Keep pressed true until Engine reads it
+        // Clear current pressed state on release
+        mousePressed = false;
     }
     
     @Override
@@ -92,7 +93,7 @@ public class MouseInput implements MouseListener, MouseMotionListener {
     public boolean isRightClick() { return rightClick; }
     
     public void resetPressed() {
-        mousePressed = false;
+        // Clear one-shot click flags but keep current pressed state
         leftClick = false;
         rightClick = false;
     }

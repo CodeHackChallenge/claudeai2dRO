@@ -42,10 +42,17 @@ public class SkillLevel implements Component {
      * Refund skill points (for respec)
      */
     public void refundPoints(int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Cannot refund negative points");
+        }
+        if (spentPoints < amount) {
+            throw new IllegalStateException(
+                "Cannot refund " + amount + " points (only " + spentPoints + " spent)");
+        }
+        
         availablePoints += amount;
         spentPoints -= amount;
     }
-    
     /**
      * Check if can afford an upgrade
      */

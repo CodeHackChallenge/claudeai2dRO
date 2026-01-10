@@ -215,7 +215,8 @@ public class UIPanel extends UIComponent {
         }
     }
     
-    public void handleMouseMove(int mouseX, int mouseY) {
+    // Updated to include pressed state for drag interactions
+    public void handleMouseMove(int mouseX, int mouseY, boolean pressed) {
         for (UIComponent child : children) {
             if (!child.isVisible() || !child.isEnabled()) continue;
             
@@ -234,10 +235,16 @@ public class UIPanel extends UIComponent {
             UIComponent child = children.get(i);
             if (!child.isVisible() || !child.isEnabled()) continue;
             
-            if (child.contains(mouseX, mouseY)) { 
-                boolean consumed = child.onClick();
-                if (consumed) { 
-                    return true;
+            if (child.contains(mouseX, mouseY)) {
+                // Allow complex children (like scrollable panels) to receive exact coordinates
+                if (child instanceof UIScrollableInventoryPanel) {
+                    UIScrollableInventoryPanel sp = (UIScrollableInventoryPanel) child;
+                    if (sp.handleClick(mouseX, mouseY)) return true;
+                } else {
+                    boolean consumed = child.onClick();
+                    if (consumed) {
+                        return true;
+                    }
                 }
             }
         }
@@ -255,9 +262,14 @@ public class UIPanel extends UIComponent {
             if (!child.isVisible() || !child.isEnabled()) continue;
             
             if (child.contains(mouseX, mouseY)) {
-                boolean consumed = child.onRightClick();
-                if (consumed) {
-                    return true;
+                if (child instanceof UIScrollableInventoryPanel) {
+                    UIScrollableInventoryPanel sp = (UIScrollableInventoryPanel) child;
+                    if (sp.handleRightClick(mouseX, mouseY)) return true;
+                } else {
+                    boolean consumed = child.onRightClick();
+                    if (consumed) {
+                        return true;
+                    }
                 }
             }
         }

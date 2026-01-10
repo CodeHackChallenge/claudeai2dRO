@@ -76,6 +76,7 @@ public class Sprite implements Component {
     private String currentAnimation;
     private boolean loopAnimation;
     private Animation cachedAnimation;  // ⭐ NEW: Cache current animation
+    private boolean isStatic; // true for single-image sprites (no animation)
     
     // Animation definitions
     private Map<String, Animation> animations;
@@ -102,119 +103,25 @@ public class Sprite implements Component {
         this.animations = new HashMap<>();
         this.loopAnimation = true;
         this.cachedAnimation = null;  // ⭐ NEW
-        
-        setupAnimations();
-        
-        // Start with idle animation
-        this.currentAnimation = "idle_down";
-        this.cachedAnimation = animations.get(this.currentAnimation);  // ⭐ NEW: Cache initial
+        this.isStatic = frameDuration <= 0f;
+
+        if (!this.isStatic) {
+            setupAnimations();
+            // Start with idle animation
+            this.currentAnimation = ANIM_IDLE_DOWN;
+            this.cachedAnimation = animations.get(this.currentAnimation);  // ⭐ NEW: Cache initial
+        } else {
+            // Single-image sprite: use first row, single frame
+            this.currentAnimation = null;
+            this.cachedAnimation = new Animation(0, 1);
+            this.loopAnimation = true;
+        }
     }
-    private void setupAnimations() {
-        // Idle animations
-        animations.put(ANIM_IDLE_DOWN, new Animation(0, 4));
-        animations.put(ANIM_IDLE_UP, new Animation(0, 4));
-        animations.put(ANIM_IDLE_LEFT, new Animation(1, 4));
-        animations.put(ANIM_IDLE_RIGHT, new Animation(0, 4));
-        animations.put(ANIM_IDLE_DOWN_LEFT, new Animation(1, 4));
-        animations.put(ANIM_IDLE_DOWN_RIGHT, new Animation(0, 4));
-        animations.put(ANIM_IDLE_UP_LEFT, new Animation(2, 4));
-        animations.put(ANIM_IDLE_UP_RIGHT, new Animation(3, 4)); 
-        
-        // victory Idle animations
-        animations.put(ANIM_VICTORY_IDLE_DOWN, new Animation(13, 3));
-        animations.put(ANIM_VICTORY_IDLE_UP, new Animation(13, 3));
-        animations.put(ANIM_VICTORY_IDLE_LEFT, new Animation(14, 3));
-        animations.put(ANIM_VICTORY_IDLE_RIGHT, new Animation(13, 4));
-        animations.put(ANIM_VICTORY_IDLE_DOWN_LEFT, new Animation(14, 3));
-        animations.put(ANIM_VICTORY_IDLE_DOWN_RIGHT, new Animation(13, 3));
-        animations.put(ANIM_VICTORY_IDLE_UP_LEFT, new Animation(15, 3));
-        animations.put(ANIM_VICTORY_IDLE_UP_RIGHT, new Animation(16, 3)); 
-                 
-        // Walk animations
-        animations.put(ANIM_WALK_DOWN, new Animation(8, 6));
-        animations.put(ANIM_WALK_UP, new Animation(8, 6));
-        animations.put(ANIM_WALK_LEFT, new Animation(9, 6));
-        animations.put(ANIM_WALK_RIGHT, new Animation(8, 6));
-        animations.put(ANIM_WALK_DOWN_LEFT, new Animation(9, 6));
-        animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(8, 6));
-        animations.put(ANIM_WALK_UP_LEFT, new Animation(9, 6));
-        animations.put(ANIM_WALK_UP_RIGHT, new Animation(8, 6));
-        
-        //animations.put(ANIM_ATTACK, new Animation(16, 6));
-        
-        // Run animations
-        animations.put(ANIM_RUN_DOWN, new Animation(8, 6));
-        animations.put(ANIM_RUN_UP, new Animation(8, 6));
-        animations.put(ANIM_RUN_LEFT, new Animation(9, 6));
-        animations.put(ANIM_RUN_RIGHT, new Animation(8, 6));
-        animations.put(ANIM_RUN_DOWN_LEFT, new Animation(9, 6));
-        animations.put(ANIM_RUN_DOWN_RIGHT, new Animation(8, 6));
-        animations.put(ANIM_RUN_UP_LEFT, new Animation(9, 6));
-        animations.put(ANIM_RUN_UP_RIGHT, new Animation(8, 6)); 
-        
-        animations.put(ANIM_ATTACK_DOWN, new Animation(4, 4));
-        animations.put(ANIM_ATTACK_UP, new Animation(4, 4));
-        animations.put(ANIM_ATTACK_LEFT, new Animation(5, 4));
-        animations.put(ANIM_ATTACK_RIGHT, new Animation(4, 4));
-        animations.put(ANIM_ATTACK_DOWN_LEFT, new Animation(5, 4));
-        animations.put(ANIM_ATTACK_DOWN_RIGHT, new Animation(4, 4));
-        animations.put(ANIM_ATTACK_UP_LEFT, new Animation(6, 4));
-        animations.put(ANIM_ATTACK_UP_RIGHT, new Animation(7, 4));
-        
-        
-        
-        
-        animations.put(ANIM_DEAD, new Animation(12, 5));
-    }
-    /*
-    private void setupAnimations() {
-        // Idle animations
-        animations.put("idle_down", new Animation(24, 2));
-        animations.put("idle_up", new Animation(22, 2));
-        animations.put("idle_left", new Animation(23, 2));
-        animations.put("idle_right", new Animation(25, 2));
-        animations.put("idle_down_left", new Animation(23, 2));
-        animations.put("idle_down_right", new Animation(25, 2));
-        animations.put("idle_up_left", new Animation(23, 2));
-        animations.put("idle_up_right", new Animation(25, 2));
-        
-        // Walk animations
-        animations.put(ANIM_WALK_DOWN, new Animation(10, 9));
-        animations.put(ANIM_WALK_UP, new Animation(8, 9));
-        animations.put(ANIM_WALK_LEFT, new Animation(9, 9));
-        animations.put(ANIM_WALK_RIGHT, new Animation(11, 9));
-        animations.put(ANIM_WALK_DOWN_LEFT, new Animation(9, 9));
-        animations.put(ANIM_WALK_DOWN_RIGHT, new Animation(11, 9));
-        animations.put(ANIM_WALK_UP_LEFT, new Animation(9, 9));
-        animations.put(ANIM_WALK_UP_RIGHT, new Animation(11, 9));
-        
-        animations.put(ANIM_ATTACK, new Animation(16, 6));
-        
-        // Run animations
-        animations.put("run_down", new Animation(40, 8));
-        animations.put("run_up", new Animation(38, 8));
-        animations.put("run_left", new Animation(39, 8));
-        animations.put("run_right", new Animation(41, 8));
-        animations.put("run_down_left", new Animation(39, 8));
-        animations.put("run_down_right", new Animation(41, 8));
-        animations.put("run_up_left", new Animation(39, 8));
-        animations.put("run_up_right", new Animation(41, 8));
-        
-        // Attack animations
-        animations.put("attack_down", new Animation(14, 6));
-        animations.put("attack_up", new Animation(12, 6));
-        animations.put("attack_left", new Animation(13, 6));
-        animations.put("attack_right", new Animation(15, 6));
-        animations.put("attack_down_left", new Animation(13, 6));
-        animations.put("attack_down_right", new Animation(15, 6));
-        animations.put("attack_up_left", new Animation(13, 6));
-        animations.put("attack_up_right", new Animation(15, 6));
-        
-        animations.put("dead", new Animation(20, 6));
-    }
-    */
+     
+    
     // ⭐ OPTIMIZED: Use cached animation instead of HashMap lookup
     public void update(float delta) {
+        if (isStatic) return; // no animation update for static sprites
         if (cachedAnimation == null) return;  // ⭐ Use cache
         
         animationTimer += delta;
@@ -269,25 +176,91 @@ public class Sprite implements Component {
     
     // ⭐ OPTIMIZED: Cache animation on change
     public void setAnimation(String animationName) {
-        if (!animationName.equals(currentAnimation)) {
-            this.currentAnimation = animationName;
-            this.cachedAnimation = animations.get(animationName);  // ⭐ Cache lookup
-            this.currentFrame = 0;
-            this.animationTimer = 0;
-            this.loopAnimation = !animationName.equals("dead");
+        if (animationName == null) return;
+        if (animationName.equals(currentAnimation)) return;
+
+        this.currentAnimation = animationName;
+        Animation a = animations.get(animationName);
+        if (a != null) {
+            this.cachedAnimation = a;
+        } else {
+            // requested animation not found
+            if (isStatic) {
+                // ignore for static sprites
+                return;
+            } else {
+                // fallback to a single-frame at row 0
+                this.cachedAnimation = new Animation(0, 1);
+            }
         }
+        this.currentFrame = 0;
+        this.animationTimer = 0;
+        this.loopAnimation = !"dead".equals(animationName);
     }
     
     public boolean isAnimationFinished() {
+        if (isStatic) return true;
         if (cachedAnimation == null) return true;  // ⭐ Use cache
         return !loopAnimation && currentFrame >= cachedAnimation.frameCount - 1;  // ⭐ Use cache
     }
     
-    public String getCurrentAnimation() {
-        return currentAnimation;
+    private void setupAnimations() {
+        // Use helper to add animations so row/frameCount are explicit and centralized
+        // Idle animations 
+        addAnimation(ANIM_IDLE_DOWN, 24, 2);
+        addAnimation(ANIM_IDLE_UP, 22, 2);
+        addAnimation(ANIM_IDLE_LEFT, 23, 2);
+        addAnimation(ANIM_IDLE_RIGHT, 25, 2);
+        addAnimation(ANIM_IDLE_DOWN_LEFT, 23, 2);
+        addAnimation(ANIM_IDLE_DOWN_RIGHT, 25, 2);
+        addAnimation(ANIM_IDLE_UP_LEFT, 23, 2);
+        addAnimation(ANIM_IDLE_UP_RIGHT, 25, 2);
+
+        // Victory idle animations
+        addAnimation(ANIM_VICTORY_IDLE_DOWN, 13, 3);
+        addAnimation(ANIM_VICTORY_IDLE_UP, 13, 3);
+        addAnimation(ANIM_VICTORY_IDLE_LEFT, 14, 3);
+        addAnimation(ANIM_VICTORY_IDLE_RIGHT, 13, 4);
+        addAnimation(ANIM_VICTORY_IDLE_DOWN_LEFT, 14, 3);
+        addAnimation(ANIM_VICTORY_IDLE_DOWN_RIGHT, 13, 3);
+        addAnimation(ANIM_VICTORY_IDLE_UP_LEFT, 15, 3);
+        addAnimation(ANIM_VICTORY_IDLE_UP_RIGHT, 16, 3);
+
+        // Walk animations
+        addAnimation(ANIM_WALK_DOWN, 10, 9);
+        addAnimation(ANIM_WALK_UP, 8, 9);
+        addAnimation(ANIM_WALK_LEFT, 9, 9);
+        addAnimation(ANIM_WALK_RIGHT, 11, 9);
+        addAnimation(ANIM_WALK_DOWN_LEFT, 9, 9);
+        addAnimation(ANIM_WALK_DOWN_RIGHT, 11, 9);
+        addAnimation(ANIM_WALK_UP_LEFT, 9, 9);
+        addAnimation(ANIM_WALK_UP_RIGHT, 11, 9);
+
+        // Run animations
+        addAnimation(ANIM_RUN_DOWN, 40, 8);
+        addAnimation(ANIM_RUN_UP, 38, 8);
+        addAnimation(ANIM_RUN_LEFT, 39, 8);
+        addAnimation(ANIM_RUN_RIGHT, 41, 8);
+        addAnimation(ANIM_RUN_DOWN_LEFT, 39, 8);
+        addAnimation(ANIM_RUN_DOWN_RIGHT, 41, 8);
+        addAnimation(ANIM_RUN_UP_LEFT, 39, 8);
+        addAnimation(ANIM_RUN_UP_RIGHT, 41, 8);
+
+        addAnimation(ANIM_ATTACK_DOWN, 14, 6);
+        addAnimation(ANIM_ATTACK_UP, 12, 6);
+        addAnimation(ANIM_ATTACK_LEFT, 13, 6);
+        addAnimation(ANIM_ATTACK_RIGHT, 15, 6);
+        addAnimation(ANIM_ATTACK_DOWN_LEFT, 13, 6);
+        addAnimation(ANIM_ATTACK_DOWN_RIGHT, 15, 6);
+        addAnimation(ANIM_ATTACK_UP_LEFT, 13, 6);
+        addAnimation(ANIM_ATTACK_UP_RIGHT, 15, 6);
+
+        addAnimation(ANIM_DEAD, 12, 5);
     }
-    
-    public int getCurrentFrame() {
-        return currentFrame;
+
+    // Helper to add animation entries with flexible row and frame count
+    private void addAnimation(String name, int row, int frameCount) {
+        animations.put(name, new Animation(row, frameCount));
     }
+
 }
