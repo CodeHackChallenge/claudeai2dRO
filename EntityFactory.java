@@ -8,31 +8,32 @@ public class EntityFactory {
 	    Entity player = new Entity("Player", EntityType.PLAYER);
 	    
 	    player.addComponent(new Position(x, y));
-	    //player.addComponent(new Sprite("resources/sprites/hero2.png", 64, 64, 0.2f)); //VS Code
-        player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f)); //eclipse
-
+	    //player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f)); //eclipse
+        player.addComponent(new Sprite("resources/sprites/hero2.png", 64, 64, 0.2f));
 	    player.addComponent(new Movement(100f, 200f));
 	    
-	    // ☆ LEVEL 1 BASE STATS:
-	    // baseMaxHp=100, baseAttack=10, baseDefense=2, baseAccuracy=0, baseMaxMana=50
-	    // Stamina is now calculated automatically (500 base)
-	    Stats stats = new Stats(100, 10, 2, 0, 50);  // ☆ Removed stamina parameter
+	    // Base stats
+	    Stats stats = new Stats(1000, 100, 2, 0, 50);
 	    player.addComponent(stats);
 	    
-	    // ADD EXPERIENCE COMPONENT
+	    // Experience and leveling
 	    Experience exp = new Experience();
-	    exp.hpGrowth = 10;      // +10 HP per level
-	    exp.attackGrowth = 2;   // +2 Attack per level
-	    exp.defenseGrowth = 1;  // +1 Defense per level
-	    exp.accGrowth = 1;      // +1 Accuracy per level
-	    exp.manaGrowth = 5;     // +5 mana per level
+	    exp.hpGrowth = 10;
+	    exp.attackGrowth = 2;
+	    exp.defenseGrowth = 1;
+	    exp.accGrowth = 1;
+	    exp.manaGrowth = 5;
 	    player.addComponent(exp);
 	    
-	    // ADD SKILL LEVEL COMPONENT
+	    // Skill system
 	    SkillLevel skillLevel = new SkillLevel();
 	    player.addComponent(skillLevel);
 	    
-	    // APPLY LEVEL 1 STATS
+	    // ⭐ NEW: Quest log
+	    QuestLog questLog = new QuestLog();
+	    player.addComponent(questLog);
+	    
+	    // Apply level 1 stats
 	    stats.applyLevelStats(exp);
 	    
 	    // Combat system
@@ -47,17 +48,16 @@ public class EntityFactory {
 	    // Collision and movement
 	    player.addComponent(new CollisionBox(-10, -14, 22, 44));
 	    player.addComponent(new Path());
-	    player.addComponent(new TargetIndicator()); 
+	    player.addComponent(new TargetIndicator());
 	    
 	    // Rendering
 	    player.addComponent(new Renderable(RenderLayer.ENTITIES));
 	    
-	    // Level-up visual effect
+	    // Level-up effect
 	    player.addComponent(new LevelUpEffect());
 	    
 	    return player;
 	}
-    
     /**
      * NEW: Create monster with level and tier scaling
      */
@@ -81,8 +81,8 @@ public class EntityFactory {
         // Configure monster type-specific properties
         switch(monsterType) {
             case "Goblin":
-                //monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code 
-                 monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse
+                monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code 
+                 //monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44)); 
@@ -93,8 +93,8 @@ public class EntityFactory {
                 break;
                 
             case "GoblinBoss":
-               // monster.addComponent(new Sprite("resources/sprites/goblin_dark.png", 64, 64, 0.12f)); //VS code
-                monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.12f)); // eclipse
+                monster.addComponent(new Sprite("resources/sprites/goblin_dark.png", 64, 64, 0.12f)); //VS code
+                //monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.12f)); // eclipse
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
                 monster.addComponent(new Movement(100f, 200f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -105,8 +105,8 @@ public class EntityFactory {
                 break;
                 
             case "BunnyBoss":
-                //monster.addComponent(new Sprite("resources/sprites/bunny_boss.png", 64, 64, 0.12f)); //vs code
-                monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f)); // eclipse
+                monster.addComponent(new Sprite("resources/sprites/bunny_boss.png", 64, 64, 0.12f)); //vs code
+                //monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f)); // eclipse
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
                 monster.addComponent(new Movement(100f, 200f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -117,8 +117,8 @@ public class EntityFactory {
                 break;
                 
             case "MinotaurBoss":
-                //monster.addComponent(new Sprite("resources/sprites/minotaur_boss.png", 64, 64, 0.12f)); //vs code
-                monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f)); // eclipse
+                monster.addComponent(new Sprite("resources/sprites/minotaur_boss.png", 64, 64, 0.12f)); //vs code
+                //monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f)); // eclipse
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
                 monster.addComponent(new Movement(100f, 200f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -129,8 +129,8 @@ public class EntityFactory {
                 break;
                 
             case "Bunny":
-                //monster.addComponent(new Sprite("resources/sprites/bunny.png", 64, 64, 0.15f)); //vs code
-                monster.addComponent(new Sprite("/sprites/bunny.png", 64, 64, 0.15f)); // eclipse
+                monster.addComponent(new Sprite("resources/sprites/bunny.png", 64, 64, 0.15f)); //vs code
+                //monster.addComponent(new Sprite("/sprites/bunny.png", 64, 64, 0.15f)); // eclipse
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -142,8 +142,8 @@ public class EntityFactory {
                 
                 //me
             case "Ghost":
-                //monster.addComponent(new Sprite("resources/sprites/ghost.png", 64, 64, 0.15f)); //vs code
-                monster.addComponent(new Sprite("/sprites/ghost.png", 64, 64, 0.15f)); // eclipse
+                monster.addComponent(new Sprite("resources/sprites/ghost.png", 64, 64, 0.15f)); //vs code
+               // monster.addComponent(new Sprite("/sprites/ghost.png", 64, 64, 0.15f)); // eclipse
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-17, -14, 36, 42));
@@ -154,8 +154,8 @@ public class EntityFactory {
                 break;
                 //me
             case "Orc":
-                // monster.addComponent(new Sprite("resources/sprites/ro_orc.png", 95, 129, 0.15f)); //vs code
-                 monster.addComponent(new Sprite("/sprites/ro_orc.png", 95, 129, 0.15f)); // eclipse
+                 monster.addComponent(new Sprite("resources/sprites/ro_orc.png", 95, 129, 0.15f)); //vs code
+                 //monster.addComponent(new Sprite("/sprites/ro_orc.png", 95, 129, 0.15f)); // eclipse
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-17, -14, 36, 42));
@@ -166,8 +166,8 @@ public class EntityFactory {
                 break;
             default:
                 // Default monster setup
-                //monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code
-                 monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse 
+                monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code
+                 //monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse 
                 monster.addComponent(new Combat(1.5f, 0.05f, 0.08f));
                 monster.addComponent(new Movement(50f, 100f));
                 monster.addComponent(new CollisionBox(-12, -12, 24, 24));
@@ -190,15 +190,86 @@ public class EntityFactory {
         return createMonster(monsterType, x, y, 1, MobTier.NORMAL);
     }
     
+ // Add this method to EntityFactory.java
+
     /**
-     * Create NPC entity (reserved for later)
+     * Create NPC entity with dialogue and quests
      */
-    public static Entity createNPC(String npcName, float x, float y) {
+    public static Entity createNPC(String npcId, String npcName, float x, float y) {
         Entity npc = new Entity(npcName, EntityType.NPC);
-        // TODO: Implement NPC creation
+        
+        npc.addComponent(new Position(x, y));
+        
+        // Use a simple sprite for NPCs (can be customized later)
+        //npc.addComponent(new Sprite("/sprites/npc_" + npcId + ".png", 64, 64, 0f));
+        npc.addComponent(new Sprite("resources/sprites/npc_" + npcId + ".png", 64, 64, 0f)); 
+          
+        // NPCs don't move
+        // No Movement component needed
+        
+        // Add NPC component
+        NPC npcComponent = new NPC(npcId, npcName, NPC.NPCType.QUEST_GIVER);
+        npc.addComponent(npcComponent);
+        
+        // Add name tag (always visible)
+        NameTag nameTag = new NameTag(npcName, -22);
+        nameTag.show();  // Always show NPC names
+        npc.addComponent(nameTag);
+        
+        // Add collision box (so player can't walk through NPC)
+        npc.addComponent(new CollisionBox(-10, -14, 22, 44));
+        
+        // Add rendering component
+        npc.addComponent(new Renderable(RenderLayer.ENTITIES));
+        
+        // Add quest indicator (exclamation mark when quest available)
+        npc.addComponent(new QuestIndicator(-40));
+        
         return npc;
     }
-     
+
+    /**
+     * Create Fionne NPC with starter quest
+     */
+    public static Entity createFionne(float x, float y) {
+        Entity fionne = createNPC("fionne", "Fionne", x, y);
+        
+        NPC npcComponent = fionne.getComponent(NPC.class);
+        
+        // Set custom dialogue
+        //npcComponent.setGreetingDialogue("Greetings, brave adventurer! I have a task that needs doing.");
+        //npcComponent.setFarewellDialogue("May fortune favor you on your journey!");
+        
+        // Create a starter quest
+        Quest goblinSlayerQuest = new Quest(
+            "goblin_slayer",
+            "Goblin Slayer",
+            "The goblins have to be dealt with! Help us by defeating 5 of them.",
+            Quest.QuestType.KILL
+        );
+        
+        // Add objective: Kill 5 goblins
+        goblinSlayerQuest.addObjective(new QuestObjective(
+            "kill_goblins",
+            "Defeat 5 Goblins",
+            5
+        ));
+         
+        // Set rewards
+        goblinSlayerQuest.setExpReward(150);
+        goblinSlayerQuest.setGoldReward(50);
+        goblinSlayerQuest.addItemReward("Potion of Minor Healing");
+        
+        // Set quest dialogue
+        //goblinSlayerQuest.setAcceptDialogue("Excellent! The goblins won't know what hit them. Return when you've slain 5 of them.");
+        //goblinSlayerQuest.setProgressDialogue("Have you dealt with those goblins yet? We're counting on you!");
+        //goblinSlayerQuest.setCompleteDialogue("Amazing work! The village is safer thanks to you. Here's your reward.");
+        
+        // Add quest to NPC
+        npcComponent.addQuest(goblinSlayerQuest);
+        
+        return fionne;
+    }
     /**
      * Create a simple tree environment entity
      */
@@ -206,8 +277,8 @@ public class EntityFactory {
         Entity tree = new Entity("Tree", EntityType.ENVIRONMENT);
 
         tree.addComponent(new Position(x, y));
-       // tree.addComponent(new Sprite("resources/sprites/tree.png", 481, 513, 0f)); //VS Code
-        tree.addComponent(new Sprite("/sprites/willow.png", 481, 513, 0f)); //eclipse
+        tree.addComponent(new Sprite("resources/sprites/tree.png", 481, 513, 0f)); //VS Code
+        //tree.addComponent(new Sprite("/sprites/willow.png", 481, 513, 0f)); //eclipse
         tree.addComponent(new Renderable(RenderLayer.ENTITIES, 80));
         NameTag nt = new NameTag("Tree", -40);
         nt.show();

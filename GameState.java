@@ -43,8 +43,25 @@ public class GameState {
         
         // ☆ Create UI Manager (GameLogic will be set later)
         uiManager = new UIManager(this);
+   
+        // Initialize dialogue system
+        initializeDialogueSystem();
     }
-    
+   
+    private void initializeDialogueSystem() {
+    	      DialogueDatabase db = DialogueDatabase.getInstance();
+    	      
+    	      // Load all dialogue files
+    	     db.loadAllDialogues("/dialogues/");
+    	      
+    	     // Create programmatic dialogues
+    	     DialogueExamples.createSimpleGreeting();
+    	     
+    	      // Map NPCs to their dialogues
+    	      db.mapNPCToDialogue("fionne", "fionne_intro");
+    	      
+    	      System.out.println("Dialogue system initialized");
+   }
     /**
      * ☆ NEW: Set game logic reference for UI Manager
      * Call this from Engine after creating GameLogic
@@ -57,6 +74,12 @@ public class GameState {
         // Create player
         player = EntityFactory.createPlayer(8 * 64, 5 * 64);
         entities.add(player);
+        
+        // ⭐ NEW: Create Fionne NPC
+        Entity fionne = EntityFactory.createFionne(10 * 64, 5 * 64);
+        entities.add(fionne);
+        System.out.println("Fionne NPC created at (10, 5)");
+       
         
         float normalRespawn = 30f;
         float bossRespawn = 50f;

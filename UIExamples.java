@@ -1,6 +1,9 @@
 package dev.main;
 
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
 
 /**
  * Examples of how to use the UI system for different purposes
@@ -65,6 +68,7 @@ public class UIExamples {
         // Add 20 inventory slots (4 rows × 5 columns)
         for (int i = 0; i < 20; i++) {
             UISkillSlot slot = new UISkillSlot(0, 0, slotSize);
+            inventory.addChild(slot);
             inventory.addChild(slot);
         }
         
@@ -202,24 +206,8 @@ public class UIExamples {
     /**
      * Example 9: Create a tooltip panel (follows mouse)
      */
-    public static UIPanel createTooltip(String text, int mouseX, int mouseY) {
-        // Calculate size based on text
-        int width = 200;
-        int height = 100;
-        
-        // Position near mouse but stay on screen
-        int x = Math.min(mouseX + 10, Engine.WIDTH - width - 10);
-        int y = Math.min(mouseY + 10, Engine.HEIGHT - height - 10);
-        
-        UIPanel tooltip = new UIPanel(x, y, width, height);
-        tooltip.setPadding(8);
-        tooltip.setBackgroundColor(new Color(0, 0, 0, 220));
-        tooltip.setBorderColor(new Color(255, 255, 255));
-        tooltip.setBorderWidth(1);
-        
-        // Would add UILabel with text here
-        
-        return tooltip;
+    public static UITooltipPanel createTooltip(String text, int mouseX, int mouseY) {
+        return new UITooltipPanel(text, mouseX, mouseY);
     }
     
     /**
@@ -242,5 +230,69 @@ public class UIExamples {
         panel.setPadding(12);
         
         return panel;
+    }
+}
+
+/**
+ * Simple tooltip panel that displays text
+ */
+class UITooltipPanel extends UIPanel {
+    private String text;
+    private static final Font TOOLTIP_FONT = new Font("Arial", Font.PLAIN, 12);
+    
+    public UITooltipPanel(String text, int mouseX, int mouseY) {
+        super(0, 0, 200, 100); // Will be resized based on text
+        
+        this.text = text;
+        
+        // Calculate size based on text
+        Graphics2D g = (Graphics2D) new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_RGB).getGraphics();
+        g.setFont(TOOLTIP_FONT);
+        FontMetrics fm = g.getFontMetrics();
+        String[] lines = text.split("\n");
+        int maxWidth = 0;
+        for (String line : lines) {
+            maxWidth = Math.max(maxWidth, fm.stringWidth(line));
+        }
+        int height = lines.length * fm.getHeight() + 16; // padding
+        int width = Math.max(150, maxWidth + 16); // minimum width
+        
+        // Position near mouse but stay on screen
+        int x = Math.min(mouseX + 10, Engine.WIDTH - width - 10);
+        int y = Math.min(mouseY + 10, Engine.HEIGHT - height - 10);
+        
+        setPosition(x, y);
+        setSize(width, height);
+        setPadding(8);
+        setBackgroundColor(new Color(0, 0, 0, 220));
+        setBorderColor(new Color(255, 255, 255));
+        setBorderWidth(1);
+    }
+    
+    @Override
+    public void render(Graphics2D g) {
+        if (!visible) return;
+        
+        // Draw background
+        g.setColor(new Color(0, 0, 0, 220));
+        g.fillRect(x, y, width, height);
+        
+        // Draw border
+        g.setColor(Color.WHITE);
+        g.setStroke(new java.awt.BasicStroke(1));
+        g.drawRect(x, y, width, height);
+        
+        // Draw text
+        g.setColor(Color.WHITE);
+        g.setFont(TOOLTIP_FONT);
+        FontMetrics fm = g.getFontMetrics();
+        int textX = x + 8; // padding
+        int textY = y + 8 + fm.getAscent(); // padding
+        
+        String[] lines = text.split("\n");
+        for (String line : lines) {
+            g.drawString(line, textX, textY);
+            textY += fm.getHeight();
+        }
     }
 }

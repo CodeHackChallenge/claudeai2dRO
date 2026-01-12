@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * OPTIMIZED: Added dirty flag system to prevent unnecessary relayout calls
+ * ⭐ OPTIMIZED: Added batch mode to prevent cascading relayout calls
  */
 public class UIPanel extends UIComponent {
     
@@ -31,8 +31,11 @@ public class UIPanel extends UIComponent {
     private Color borderColor;
     private int borderWidth;
     
-    // ⭐ NEW: Dirty flag system
+    // Dirty flag system
     private boolean needsRelayout = false;
+    
+    // ⭐ NEW: Batch mode
+    private boolean batchMode = false;
     
     public UIPanel(int x, int y, int width, int height) {
         super(x, y, width, height);
@@ -46,20 +49,80 @@ public class UIPanel extends UIComponent {
         this.borderColor = new Color(100, 100, 100, 255);
         this.borderWidth = 2;
         
-        this.needsRelayout = false;  // ⭐ NEW
+        this.needsRelayout = false;
+        this.batchMode = false;
     }
     
-    // ⭐ OPTIMIZED: Just mark dirty instead of immediate relayout
+    // ════════════════════════════════════════════════════════════════
+    // BATCH MODE API
+    // ════════════════════════════════════════════════════════════════
+    
+    /**
+     * ⭐ Start batch mode - prevents automatic relayout
+     * Use when adding multiple children at once
+     */
+    public void beginBatch() {
+        batchMode = true;
+    }
+    
+    /**
+     * ⭐ End batch mode - triggers single relayout
+     * Must be called after beginBatch()
+     */
+    public void endBatch() {
+        batchMode = false;
+        markDirty();  // Now trigger the relayout
+    }
+    
+    /**
+     * ⭐ Mark panel as needing relayout
+     * Respects batch mode - won't mark if batching
+     */
+    private void markDirty() {
+        if (!batchMode) {
+            needsRelayout = true;
+        }
+    }
+    
+    // ════════════════════════════════════════════════════════════════
+    // CHILD MANAGEMENT
+    // ════════════════════════════════════════════════════════════════
+    
+    /**
+     * Add single child (triggers relayout unless in batch mode)
+     */
     public void addChild(UIComponent child) {
         child.setParent(this);
         children.add(child);
-        markDirty();  // ⭐ Changed from relayout()
+        markDirty();  // Respects batchMode
+    }
+    
+    /**
+     * ⭐ NEW: Convenience method - adds multiple children efficiently
+     */
+    public void addChildren(UIComponent... components) {
+        beginBatch();
+        for (UIComponent child : components) {
+            addChild(child);  // Won't trigger relayout (batchMode=true)
+        }
+        endBatch();  // Single relayout at end
+    }
+    
+    /**
+     * ⭐ NEW: Add list of children
+     */
+    public void addChildren(List<UIComponent> components) {
+        beginBatch();
+        for (UIComponent child : components) {
+            addChild(child);
+        }
+        endBatch();
     }
     
     public void removeChild(UIComponent child) {
         child.setParent(null);
         children.remove(child);
-        markDirty();  // ⭐ Changed from relayout()
+        markDirty();
     }
     
     public void clearChildren() {
@@ -67,33 +130,34 @@ public class UIPanel extends UIComponent {
             child.setParent(null);
         }
         children.clear();
-        markDirty();  // ⭐ Changed from relayout()
+        markDirty();
     }
+    
+    // ════════════════════════════════════════════════════════════════
+    // LAYOUT CONFIGURATION
+    // ════════════════════════════════════════════════════════════════
     
     public void setLayout(LayoutType layoutType) {
         this.layoutType = layoutType;
-        markDirty();  // ⭐ Changed from relayout()
+        markDirty();
     }
     
     public void setGap(int gap) {
         this.gap = gap;
-        markDirty();  // ⭐ Changed from relayout()
+        markDirty();
     }
     
     public void setGridDimensions(int columns, int rows) {
         this.columns = columns;
         this.rows = rows;
         if (layoutType == LayoutType.GRID) {
-            markDirty();  // ⭐ Changed from relayout()
+            markDirty();
         }
     }
     
-    // ⭐ NEW: Mark panel as needing relayout
-    private void markDirty() {
-        needsRelayout = true;
-    }
-    
-    // ⭐ PUBLIC: Allow manual relayout trigger
+    /**
+     * Force immediate relayout (public API)
+     */
     public void relayout() {
         if (children.isEmpty()) {
             needsRelayout = false;
@@ -124,7 +188,7 @@ public class UIPanel extends UIComponent {
                 break;
         }
         
-        needsRelayout = false;  // ⭐ Clear dirty flag
+        needsRelayout = false;
     }
     
     private void layoutHorizontal(int startX, int startY, int availableWidth) {
@@ -173,12 +237,15 @@ public class UIPanel extends UIComponent {
         }
     }
     
-    // ⭐ OPTIMIZED: Only relayout when actually rendering
+    // ════════════════════════════════════════════════════════════════
+    // RENDERING
+    // ════════════════════════════════════════════════════════════════
+    
     @Override
     public void render(Graphics2D g) {
         if (!visible) return;
         
-        // ⭐ NEW: Relayout only when dirty and visible
+        // Relayout only when dirty and visible
         if (needsRelayout) {
             relayout();
         }
@@ -215,7 +282,10 @@ public class UIPanel extends UIComponent {
         }
     }
     
-    // Updated to include pressed state for drag interactions
+    // ════════════════════════════════════════════════════════════════
+    // INPUT HANDLING
+    // ════════════════════════════════════════════════════════════════
+    
     public void handleMouseMove(int mouseX, int mouseY, boolean pressed) {
         for (UIComponent child : children) {
             if (!child.isVisible() || !child.isEnabled()) continue;
@@ -236,7 +306,6 @@ public class UIPanel extends UIComponent {
             if (!child.isVisible() || !child.isEnabled()) continue;
             
             if (child.contains(mouseX, mouseY)) {
-                // Allow complex children (like scrollable panels) to receive exact coordinates
                 if (child instanceof UIScrollableInventoryPanel) {
                     UIScrollableInventoryPanel sp = (UIScrollableInventoryPanel) child;
                     if (sp.handleClick(mouseX, mouseY)) return true;
@@ -281,7 +350,10 @@ public class UIPanel extends UIComponent {
         return false;
     }
     
-    // Visual style setters
+    // ════════════════════════════════════════════════════════════════
+    // GETTERS / SETTERS
+    // ════════════════════════════════════════════════════════════════
+    
     public void setBackgroundColor(Color color) {
         this.backgroundColor = color;
     }
@@ -294,7 +366,6 @@ public class UIPanel extends UIComponent {
         this.borderWidth = width;
     }
     
-    // Getters
     public List<UIComponent> getChildren() {
         return children;
     }

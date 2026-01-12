@@ -12,49 +12,90 @@ public class GameLogic {
         this.state = state;
     } 
     
-    public void update(float delta) {
-        state.incrementGameTime(delta);
-        
-        Entity player = state.getPlayer();
-        Position playerPos = player.getComponent(Position.class);
-        
-        for (Entity entity : state.getEntities()) {
-            EntityType entityType = entity.getType();
-            
-            Combat combat = entity.getComponent(Combat.class);
-            if (combat != null) {
-                combat.update(delta);
-            }
-            
-            if (entityType == EntityType.PLAYER) {
-                updatePlayer(entity, delta);
-            } else if (entityType == EntityType.MONSTER) {
-                updateMonster(entity, playerPos, delta);
-            }
-            
-            Sprite sprite = entity.getComponent(Sprite.class);
-            if (sprite != null) {
-                sprite.update(delta);
-            }
-            
-            TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
-            if (indicator != null) {
-                indicator.update(delta);
-            }
-            
-            // Add to the update method in GameLogic (inside the entity loop):
-            // Update level-up effect
-            LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
-            if (levelUpEffect != null) {
-                levelUpEffect.update(delta);
-            }
-        }
-        
-        state.updateDamageTexts(delta);
-        state.updateSpawnPoints(delta);  // NEW: Update respawn timers
-        state.removeMarkedEntities();
-        updateCamera(delta);
-    } 
+
+	public void update(float delta) {
+	    state.incrementGameTime(delta);
+	    
+	    Entity player = state.getPlayer();
+	    Position playerPos = player.getComponent(Position.class);
+	    
+	    for (Entity entity : state.getEntities()) {
+	        EntityType entityType = entity.getType();
+	        
+	        Combat combat = entity.getComponent(Combat.class);
+	        if (combat != null) {
+	            combat.update(delta);
+	        }
+	        
+	        if (entityType == EntityType.PLAYER) {
+	            updatePlayer(entity, delta);
+	        } else if (entityType == EntityType.MONSTER) {
+	            updateMonster(entity, playerPos, delta);
+	        } 
+	        // ⭐ NEW: Update NPCs
+	        else if (entityType == EntityType.NPC) {
+	            updateNPC(entity, player, delta);
+	        }
+	        
+	        Sprite sprite = entity.getComponent(Sprite.class);
+	        if (sprite != null) {
+	            sprite.update(delta);
+	        }
+	        
+	        TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
+	        if (indicator != null) {
+	            indicator.update(delta);
+	        }
+	        
+	        // Update level-up effect
+	        LevelUpEffect levelUpEffect = entity.getComponent(LevelUpEffect.class);
+	        if (levelUpEffect != null) {
+	            levelUpEffect.update(delta);
+	        }
+	    }
+	    
+	    state.updateDamageTexts(delta);
+	    state.updateSpawnPoints(delta);
+	    state.removeMarkedEntities();
+	    updateCamera(delta);
+	}
+	/**
+	 * Update NPC quest indicators based on player's quest status
+	 */
+	private void updateNPC(Entity npc, Entity player, float delta) {
+	    NPC npcComponent = npc.getComponent(NPC.class);
+	    QuestIndicator questIndicator = npc.getComponent(QuestIndicator.class);
+	    
+	    if (npcComponent == null || questIndicator == null) return;
+	    
+	    // Update quest indicator animation
+	    questIndicator.update(delta);
+	    
+	    // Check quest status
+	    Quest completedQuest = npcComponent.getCompletedQuest();
+	    if (completedQuest != null) {
+	        // Show "?" for quest completion
+	        questIndicator.show(QuestIndicator.IndicatorType.COMPLETE);
+	        return;
+	    }
+	    
+	    Quest activeQuest = npcComponent.getActiveQuest();
+	    if (activeQuest != null) {
+	        // Show "..." for quest in progress
+	        questIndicator.show(QuestIndicator.IndicatorType.IN_PROGRESS);
+	        return;
+	    }
+	    
+	    Quest availableQuest = npcComponent.getNextAvailableQuest();
+	    if (availableQuest != null) {
+	        // Show "!" for available quest
+	        questIndicator.show(QuestIndicator.IndicatorType.AVAILABLE);
+	        return;
+	    }
+	    
+	    // No quests - hide indicator
+	    questIndicator.hide();
+	}
     /**
      * Player attacks target entity (called from click or auto-attack)
      * ☆ FIXED: Clears previous movement path immediately when targeting monster
@@ -1534,11 +1575,14 @@ public class GameLogic {
         
         System.out.println(monsterInfo + " has died!");
         
-        // ★ Award XP to player
+        // Award XP to player
         Entity player = state.getPlayer();
         int xpReward = calculateMonsterXP(monster);
         System.out.println("→ XP Reward: " + xpReward);
         awardExperience(player, xpReward);
+        
+        // ⭐ NEW: Update quest progress
+        updateQuestProgress(player, monster);
         
         // Clear as auto-attack target
         if (state.getAutoAttackTarget() == monster) {
@@ -1578,13 +1622,83 @@ public class GameLogic {
             sprite.setAnimation(Sprite.ANIM_DEAD);
         }
     }
+    /**
+     * Update quest progress when monster is killed
+     */
+    private void updateQuestProgress(Entity player, Entity monster) {
+        QuestLog questLog = player.getComponent(QuestLog.class);
+        if (questLog == null) return;
+        
+        String monsterName = monster.getName();
+        
+        // Update all active quests
+        for (Quest quest : questLog.getActiveQuests()) {
+            // Check each objective
+            for (QuestObjective objective : quest.getObjectives()) {
+                // Match objective ID with monster name
+                // e.g., "kill_goblins" matches "Goblin"
+                String objectiveId = objective.getId();
+                
+                if (objectiveId.contains("kill")) {
+                    // Extract monster type from objective ID
+                    // "kill_goblins" -> "goblin"
+                    String targetMonster = objectiveId.replace("kill_", "").replace("s", "");
+                    
+                    if (monsterName.toLowerCase().contains(targetMonster)) {
+                        questLog.updateQuestProgress(objectiveId, 1);
+                        System.out.println("Quest progress: " + quest.getName() + " - " + objective.getDescription());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * ⭐ NEW: Update all NPC quest indicators
+     * Call this when quest status changes
+     */
+    private void updateNPCQuestIndicators() {
+        for (Entity entity : state.getEntities()) {
+            if (entity.getType() == EntityType.NPC) {
+                NPC npcComponent = entity.getComponent(NPC.class);
+                QuestIndicator questIndicator = entity.getComponent(QuestIndicator.class);
+                
+                if (npcComponent != null && questIndicator != null) {
+                    updateNPCIndicator(entity, npcComponent, questIndicator);
+                }
+            }
+        }
+    }
+
+    /**
+     * ⭐ NEW: Update individual NPC quest indicator
+     */
+    private void updateNPCIndicator(Entity npc, NPC npcComponent, QuestIndicator questIndicator) {
+        // Check quest status
+        Quest completedQuest = npcComponent.getCompletedQuest();
+        if (completedQuest != null) {
+            // Show "?" for quest completion
+            questIndicator.show(QuestIndicator.IndicatorType.COMPLETE);
+            return;
+        }
+        
+        Quest activeQuest = npcComponent.getActiveQuest();
+        if (activeQuest != null) {
+            // Show "..." for quest in progress
+            questIndicator.show(QuestIndicator.IndicatorType.IN_PROGRESS);
+            return;
+        }
+        
+        Quest availableQuest = npcComponent.getNextAvailableQuest();
+        if (availableQuest != null) {
+            // Show "!" for available quest
+            questIndicator.show(QuestIndicator.IndicatorType.AVAILABLE);
+            return;
+        }
+        
+        // No quests - hide indicator
+        questIndicator.hide();
+    }
     
-}
-/*
-## Visual Guide of What Should Happen
-```
-[HOME] ---roamRadius---> [ROAM ZONE] ---returnThreshold---> [LEASH BREAK]
-  |                           |                                    |
-  IDLE/ROAMING           CAN CHASE                           MUST RETURN
-                         PLAYER HERE                         (ignore player)
-*/
+    
+} 

@@ -13,21 +13,23 @@ import java.awt.FontMetrics;
 public class UIInventorySlot extends UIComponent {
     private static final Font SLOT_FONT = new Font("Arial", Font.PLAIN, 10);
    
-    private Object item;  // TODO: Replace with actual Item class later
+    private Item item;  // TODO: Replace with actual Item class later
     private int slotIndex;
-    private boolean isEmpty;
+    
+    // Reference to UIManager for equipping
+    private UIManager uiManager;
     
     // Visual properties
     private Color emptyColor;
     private Color hoverColor;
     private Color fillColor;
     
-    public UIInventorySlot(int x, int y, int size, int slotIndex) {
+    public UIInventorySlot(int x, int y, int size, int slotIndex, UIManager uiManager) {
         super(x, y, size, size);
         
         this.slotIndex = slotIndex;
+        this.uiManager = uiManager;
         this.item = null;
-        this.isEmpty = true;
         
         // Colors similar to locked menu buttons
         this.emptyColor = new Color(60, 60, 60, 180);
@@ -41,7 +43,7 @@ public class UIInventorySlot extends UIComponent {
         
         // Choose background color
         Color bgColor;
-        if (!isEmpty) {
+        if (item != null) {
             bgColor = hovered ? fillColor.brighter() : fillColor;
         } else {
             bgColor = hovered ? hoverColor : emptyColor;
@@ -57,7 +59,7 @@ public class UIInventorySlot extends UIComponent {
         g.drawRect(x, y, width, height);
         
         // If empty, draw empty slot indicator (grid pattern)
-        if (isEmpty) {
+        if (item == null) {
             drawEmptySlotPattern(g);
         } else {
             // TODO: Draw item icon here when item system is implemented
@@ -109,7 +111,7 @@ public class UIInventorySlot extends UIComponent {
     
     @Override
     public boolean onClick() {
-        if (isEmpty) {
+        if (item == null) {
             System.out.println("Clicked empty inventory slot " + slotIndex);
         } else {
             System.out.println("Clicked inventory slot " + slotIndex + " with item");
@@ -120,34 +122,90 @@ public class UIInventorySlot extends UIComponent {
     
     @Override
     public boolean onRightClick() {
-        if (!isEmpty) {
-            System.out.println("Right-clicked inventory slot " + slotIndex + " - removing item");
-            // TODO: Handle right-click (drop, delete, context menu)
-            removeItem();  // For testing
+        if (item != null) {
+            String itemName = item.getName();  // Store name before any modifications
+            // Try to equip the item if it's a weapon
+            if (item.isWeapon()) {
+                boolean equipped = uiManager.equipItem(UIGearSlot.SlotType.WEAPON, item);
+                if (equipped) {
+                    // Remove from inventory
+                    UIScrollableInventoryPanel inventoryPanel = uiManager.getInventoryGrid();
+                    inventoryPanel.removeItemFromSlot(slotIndex);
+                    System.out.println("Equipped " + itemName + " to weapon slot");
+                    return true;
+                } else {
+                    System.out.println("Failed to equip " + itemName + " - weapon slot occupied?");
+                }
+            } else {
+                System.out.println("Cannot equip " + itemName + " - not a weapon");
+            }
         }
         return true;  // Consume click
     }
     
     // Item management methods
-    public void setItem(Object item) {
+    public void setItem(Item item) {
         this.item = item;
-        this.isEmpty = false;
     }
     
     public void removeItem() {
         this.item = null;
-        this.isEmpty = true;
     }
     
-    public Object getItem() {
+    public Item getItem() {
         return item;
     }
     
     public boolean isEmpty() {
-        return isEmpty;
+        return item == null;
     }
     
     public int getSlotIndex() {
         return slotIndex;
+    }
+    
+    @Override
+    public String getTooltipText() {
+        if (item != null) {
+            return getItemDescription(item);
+        }
+        return null;
+    }
+    
+    private String getItemDescription(Item item) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(item.getName()).append("\n");
+        sb.append("Type: ").append(item.getType()).append("\n");
+        sb.append("Rarity: ").append(item.getRarity()).append("\n");
+        
+        if (item.getAttackBonus() > 0) {
+            sb.append("Attack: +").append(item.getAttackBonus()).append("\n");
+        }
+        if (item.getDefenseBonus() > 0) {
+            sb.append("Defense: +").append(item.getDefenseBonus()).append("\n");
+        }
+        if (item.getMagicAttackBonus() > 0) {
+            sb.append("Magic Attack: +").append(item.getMagicAttackBonus()).append("\n");
+        }
+        if (item.getMagicDefenseBonus() > 0) {
+            sb.append("Magic Defense: +").append(item.getMagicDefenseBonus()).append("\n");
+        }
+        
+        sb.append("Durability: ").append(item.getCurrentDurability()).append("/").append(item.getMaxDurability()).append("\n");
+        
+        if (!item.isUpgradable()) {
+            sb.append("Not upgradable\n");
+        }
+        if (!item.canInfuseElemental()) {
+            sb.append("Cannot infuse elemental stones\n");
+        }
+        if (!item.isTradable()) {
+            sb.append("Cannot be traded\n");
+        }
+        if (!item.isSellable()) {
+            sb.append("Cannot be sold\n");
+        }
+        
+        return sb.toString().trim();
     }
 }

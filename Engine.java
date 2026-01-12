@@ -49,8 +49,10 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     
     private Cursor defaultCursor;
     private Cursor attackCursor;
+    private static Engine instance;
     
     public Engine() {
+        instance = this;
         // Window setup
         JFrame window = new JFrame("RO-Style 2D Game v.1");
         JPanel panel = (JPanel) window.getContentPane();
@@ -66,7 +68,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         window.setVisible(true);
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        /*
+      
         // VS Code
         // Setup cursors
         defaultCursor = Cursor.getDefaultCursor();
@@ -111,8 +113,8 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         } catch (Exception e) {
             attackCursor = defaultCursor;
         }
-        */
-
+        
+    /*  
         //eclpise 
         // Setup cursors
         defaultCursor = Cursor.getDefaultCursor();
@@ -128,7 +130,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         } catch (Exception e) {
             attackCursor = defaultCursor;
         }
-             
+          */   
         // Input
         mouse = new MouseInput();
         addMouseListener(mouse);
@@ -185,7 +187,6 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     
  // ⭐ Also optimize handleMouseHover() - only check when mouse moves
     private void handleMouseHover() {
-        // ⭐ NEW: Only check when mouse actually moved
         if (!mouse.hasMoved()) {
             return;
         }
@@ -196,34 +197,36 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         float worldX = screenX + gameState.getCameraX();
         float worldY = screenY + gameState.getCameraY();
         
-        // Check if hovering over any monster
-        Entity hoveredMonster = null;
+        // Check if hovering over any entity (monster or NPC)
+        Entity hoveredEntity = null;
         
         for (Entity entity : gameState.getEntities()) {
-            if (entity.getType() != EntityType.MONSTER) continue;
+            // ⭐ Include both monsters and NPCs
+            if (entity.getType() != EntityType.MONSTER && entity.getType() != EntityType.NPC) {
+                continue;
+            }
             
             Position pos = entity.getComponent(Position.class);
             CollisionBox box = entity.getComponent(CollisionBox.class);
             
             if (pos != null && box != null) {
-                // Check if mouse is within collision box
                 float left = box.getLeft(pos.x);
                 float right = box.getRight(pos.x);
                 float top = box.getTop(pos.y);
                 float bottom = box.getBottom(pos.y);
                 
                 if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
-                    hoveredMonster = entity;
+                    hoveredEntity = entity;
                     break;
                 }
             }
         }
         
         // Update hover state
-        gameState.setHoveredEntity(hoveredMonster);
+        gameState.setHoveredEntity(hoveredEntity);
 
         // Change cursor
-        if (hoveredMonster != null) {
+        if (hoveredEntity != null) {
             setCursor(attackCursor);
         } else {
             setCursor(defaultCursor);
@@ -235,7 +238,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
-            // ☆ Check UI clicks first
+            // ⭐ Check UI clicks first
             boolean uiConsumedClick = gameState.getUIManager().handleClick(screenX, screenY);
             
             if (!uiConsumedClick) {
@@ -244,19 +247,20 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 
                 Entity hoveredEntity = gameState.getHoveredEntity();
                 
-                // ☆ Check if clicking a monster
-                if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
+                // ⭐ NEW: Check if clicking an NPC
+                if (hoveredEntity != null && hoveredEntity.getType() == EntityType.NPC) {
+                    handleNPCClick(hoveredEntity);
+                }
+                // Check if clicking a monster
+                else if (hoveredEntity != null && hoveredEntity.getType() == EntityType.MONSTER) {
                     Stats stats = hoveredEntity.getComponent(Stats.class);
                     if (stats != null && stats.hp > 0) {
                         gameState.setTargetedEntity(hoveredEntity);
-                        
-                        // ☆ Attack the monster (this will clear old path internally)
                         gameLogic.playerAttack(hoveredEntity);
-                        
                         System.out.println("Attacking " + hoveredEntity.getName());
                     }
                 } else {
-                    // ☆ Clicking empty ground - stop auto-attack and move to location
+                    // Clicking empty ground - stop auto-attack and move to location
                     gameLogic.stopAutoAttack();
                     gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
                 }
@@ -269,14 +273,14 @@ public class Engine extends Canvas implements Runnable, KeyListener {
             int screenX = mouse.getX();
             int screenY = mouse.getY();
             
-            // ☆ Check UI right clicks
+            // Check UI right clicks
             boolean uiConsumedClick = gameState.getUIManager().handleRightClick(screenX, screenY);
             
             if (!uiConsumedClick) {
                 float worldX = screenX + gameState.getCameraX();
                 float worldY = screenY + gameState.getCameraY();
                 
-                // ☆ Right-click always stops auto-attack and moves
+                // Right-click always stops auto-attack and moves
                 gameLogic.stopAutoAttack();
                 gameLogic.movePlayerTo(worldX, worldY, shiftPressed);
             }
@@ -303,7 +307,37 @@ public class Engine extends Canvas implements Runnable, KeyListener {
      // ⭐ Handle skill hotkeys AND inventory key
      gameState.getUIManager().handleKeyPress(e.getKeyCode());
      
-     // ⭐ REMOVED: K key for gear panel (now handled by I key in UIManager)
+  // Show controls help (press F1)
+     if (e.getKeyCode() == KeyEvent.VK_F1) {
+         System.out.println("\n╔═══════════════════════════════════════╗");
+         System.out.println("║         GAME CONTROLS                ║");
+         System.out.println("╠═══════════════════════════════════════╣");
+         System.out.println("║ Movement:                            ║");
+         System.out.println("║   Left Click - Move / Attack         ║");
+         System.out.println("║   Right Click - Force Move           ║");
+         System.out.println("║   Shift + Click - Run                ║");
+         System.out.println("║                                      ║");
+         System.out.println("║ Skills:                              ║");
+         System.out.println("║   1-8 - Use skill slots              ║");
+         System.out.println("║   Q, E, R, F - Quick skills          ║");
+         System.out.println("║   Right Click Slot - Upgrade skill   ║");
+         System.out.println("║                                      ║");
+         System.out.println("║ UI:                                  ║");
+         System.out.println("║   I - Toggle Inventory               ║");
+         System.out.println("║   J - Toggle Quest Log               ║");
+         System.out.println("║                                      ║");
+         System.out.println("║ Debug:                               ║");
+         System.out.println("║   F1 - Show this help                ║");
+         System.out.println("║   F3 - Toggle debug mode             ║");
+         System.out.println("║   D - Damage self                    ║");
+         System.out.println("║   F - Full heal                      ║");
+         System.out.println("║   X - Add XP                         ║");
+         System.out.println("║   S - Show stats                     ║");
+         System.out.println("║   M - Spawn normal goblin            ║");
+         System.out.println("║   E - Spawn elite goblin             ║");
+         System.out.println("║   B - Spawn boss                     ║");
+         System.out.println("╚═══════════════════════════════════════╝\n");
+     }
      
      // Test unlocking menu buttons (press U)
      if (e.getKeyCode() == KeyEvent.VK_U) {
@@ -337,7 +371,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
      
      // Add test item to inventory (press G for "Get item")
      if (e.getKeyCode() == KeyEvent.VK_G) {
-         boolean added = gameState.getUIManager().addItemToInventory("TestItem");
+         boolean added = gameState.getUIManager().addItemToInventory(ItemManager.createWoodenShortSword());
          if (added) {
              System.out.println("DEBUG: Added test item to inventory");
          } else {
@@ -504,6 +538,52 @@ public class Engine extends Canvas implements Runnable, KeyListener {
      }
  }
     
+ /**
+  * Handle NPC interaction
+  */ private void handleNPCClick(Entity npc) {
+       NPC npcComponent = npc.getComponent(NPC.class);
+       if (npcComponent == null) return;
+       
+       Entity player = gameState.getPlayer();
+       
+       // Check range
+       if (!npcComponent.isPlayerInRange(player, npc)) {
+           System.out.println("Too far away to talk to " + npcComponent.getNpcName());
+           return;
+       }
+       
+       // Get dialogue from database
+       // If NPC has a completed quest for the player, show quest completion dialog
+       Quest completedQuest = npcComponent.getCompletedQuest();
+       if (completedQuest != null) {
+           gameState.getUIManager().showQuestComplete(npcComponent.getNpcName(), completedQuest);
+           return;
+       }
+
+       // If NPC has an active quest in-progress, show progress dialogue
+       Quest activeQuest = npcComponent.getActiveQuest();
+       if (activeQuest != null) {
+           gameState.getUIManager().showDialogue(npcComponent.getNpcName(), npcComponent.getDialogue());
+           return;
+       }
+
+       // Otherwise fall back to dialogue database or greeting
+       DialogueDatabase db = DialogueDatabase.getInstance();
+       DialogueTree dialogue = db.getDialogueForNPC(npcComponent.getNpcId());
+
+       if (dialogue != null) {
+           // Start dialogue using enhanced dialogue box
+           UIDialogueBoxEnhanced dialogueBox = gameState.getUIManager().getEnhancedDialogueBox();
+           dialogueBox.startDialogue(dialogue.getId(), npc, player);
+       } else {
+           // Fallback to simple greeting
+           gameState.getUIManager().showDialogue(
+               npcComponent.getNpcName(),
+               npcComponent.getGreetingDialogue()
+           );
+       }
+   }
+   
     public boolean isDebugMode() {
         return debugMode;
     }
@@ -620,6 +700,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     public int getHeight() { return HEIGHT; }
     public MouseInput getMouse() { return mouse; }
     public GameState getGameState() { return gameState; }
+    public static Engine getInstance() { return instance; }
     
     public static void main(String[] args) {
         new Engine().start();

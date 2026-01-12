@@ -1,0 +1,68 @@
+ 
+{
+    "id": "fionne_intro",
+    "name": "Fionne Introduction",
+    "startNode": "greet",
+    "nodes": [
+      {
+        "id": "greet",
+        "type": "DIALOGUE",
+        "speaker": "Fionne",
+        "text": "The goblins have been causing trouble near the village. Could you help us by defeating some of them?",
+        "choices": [
+          {"text": "What do you need?", "targetNode": "quest_offer"},
+          {"text": "Not interested.", "targetNode": "decline"}
+        ]
+      },
+      {
+        "id": "quest_offer",
+        "type": "QUEST_OFFER",
+        "speaker": "Fionne",
+        "text": "The goblins have been causing trouble. Could you help us by defeating 5 of them?",
+        "questId": "goblin_slayer",
+        "choices": [
+          {"text": "I'll do it!", "targetNode": "accept"},
+          {"text": "Maybe later.", "targetNode": "decline"}
+        ]
+      },
+      {
+        "id": "accept",
+        "type": "DIALOGUE",
+        "speaker": "Fionne",
+        "text": "Excellent! The goblins won't know what hit them.",
+        "actions": [
+          {"type": "debug_message", "message": "Quest accepted: Goblin Slayer"}
+        ],
+        "nextNode": "end"
+      },
+      {
+        "id": "progress",
+        "type": "DIALOGUE",
+        "speaker": "Fionne",
+        "text": "Have you dealt with those goblins yet? We're counting on you!",
+        "choices": [
+          {"text": "I'm working on it", "targetNode": "end"},
+          {"text": "I've completed it", "targetNode": "complete", "conditions": [{"type": "quest_completed", "questId": "goblin_slayer"}]}
+        ]
+      },
+      {
+        "id": "complete",
+        "type": "DIALOGUE",
+        "speaker": "Fionne",
+        "text": "Amazing work! The village is safer thanks to you. Here's your reward.",
+        "nextNode": "end"
+      },
+      {
+        "id": "decline",
+        "type": "DIALOGUE",
+        "speaker": "Fionne",
+        "text": "I understand. Come back if you change your mind.",
+        "nextNode": "end"
+      },
+      {
+        "id": "end",
+        "type": "END"
+      }
+    ]
+  }
+ 

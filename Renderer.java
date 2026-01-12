@@ -14,6 +14,10 @@ import java.util.List;
  * OPTIMIZED: Fixed double entity sorting and added batched state changes
  */
 public class Renderer {
+	
+	private static final Font QUEST_INDICATOR_FONT = new Font("Arial", Font.BOLD, 24);
+
+	
     private GameState gameState;
     private Engine engine;
     
@@ -209,6 +213,37 @@ public class Renderer {
                 }
             }
         }
+        
+	     // ========================================
+	     // BATCH: QUEST INDICATORS
+	     // ========================================
+	     boolean hasQuestIndicators = false;
+	     for (RenderObject ro : sortedRenderObjects) {
+	         if (ro.entity.getType() == EntityType.NPC) {
+	             QuestIndicator qi = ro.entity.getComponent(QuestIndicator.class);
+	             if (qi != null && qi.active) {
+	                 hasQuestIndicators = true;
+	                 break;
+	             }
+	         }
+	     }
+	
+	     if (hasQuestIndicators) {
+	         g.setFont(QUEST_INDICATOR_FONT);
+	         for (RenderObject ro : sortedRenderObjects) {
+	             if (ro.entity.getType() == EntityType.NPC) {
+	                 Dead dead = ro.entity.getComponent(Dead.class);
+	                 if (dead != null) continue;
+	                 
+	                 QuestIndicator qi = ro.entity.getComponent(QuestIndicator.class);
+	                 if (qi != null && qi.active) {
+	                     int screenX = (int)Math.round(ro.position.x - cameraX);
+	                     int screenY = (int)Math.round(ro.position.y - cameraY);
+	                     drawQuestIndicator(g, screenX, screenY, qi);
+	                 }
+	             }
+	         }
+	     }
         
         // ========================================
         // BATCH 2: LEVEL BADGES
@@ -489,6 +524,7 @@ public class Renderer {
         
         g.setStroke(originalStroke);
     }
+    /*
     /////////////////////////
     // ⭐ OPTIMIZED: Use cached font
     private void drawMonsterLevelBadge(Graphics2D g, int spriteX, int spriteY, MonsterLevel monsterLevel) {
@@ -516,7 +552,8 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
-    
+    */
+    /*
     // ⭐ OPTIMIZED: Use cached font
     private void drawNameTag(Graphics2D g, int spriteX, int spriteY, NameTag tag, Entity entity) {
         Font originalFont = g.getFont();
@@ -550,7 +587,7 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
-    
+    */
     private String getTierPrefix(MobTier tier) {
         switch (tier) {
             case ELITE: return "[Elite]";
@@ -763,6 +800,7 @@ public class Renderer {
         g.setColor(textColor);
         g.drawString(dt.text, textX, textY);
     }
+    /*
     // ⭐ OPTIMIZED: Use cached font
     private void drawLevelBadge(Graphics2D g, int spriteX, int spriteY, int level) {
         Font originalFont = g.getFont();
@@ -787,7 +825,8 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
-    
+    */
+    /*
     // ⭐ OPTIMIZED: Use cached font
     private void drawLevelUpEffect(Graphics2D g, int spriteX, int spriteY, LevelUpEffect effect) {
         if (!effect.active) return;
@@ -820,7 +859,8 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
-    
+    */
+    /*
     // ⭐ OPTIMIZED: Use cached font
     private void drawAlert(Graphics2D g, int spriteX, int spriteY, Alert alert) {
         if (!alert.active) return;
@@ -850,7 +890,7 @@ public class Renderer {
         g.setStroke(originalStroke);
         g.setFont(originalFont);
     }
-    
+    */
     private void drawCollisionBox(Graphics2D g, Position pos, CollisionBox box, float cameraX, float cameraY) {
         int boxX = (int)Math.round(box.getLeft(pos.x) - cameraX);
         int boxY = (int)Math.round(box.getTop(pos.y) - cameraY);
@@ -1053,4 +1093,56 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
+
+/**
+ * ⭐ NEW: Draw quest indicator (! or ?)
+ */
+private void drawQuestIndicator(Graphics2D g, int spriteX, int spriteY, QuestIndicator indicator) {
+    if (!indicator.active) return;
+    
+    Font originalFont = g.getFont();
+    g.setFont(QUEST_INDICATOR_FONT);
+    
+    int indicatorX = spriteX;
+    int indicatorY = (int)(spriteY + indicator.offsetY + indicator.bounceOffset);
+    
+    String symbol;
+    Color color;
+    
+    switch (indicator.type) {
+        case AVAILABLE:
+            symbol = "!";
+            color = new Color(255, 215, 0);  // Gold
+            break;
+        case COMPLETE:
+            symbol = "?";
+            color = new Color(255, 215, 0);  // Gold
+            break;
+        case IN_PROGRESS:
+            symbol = "...";
+            color = new Color(150, 150, 150);  // Gray
+            break;
+        default:
+            symbol = "!";
+            color = new Color(255, 215, 0);
+    }
+    
+    FontMetrics fm = g.getFontMetrics();
+    int textWidth = fm.stringWidth(symbol);
+    int textHeight = fm.getHeight();
+    
+    int textX = indicatorX - textWidth / 2;
+    int textY = indicatorY + textHeight / 4;
+    
+    // Shadow
+    g.setColor(new Color(0, 0, 0, 150));
+    g.drawString(symbol, textX + 2, textY + 2);
+    
+    // Text
+    g.setColor(color);
+    g.drawString(symbol, textX, textY);
+    
+    g.setFont(originalFont);
+}
+    
 }

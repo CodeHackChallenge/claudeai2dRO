@@ -114,6 +114,10 @@ public abstract class UIComponent {
         return false;
     }
     
+    public String getTooltipText() {
+        return null;
+    }
+    
     // Getters/Setters
     public int getX() { return x; }
     public int getY() { return y; }

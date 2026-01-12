@@ -15,33 +15,35 @@ public class UIGearSlot extends UIComponent {
     public enum SlotType {
         HEAD,
         TOP_ARMOR,
-        GLOVES,
-        BELT,
         PANTS,
+        GLOVES, 
         SHOES,
-        TIARA,
+        WEAPON,
         EARRINGS,
         NECKLACE,
         BRACELET,
         RING_1,
-        RING_2
+        RING_2,
+        SPECIAL
     }
     
     private SlotType slotType;
-    private Object item;  // TODO: Replace with actual Item class later
-    private boolean isEmpty;
+    private Item item;
+    
+    // Reference to UIManager for unequipping
+    private UIManager uiManager;
     
     // Visual properties
     private Color emptyColor;
     private Color hoverColor;
     private Color fillColor;
     
-    public UIGearSlot(int x, int y, int width, int height, SlotType slotType) {
+    public UIGearSlot(int x, int y, int width, int height, SlotType slotType, UIManager uiManager) {
         super(x, y, width, height);
         
         this.slotType = slotType;
+        this.uiManager = uiManager;
         this.item = null;
-        this.isEmpty = true;
         
         // Colors
         this.emptyColor = new Color(60, 60, 60, 180);
@@ -55,7 +57,7 @@ public class UIGearSlot extends UIComponent {
         
         // Choose background color
         Color bgColor;
-        if (!isEmpty) {
+        if (item != null) {
             bgColor = hovered ? fillColor.brighter() : fillColor;
         } else {
             bgColor = hovered ? hoverColor : emptyColor;
@@ -71,12 +73,12 @@ public class UIGearSlot extends UIComponent {
         g.drawRect(x, y, width, height);
         
         // Draw slot label (only if empty or on hover)
-        if (isEmpty || hovered) {
+        if (item == null || hovered) {
             drawSlotLabel(g);
         }
         
         // If not empty, draw item
-        if (!isEmpty) {
+        if (item != null) {
             drawPlaceholderItem(g);
         }
         
@@ -121,16 +123,16 @@ public class UIGearSlot extends UIComponent {
         switch (slotType) {
             case HEAD: return "Head";
             case TOP_ARMOR: return "Armor";
-            case GLOVES: return "Gloves";
-            case BELT: return "Belt";
             case PANTS: return "Pants";
+            case GLOVES: return "Gloves";
             case SHOES: return "Shoes";
-            case TIARA: return "Tiara";
+            case WEAPON: return "Weapon"; 
             case EARRINGS: return "Earring";
             case NECKLACE: return "Neck";
             case BRACELET: return "Bracelet";
             case RING_1: return "Ring";
             case RING_2: return "Ring";
+            case SPECIAL: return "Special";
             default: return "???";
         }
     }
@@ -161,19 +163,19 @@ public class UIGearSlot extends UIComponent {
             case HEAD:
             case TOP_ARMOR:
             case PANTS:
+            case GLOVES:
             case SHOES:
                 return new Color(120, 80, 60);  // Brown for armor
-            case GLOVES:
-            case BELT:
+            
+            case WEAPON:
                 return new Color(100, 100, 80);  // Tan for accessories
-            case TIARA:
+            case EARRINGS:
+            	 return new Color(150, 150, 180);  // Silver for earrings                 
             case NECKLACE:
             case BRACELET:
             case RING_1:
-            case RING_2:
-                return new Color(180, 150, 50);  // Gold for jewelry
-            case EARRINGS:
-                return new Color(150, 150, 180);  // Silver for earrings
+            case RING_2: 
+            case SPECIAL: 
             default:
                 return new Color(100, 100, 100);
         }
@@ -186,7 +188,7 @@ public class UIGearSlot extends UIComponent {
     
     @Override
     public boolean onClick() {
-        if (isEmpty) {
+        if (item == null) {
             System.out.println("Clicked empty gear slot: " + slotType);
         } else {
             System.out.println("Clicked gear slot: " + slotType + " with item");
@@ -197,7 +199,7 @@ public class UIGearSlot extends UIComponent {
     
     @Override
     public boolean onRightClick() {
-        if (!isEmpty) {
+        if (item != null) {
             System.out.println("Right-clicked gear slot: " + slotType + " - unequipping");
             unequipItem();
         }
@@ -205,25 +207,77 @@ public class UIGearSlot extends UIComponent {
     }
     
     // Item management
-    public void equipItem(Object item) {
+    public void equipItem(Item item) {
+        // Unequip current item if any
+        if (this.item != null) {
+            unequipItem();
+        }
+        // Equip new item
         this.item = item;
-        this.isEmpty = false;
     }
     
     public void unequipItem() {
-        this.item = null;
-        this.isEmpty = true;
+        if (item != null) {
+            // Add back to inventory
+            uiManager.addItemToInventory(item);
+            this.item = null;
+        }
     }
     
-    public Object getItem() {
+    public Item getItem() {
         return item;
     }
     
     public boolean isEmpty() {
-        return isEmpty;
+        return item == null;
     }
     
     public SlotType getSlotType() {
         return slotType;
+    }
+    
+    @Override
+    public String getTooltipText() {
+        if (item != null) {
+            return getItemDescription(item);
+        }
+        return null;
+    }
+    
+    private String getItemDescription(Item item) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(item.getName()).append("\n");
+        sb.append("Type: ").append(item.getType()).append("\n");
+        sb.append("Rarity: ").append(item.getRarity()).append("\n");
+        
+        if (item.getAttackBonus() > 0) {
+            sb.append("Attack: +").append(item.getAttackBonus()).append("\n");
+        }
+        if (item.getDefenseBonus() > 0) {
+            sb.append("Defense: +").append(item.getDefenseBonus()).append("\n");
+        }
+        if (item.getMagicAttackBonus() > 0) {
+            sb.append("Magic Attack: +").append(item.getMagicAttackBonus()).append("\n");
+        }
+        if (item.getMagicDefenseBonus() > 0) {
+            sb.append("Magic Defense: +").append(item.getMagicDefenseBonus()).append("\n");
+        }
+        
+        sb.append("Durability: ").append(item.getCurrentDurability()).append("/").append(item.getMaxDurability()).append("\n");
+        
+        if (!item.isUpgradable()) {
+            sb.append("Not upgradable\n");
+        }
+        if (!item.canInfuseElemental()) {
+            sb.append("Cannot infuse elemental stones\n");
+        }
+        if (!item.isTradable()) {
+            sb.append("Cannot be traded\n");
+        }
+        if (!item.isSellable()) {
+            sb.append("Cannot be sold\n");
+        }
+        
+        return sb.toString().trim();
     }
 }

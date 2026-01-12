@@ -186,6 +186,13 @@ public class UIButton extends UIComponent {
     public String getLabel() {
         return label;
     }
+
+    /**
+     * Change the button label at runtime
+     */
+    public void setLabel(String newLabel) {
+        this.label = newLabel;
+    }
     
     public boolean isLocked() {
         return locked;

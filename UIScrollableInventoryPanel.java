@@ -9,10 +9,12 @@ import java.util.Map;
 import java.util.HashMap;
 
 /**
- * Scrollable inventory panel with mouse wheel support
- * Fixed scrollbar flickering and thumb dragging
+ * ⭐ OPTIMIZED: Only renders visible slots, pre-allocates tab storage
  */
 public class UIScrollableInventoryPanel extends UIComponent {
+    
+    // ⭐ NEW: Known tab names as constant
+    private static final String[] KNOWN_TABS = {"Misc", "Weap", "Arm", "Acc", "Rune"};
     
     private List<UIInventorySlot> slots;
     private int columns;
@@ -48,9 +50,23 @@ public class UIScrollableInventoryPanel extends UIComponent {
     private boolean draggingThumb = false;
     private int dragOffset = 0;
     
+    // Per-tab storage
+    private Map<String, Item[]> tabItems;
+    private String currentTab;
+    
+    // Reference to UIManager for equipping items
+    private UIManager uiManager;
+    
+    // ⭐ NEW: Cached visible range
+    private int cachedFirstVisibleRow = -1;
+    private int cachedLastVisibleRow = -1;
+    private int lastScrollOffsetY = -1;
+    
     public UIScrollableInventoryPanel(int x, int y, int width, int height, 
-                                      int columns, int totalRows, int visibleRows) {
+                                      int columns, int totalRows, int visibleRows, UIManager uiManager) {
         super(x, y, width, height);
+        
+        this.uiManager = uiManager;
         
         this.columns = columns;
         this.totalRows = totalRows;
@@ -75,7 +91,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
         // Calculate slot size
         int availableWidth = width - (padding * 2) - (gap * (columns - 1));
         if (showScrollbar) {
-            availableWidth -= 10; // Reserve space for scrollbar
+            availableWidth -= 10;
         }
         this.slotSize = availableWidth / columns;
         
@@ -85,27 +101,32 @@ public class UIScrollableInventoryPanel extends UIComponent {
         this.scrollbarY = y + padding;
         this.scrollbarHeight = height - (padding * 2);
         
+        // ⭐ OPTIMIZED: Pre-allocate all known tabs
+        this.tabItems = new HashMap<>();
+        this.currentTab = "Misc";
+        
+        for (String tabName : KNOWN_TABS) {
+            tabItems.put(tabName, new Item[getTotalSlots()]);
+        }
+        
         // Create slots
         createSlots();
         calculateScrollLimits();
-        // Initialize per-tab storage with default tab
-        this.tabItems = new HashMap<>();
-        this.currentTab = "Misc";
-        this.tabItems.put(currentTab, new Object[getTotalSlots()]);
         applyTabToSlots(currentTab);
     }
-
-    // Per-tab storage
-    private Map<String, Object[]> tabItems;
-    private String currentTab;
-
+    
     private void applyTabToSlots(String tabName) {
-        Object[] items = tabItems.get(tabName);
+        Item[] items = tabItems.get(tabName);
         if (items == null) return;
+        
         for (int i = 0; i < slots.size(); i++) {
             UIInventorySlot slot = slots.get(i);
-            Object it = items[i];
-            if (it == null) slot.removeItem(); else slot.setItem(it);
+            Item it = items[i];
+            if (it == null) {
+                slot.removeItem();
+            } else {
+                slot.setItem(it);
+            }
         }
     }
     
@@ -118,7 +139,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
                 int slotX = x + padding + (col * (slotSize + gap));
                 int slotY = y + padding + (row * (slotSize + gap));
                 
-                UIInventorySlot slot = new UIInventorySlot(slotX, slotY, slotSize, slotIndex);
+                UIInventorySlot slot = new UIInventorySlot(slotX, slotY, slotSize, slotIndex, uiManager);
                 slots.add(slot);
                 slotIndex++;
             }
@@ -131,39 +152,52 @@ public class UIScrollableInventoryPanel extends UIComponent {
         maxScrollY = Math.max(0, contentHeight - viewportHeight);
     }
     
-    /**
-     * Handle mouse wheel scrolling
-     */
+    // ⭐ NEW: Calculate visible row range
+    private void updateVisibleRange() {
+        if (scrollOffsetY == lastScrollOffsetY) {
+            return; // No change
+        }
+        
+        int rowHeight = slotSize + gap;
+        cachedFirstVisibleRow = Math.max(0, scrollOffsetY / rowHeight);
+        cachedLastVisibleRow = Math.min(totalRows - 1, 
+            (scrollOffsetY + height - padding * 2) / rowHeight + 1);
+        
+        lastScrollOffsetY = scrollOffsetY;
+    }
+    
     public void handleScroll(int wheelRotation) {
         if (!showScrollbar) return;
         
         int scrollAmount = wheelRotation * (slotSize + gap);
         scrollOffsetY = Math.max(0, Math.min(maxScrollY, scrollOffsetY + scrollAmount));
         
-        // Show scrollbar and reset fade timer
         scrollbarAlpha = 1.0f;
-        scrollbarFadeTimer = 1.5f; // Keep visible for 1.5 seconds
+        scrollbarFadeTimer = 1.5f;
         
         updateSlotPositions();
     }
-
-    // Switch the visible tab
+    
     public void switchToTab(String tabName) {
+        // ⭐ Only allocate if unknown tab (shouldn't happen with pre-allocation)
         if (!tabItems.containsKey(tabName)) {
-            tabItems.put(tabName, new Object[getTotalSlots()]);
+            System.out.println("Warning: Unknown tab '" + tabName + "' - allocating");
+            tabItems.put(tabName, new Item[getTotalSlots()]);
         }
+        
         this.currentTab = tabName;
         applyTabToSlots(tabName);
     }
-
-    // Add an item to the current tab's first empty slot
-    public boolean addItemToCurrentTab(Object item) {
+    
+    public boolean addItemToCurrentTab(Item item) {
         if (currentTab == null) currentTab = "Misc";
-        Object[] items = tabItems.get(currentTab);
+        
+        Item[] items = tabItems.get(currentTab);
         if (items == null) {
-            items = new Object[getTotalSlots()];
+            items = new Item[getTotalSlots()];
             tabItems.put(currentTab, items);
         }
+        
         for (int i = 0; i < items.length; i++) {
             if (items[i] == null) {
                 items[i] = item;
@@ -171,6 +205,23 @@ public class UIScrollableInventoryPanel extends UIComponent {
                 if (slot != null) slot.setItem(item);
                 return true;
             }
+        }
+        return false;
+    }
+    
+    public boolean removeItemFromSlot(int slotIndex) {
+        if (currentTab == null || slotIndex < 0 || slotIndex >= getTotalSlots()) {
+            return false;
+        }
+        
+        Item[] items = tabItems.get(currentTab);
+        if (items != null && items[slotIndex] != null) {
+            items[slotIndex] = null;
+            UIInventorySlot slot = getSlot(slotIndex);
+            if (slot != null) {
+                slot.removeItem();
+            }
+            return true;
         }
         return false;
     }
@@ -203,20 +254,24 @@ public class UIScrollableInventoryPanel extends UIComponent {
         g.setStroke(new java.awt.BasicStroke(2));
         g.drawRect(x, y, width, height);
         
-        // Create clipping region for slots
+        // Create clipping region
         Rectangle oldClip = g.getClipBounds();
         g.setClip(x + padding, y + padding, 
                   width - padding * 2 - (showScrollbar ? 12 : 0), 
                   height - padding * 2);
         
-        // Render visible slots
-        for (UIInventorySlot slot : slots) {
-            if (slot.getY() + slot.getHeight() < y || slot.getY() > y + height) {
-                continue; // Skip slots outside viewport
-            }
-            
-            if (slot.isVisible()) {
-                slot.render(g);
+        // ⭐ OPTIMIZED: Only render visible slots
+        updateVisibleRange();
+        
+        for (int row = cachedFirstVisibleRow; row <= cachedLastVisibleRow; row++) {
+            for (int col = 0; col < columns; col++) {
+                int index = row * columns + col;
+                if (index < slots.size()) {
+                    UIInventorySlot slot = slots.get(index);
+                    if (slot.isVisible()) {
+                        slot.render(g);
+                    }
+                }
             }
         }
         
@@ -230,7 +285,6 @@ public class UIScrollableInventoryPanel extends UIComponent {
     }
     
     private void drawScrollbar(Graphics2D g) {
-        // Calculate thumb position and size
         float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
         float thumbRatio = (float)visibleRows / totalRows;
         
@@ -243,7 +297,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
                             scrollbarColor.getBlue(), bgAlpha));
         g.fillRoundRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, 4, 4);
         
-        // Draw thumb
+        // Thumb
         int thumbAlpha = (int)(scrollbarAlpha * 255);
         g.setColor(new Color(scrollbarThumbColor.getRed(), scrollbarThumbColor.getGreen(), 
                             scrollbarThumbColor.getBlue(), thumbAlpha));
@@ -254,28 +308,28 @@ public class UIScrollableInventoryPanel extends UIComponent {
     public void update(float delta) {
         if (!visible) return;
         
-        // Fade out scrollbar when not in use
+        // ⭐ OPTIMIZED: Unified scrollbar fade logic
         if (scrollbarFadeTimer > 0) {
             scrollbarFadeTimer -= delta;
-            if (scrollbarFadeTimer <= 0) {
-                scrollbarFadeTimer = 0;
-            }
-        } else if (!mouseOverScrollbar) {
-            // Only fade if mouse is not over scrollbar
-            if (scrollbarAlpha > 0) {
-                scrollbarAlpha -= delta * 1.5f; // Slower fade
-                if (scrollbarAlpha < 0) scrollbarAlpha = 0;
-            }
+        } else if (!mouseOverScrollbar && scrollbarAlpha > 0) {
+            scrollbarAlpha -= delta * 1.5f;
+            if (scrollbarAlpha < 0) scrollbarAlpha = 0;
         }
         
-        // Update slots
-        for (UIInventorySlot slot : slots) {
-            slot.update(delta);
+        // ⭐ OPTIMIZED: Only update visible slots
+        updateVisibleRange();
+        for (int row = cachedFirstVisibleRow; row <= cachedLastVisibleRow; row++) {
+            for (int col = 0; col < columns; col++) {
+                int index = row * columns + col;
+                if (index < slots.size()) {
+                    slots.get(index).update(delta);
+                }
+            }
         }
     }
     
     public void handleMouseMove(int mouseX, int mouseY, boolean pressed) {
-        // Check if mouse is over scrollbar area
+        // Check scrollbar hover
         boolean wasOverScrollbar = mouseOverScrollbar;
         mouseOverScrollbar = showScrollbar && 
                             mouseX >= scrollbarX - 5 && 
@@ -283,48 +337,46 @@ public class UIScrollableInventoryPanel extends UIComponent {
                             mouseY >= scrollbarY && 
                             mouseY <= scrollbarY + scrollbarHeight;
         
-        // Show scrollbar on hover (but don't flicker)
         if (mouseOverScrollbar && !wasOverScrollbar) {
             scrollbarAlpha = 1.0f;
-            scrollbarFadeTimer = 0; // Don't auto-fade while hovering
+            scrollbarFadeTimer = 0;
         }
         
-        // Update slot hover states
-        for (UIInventorySlot slot : slots) {
-            if (!slot.isVisible() || !slot.isEnabled()) continue;
-            
-            // Only check slots in viewport
-            if (slot.getY() + slot.getHeight() < y || slot.getY() > y + height) {
-                if (slot.isHovered()) {
+        // ⭐ OPTIMIZED: Only check visible slots
+        updateVisibleRange();
+        
+        for (int row = cachedFirstVisibleRow; row <= cachedLastVisibleRow; row++) {
+            for (int col = 0; col < columns; col++) {
+                int index = row * columns + col;
+                if (index >= slots.size()) continue;
+                
+                UIInventorySlot slot = slots.get(index);
+                if (!slot.isVisible() || !slot.isEnabled()) continue;
+                
+                boolean contains = slot.contains(mouseX, mouseY);
+                
+                if (contains && !slot.isHovered()) {
+                    slot.onMouseEnter();
+                } else if (!contains && slot.isHovered()) {
                     slot.onMouseExit();
                 }
-                continue;
-            }
-            
-            boolean contains = slot.contains(mouseX, mouseY);
-            
-            if (contains && !slot.isHovered()) {
-                slot.onMouseEnter();
-            } else if (!contains && slot.isHovered()) {
-                slot.onMouseExit();
             }
         }
-        // Handle dragging the thumb
+        
+        // Handle thumb dragging
         if (draggingThumb) {
             if (!pressed) {
-                // Released
                 draggingThumb = false;
             } else {
-                // Compute new thumbY constrained
                 int newThumbY = mouseY - dragOffset;
                 int minThumbY = scrollbarY;
                 int maxThumbY = scrollbarY + scrollbarHeight - thumbHeight;
                 newThumbY = Math.max(minThumbY, Math.min(maxThumbY, newThumbY));
-
-                float scrollRatio = (float)(newThumbY - scrollbarY) / (float)(scrollbarHeight - thumbHeight);
-                scrollOffsetY = (int)(scrollRatio * Math.max(0, maxScrollY));
+                
+                float scrollRatio = (float)(newThumbY - scrollbarY) / (scrollbarHeight - thumbHeight);
+                scrollOffsetY = (int)(scrollRatio * maxScrollY);
                 updateSlotPositions();
-
+                
                 scrollbarAlpha = 1.0f;
                 scrollbarFadeTimer = 0.5f;
             }
@@ -332,31 +384,30 @@ public class UIScrollableInventoryPanel extends UIComponent {
     }
     
     public boolean handleClick(int mouseX, int mouseY) {
-        // Check slots (in reverse order for proper z-ordering)
-        for (int i = slots.size() - 1; i >= 0; i--) {
-            UIInventorySlot slot = slots.get(i);
-            
-            if (!slot.isVisible() || !slot.isEnabled()) continue;
-            
-            // Skip slots outside viewport
-            if (slot.getY() + slot.getHeight() < y || slot.getY() > y + height) {
-                continue;
-            }
-            
-            if (slot.contains(mouseX, mouseY)) {
-                return slot.onClick();
+        // ⭐ OPTIMIZED: Only check visible slots
+        updateVisibleRange();
+        
+        for (int row = cachedLastVisibleRow; row >= cachedFirstVisibleRow; row--) {
+            for (int col = columns - 1; col >= 0; col--) {
+                int index = row * columns + col;
+                if (index >= slots.size()) continue;
+                
+                UIInventorySlot slot = slots.get(index);
+                if (!slot.isVisible() || !slot.isEnabled()) continue;
+                
+                if (slot.contains(mouseX, mouseY)) {
+                    return slot.onClick();
+                }
             }
         }
         
-        // Consume click if inside panel
-        // If click was on scrollbar thumb start dragging
+        // Handle scrollbar thumb
         if (showScrollbar) {
-            // Ensure thumb metrics are up-to-date
             float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
             float thumbRatio = (float)visibleRows / totalRows;
             thumbHeight = Math.max(20, (int)(scrollbarHeight * thumbRatio));
             thumbY = scrollbarY + (int)((scrollbarHeight - thumbHeight) * scrollRatio);
-
+            
             if (mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&
                 mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
                 draggingThumb = true;
@@ -365,24 +416,25 @@ public class UIScrollableInventoryPanel extends UIComponent {
                 return true;
             }
         }
-
+        
         return this.contains(mouseX, mouseY);
     }
     
     public boolean handleRightClick(int mouseX, int mouseY) {
-        // Check slots
-        for (int i = slots.size() - 1; i >= 0; i--) {
-            UIInventorySlot slot = slots.get(i);
-            
-            if (!slot.isVisible() || !slot.isEnabled()) continue;
-            
-            // Skip slots outside viewport
-            if (slot.getY() + slot.getHeight() < y || slot.getY() > y + height) {
-                continue;
-            }
-            
-            if (slot.contains(mouseX, mouseY)) {
-                return slot.onRightClick();
+        // ⭐ OPTIMIZED: Only check visible slots
+        updateVisibleRange();
+        
+        for (int row = cachedLastVisibleRow; row >= cachedFirstVisibleRow; row--) {
+            for (int col = columns - 1; col >= 0; col--) {
+                int index = row * columns + col;
+                if (index >= slots.size()) continue;
+                
+                UIInventorySlot slot = slots.get(index);
+                if (!slot.isVisible() || !slot.isEnabled()) continue;
+                
+                if (slot.contains(mouseX, mouseY)) {
+                    return slot.onRightClick();
+                }
             }
         }
         
@@ -411,5 +463,25 @@ public class UIScrollableInventoryPanel extends UIComponent {
     
     public void setBorderColor(Color color) {
         this.borderColor = color;
+    }
+    
+    public UIInventorySlot getHoveredSlot(int mouseX, int mouseY) {
+        // Check visible slots
+        updateVisibleRange();
+        
+        for (int row = cachedLastVisibleRow; row >= cachedFirstVisibleRow; row--) {
+            for (int col = columns - 1; col >= 0; col--) {
+                int index = row * columns + col;
+                if (index >= slots.size()) continue;
+                
+                UIInventorySlot slot = slots.get(index);
+                if (!slot.isVisible() || !slot.isEnabled()) continue;
+                
+                if (slot.contains(mouseX, mouseY)) {
+                    return slot;
+                }
+            }
+        }
+        return null;
     }
 }
