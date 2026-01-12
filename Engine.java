@@ -472,25 +472,6 @@ public class Engine extends Canvas implements Runnable, KeyListener {
          }
      }
      
-     // Show stats (press S)
-     if (e.getKeyCode() == KeyEvent.VK_S) {
-         Entity player = gameState.getPlayer();
-         Experience exp = player.getComponent(Experience.class);
-         Stats stats = player.getComponent(Stats.class);
-         
-         if (exp != null && stats != null) {
-             System.out.println("\n╔═══════════════════════════════════╗");
-             System.out.println("       PLAYER STATS");
-             System.out.println("╠═══════════════════════════════════╣");
-             System.out.println("Level:      " + exp.level);
-             System.out.println("XP:         " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel);
-             System.out.println("HP:         " + stats.hp + "/" + stats.maxHp);
-             System.out.println("Mana:       " + stats.mana + "/" + stats.maxMana);
-             System.out.println("Stamina:    " + (int)stats.stamina + "/" + (int)stats.maxStamina);
-             System.out.println("╚═══════════════════════════════════╝\n");
-         }
-     }
-     
      // Spawn test monsters (M, E, B keys)
      if (e.getKeyCode() == KeyEvent.VK_M) {
          Entity player = gameState.getPlayer();

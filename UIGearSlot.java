@@ -201,27 +201,22 @@ public class UIGearSlot extends UIComponent {
     public boolean onRightClick() {
         if (item != null) {
             System.out.println("Right-clicked gear slot: " + slotType + " - unequipping");
-            unequipItem();
+            uiManager.unequipItem(slotType);
         }
         return true;  // Consume click
     }
     
     // Item management
-    public void equipItem(Item item) {
-        // Unequip current item if any
-        if (this.item != null) {
-            unequipItem();
-        }
-        // Equip new item
+    public Item equipItem(Item item) {
+        Item oldItem = this.item;
         this.item = item;
+        return oldItem;
     }
     
-    public void unequipItem() {
-        if (item != null) {
-            // Add back to inventory
-            uiManager.addItemToInventory(item);
-            this.item = null;
-        }
+    public Item unequipItem() {
+        Item oldItem = this.item;
+        this.item = null;
+        return oldItem;
     }
     
     public Item getItem() {

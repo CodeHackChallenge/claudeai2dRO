@@ -36,6 +36,9 @@ public class UIManager implements MouseWheelListener {
     private String currentInventoryTab = "Misc";
     private List<UIInventoryTab> inventoryTabs;
     
+    private UIStatsPanel statsPanel;
+    private boolean isStatsVisible = false;
+    
     public UIManager(GameState gameState) {
         this.gameState = gameState;
         this.gameLogic = null;
@@ -54,6 +57,7 @@ public class UIManager implements MouseWheelListener {
          createVerticalMenu();
          createDialogueBox();
          createEnhancedDialogueBox();  // NEW
+         createStatsPanel();
     }
     
     private void createEnhancedDialogueBox() {
@@ -73,6 +77,15 @@ public class UIManager implements MouseWheelListener {
    
     public UIDialogueBoxEnhanced getEnhancedDialogueBox() {
          return enhancedDialogueBox;
+    }
+    
+    private void createStatsPanel() {
+        int width = 300;
+        int height = 400;
+        int menuX = Engine.WIDTH - 58;  // From vertical menu
+        int x = menuX - width - 10;
+        int y = 50;
+        statsPanel = new UIStatsPanel(x, y, width, height, gameState);
     }
     
     /**
@@ -295,6 +308,12 @@ public class UIManager implements MouseWheelListener {
                 button.setVisible(true);
                 button.setOnClick(() -> toggleQuestPanel());
             } 
+            // Stats button handler
+            else if (buttonIds[i].equals("stats")) {
+                button.setLocked(true);  // Initially locked
+                button.setVisible(true);
+                button.setOnClick(() -> toggleStatsPanel());
+            }
             else {
                 button.setLocked(true);
                 button.setVisible(true);
@@ -321,6 +340,15 @@ public class UIManager implements MouseWheelListener {
         }
         
         System.out.println("Quest Panel " + (newVisibility ? "opened" : "closed"));
+    }
+    
+    /**
+     * Toggle stats panel visibility
+     */
+    public void toggleStatsPanel() {
+        isStatsVisible = !isStatsVisible;
+        statsPanel.setVisible(isStatsVisible);
+        System.out.println("Stats Panel " + (isStatsVisible ? "opened" : "closed"));
     }
     /**
      * Create quest panel
@@ -616,6 +644,11 @@ public class UIManager implements MouseWheelListener {
             questPanel.render(g);
         }
         
+        // Render stats panel
+        if (statsPanel != null && statsPanel.isVisible()) {
+            statsPanel.render(g);
+        }
+        
         // ⭐ Render dialogue box on top of everything
         if (dialogueBox != null && dialogueBox.isVisible()) {
             dialogueBox.render(g);
@@ -805,6 +838,40 @@ public class UIManager implements MouseWheelListener {
                 toggleQuestPanel();
             }
         }
+        
+        // Stats panel toggle (S key)
+        if (keyCode == java.awt.event.KeyEvent.VK_S) {
+            UIButton statsButton = getMenuButton("stats");
+            if (statsButton != null && !statsButton.isLocked()) {
+                toggleStatsPanel();
+            }
+        }
+        
+        // Close UI panels one at a time (ESC key)
+        if (keyCode == java.awt.event.KeyEvent.VK_ESCAPE) {
+            // Close dialogue boxes first (highest priority)
+            if (enhancedDialogueBox != null && enhancedDialogueBox.isVisible()) {
+                enhancedDialogueBox.setVisible(false);
+            } else if (dialogueBox != null && dialogueBox.isVisible()) {
+                dialogueBox.setVisible(false);
+            }
+            // Then stats panel
+            else if (isStatsVisible) {
+                toggleStatsPanel();
+            }
+            // Then quest panel
+            else if (questPanel != null && questPanel.isVisible()) {
+                toggleQuestPanel();
+            }
+            // Then inventory
+            else if (inventoryContainer != null && inventoryContainer.isVisible()) {
+                toggleInventory();
+            }
+            // Finally hide tooltip
+            else {
+                hideTooltip();
+            }
+        }
     }
     
     public void useSkillInSlot(int slotIndex) {
@@ -971,11 +1038,39 @@ public class UIManager implements MouseWheelListener {
     
     public boolean equipItem(UIGearSlot.SlotType slotType, Item item) {
         UIGearSlot slot = getGearSlot(slotType);
-        if (slot != null) {
-            slot.equipItem(item);
-            return true;
+        if (slot == null) return false;
+        Item oldItem = slot.equipItem(item);
+        if (oldItem != null) {
+            addItemToInventory(oldItem);
+            applyItemStats(oldItem, false);
         }
-        return false;
+        if (item != null) {
+            applyItemStats(item, true);
+        }
+        return true;
+    }
+    
+    public Item unequipItem(UIGearSlot.SlotType slotType) {
+        UIGearSlot slot = getGearSlot(slotType);
+        if (slot == null) return null;
+        Item item = slot.unequipItem();
+        if (item != null) {
+            addItemToInventory(item);
+            applyItemStats(item, false);
+        }
+        return item;
+    }
+    
+    private void applyItemStats(Item item, boolean add) {
+        if (item == null) return;
+        Entity player = gameState.getPlayer();
+        Stats stats = player.getComponent(Stats.class);
+        if (stats == null) return;
+        int multiplier = add ? 1 : -1;
+        stats.attack += multiplier * item.getAttackBonus();
+        stats.defense += multiplier * item.getDefenseBonus();
+        stats.magicAttack += multiplier * item.getMagicAttackBonus();
+        stats.magicDefense += multiplier * item.getMagicDefenseBonus();
     }
     
     public UIPanel getHeroPreviewPanel() {
