@@ -5,16 +5,12 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 /**
- * ⭐ OPTIMIZED: Only renders visible slots, pre-allocates tab storage
+ * REFACTORED: All tabs share same inventory slots
+ * Tabs filter items by category (Misc shows all)
  */
 public class UIScrollableInventoryPanel extends UIComponent {
-    
-    // ⭐ NEW: Known tab names as constant
-    private static final String[] KNOWN_TABS = {"Misc", "Weap", "Arm", "Acc", "Rune"};
     
     private List<UIInventorySlot> slots;
     private int columns;
@@ -50,14 +46,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
     private boolean draggingThumb = false;
     private int dragOffset = 0;
     
-    // Per-tab storage
-    private Map<String, Item[]> tabItems;
+    // ★ NEW: Single shared inventory storage
+    private Item[] sharedInventory;  // All items stored here
     private String currentTab;
     
-    // Reference to UIManager for equipping items
+    // Reference to UIManager
     private UIManager uiManager;
     
-    // ⭐ NEW: Cached visible range
+    // Cached visible range
     private int cachedFirstVisibleRow = -1;
     private int cachedLastVisibleRow = -1;
     private int lastScrollOffsetY = -1;
@@ -101,33 +97,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
         this.scrollbarY = y + padding;
         this.scrollbarHeight = height - (padding * 2);
         
-        // ⭐ OPTIMIZED: Pre-allocate all known tabs
-        this.tabItems = new HashMap<>();
+        // ★ NEW: Single shared inventory (5x10 = 50 slots)
+        this.sharedInventory = new Item[getTotalSlots()];
         this.currentTab = "Misc";
-        
-        for (String tabName : KNOWN_TABS) {
-            tabItems.put(tabName, new Item[getTotalSlots()]);
-        }
         
         // Create slots
         createSlots();
         calculateScrollLimits();
-        applyTabToSlots(currentTab);
-    }
-    
-    private void applyTabToSlots(String tabName) {
-        Item[] items = tabItems.get(tabName);
-        if (items == null) return;
-        
-        for (int i = 0; i < slots.size(); i++) {
-            UIInventorySlot slot = slots.get(i);
-            Item it = items[i];
-            if (it == null) {
-                slot.removeItem();
-            } else {
-                slot.setItem(it);
-            }
-        }
+        refreshSlotDisplay();
     }
     
     private void createSlots() {
@@ -152,10 +129,9 @@ public class UIScrollableInventoryPanel extends UIComponent {
         maxScrollY = Math.max(0, contentHeight - viewportHeight);
     }
     
-    // ⭐ NEW: Calculate visible row range
     private void updateVisibleRange() {
         if (scrollOffsetY == lastScrollOffsetY) {
-            return; // No change
+            return;
         }
         
         int rowHeight = slotSize + gap;
@@ -178,66 +154,207 @@ public class UIScrollableInventoryPanel extends UIComponent {
         updateSlotPositions();
     }
     
+    // ═══════════════════════════════════════════════════════════════
+    // ★ NEW: TAB FILTERING SYSTEM
+    // ═══════════════════════════════════════════════════════════════
+    
+    /**
+     * Switch to a tab (filters display but shares same inventory)
+     */
     public void switchToTab(String tabName) {
-        // ⭐ Only allocate if unknown tab (shouldn't happen with pre-allocation)
-        if (!tabItems.containsKey(tabName)) {
-            System.out.println("Warning: Unknown tab '" + tabName + "' - allocating");
-            tabItems.put(tabName, new Item[getTotalSlots()]);
-        }
-        
         this.currentTab = tabName;
-        applyTabToSlots(tabName);
+        scrollOffsetY = 0;  // Reset scroll to top
+        refreshSlotDisplay();
     }
     
-    public boolean addItemToCurrentTab(Item item) {
-        if (currentTab == null) currentTab = "Misc";
+    /**
+     * Refresh slot display based on current tab filter
+     */
+    private void refreshSlotDisplay() {
+        // Get filtered items for current tab
+        List<Item> filteredItems = getFilteredItems(currentTab);
         
-        Item[] items = tabItems.get(currentTab);
-        if (items == null) {
-            items = new Item[getTotalSlots()];
-            tabItems.put(currentTab, items);
+        // Clear all slots first
+        for (UIInventorySlot slot : slots) {
+            slot.removeItem();
+            slot.setVisible(false);
         }
         
-        for (int i = 0; i < items.length; i++) {
-            if (items[i] == null) {
-                items[i] = item;
-                UIInventorySlot slot = getSlot(i);
-                if (slot != null) slot.setItem(item);
+        // Populate visible slots with filtered items
+        for (int i = 0; i < filteredItems.size() && i < slots.size(); i++) {
+            UIInventorySlot slot = slots.get(i);
+            slot.setItem(filteredItems.get(i));
+            slot.setVisible(true);
+        }
+        
+        // Update scroll limits based on filtered item count
+        updateScrollLimitsForFilteredItems(filteredItems.size());
+    }
+    
+    /**
+     * Get items filtered by tab category
+     */
+    private List<Item> getFilteredItems(String tabName) {
+        List<Item> filtered = new ArrayList<>();
+        
+        for (Item item : sharedInventory) {
+            if (item == null) continue;
+            
+            // "Misc" shows everything
+            if (tabName.equals("Misc")) {
+                filtered.add(item);
+                continue;
+            }
+            
+            // Filter by category
+            if (matchesTabFilter(item, tabName)) {
+                filtered.add(item);
+            }
+        }
+        
+        return filtered;
+    }
+    
+    /**
+     * Check if item matches tab filter
+     */
+    private boolean matchesTabFilter(Item item, String tabName) {
+        Item.ItemType type = item.getType();
+        
+        switch (tabName) {
+            case "Weap":
+                return type == Item.ItemType.WEAPON;
+                
+            case "Arm":
+                return type == Item.ItemType.ARMOR;
+                
+            case "Acc":
+                return type == Item.ItemType.ACCESSORY;
+                
+            case "Rune":
+                return type == Item.ItemType.MATERIAL && 
+                       item.getName().toLowerCase().contains("rune");
+                
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Update scroll limits based on filtered item count
+     */
+    private void updateScrollLimitsForFilteredItems(int itemCount) {
+        int requiredRows = (int) Math.ceil((double) itemCount / columns);
+        int contentHeight = (slotSize * requiredRows) + (gap * (requiredRows - 1));
+        int viewportHeight = (slotSize * visibleRows) + (gap * (visibleRows - 1));
+        maxScrollY = Math.max(0, contentHeight - viewportHeight);
+        
+        // Clamp scroll offset
+        scrollOffsetY = Math.min(scrollOffsetY, maxScrollY);
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ★ NEW: INVENTORY MANAGEMENT (Shared Storage)
+    // ═══════════════════════════════════════════════════════════════
+    
+    /**
+     * Add item to shared inventory (finds first empty slot)
+     */
+    public boolean addItemToCurrentTab(Item item) {
+        // Find first empty slot in shared inventory
+        for (int i = 0; i < sharedInventory.length; i++) {
+            if (sharedInventory[i] == null) {
+                sharedInventory[i] = item;
+                refreshSlotDisplay();
                 return true;
             }
         }
-        return false;
+        return false;  // Inventory full
     }
     
+    /**
+     * Remove item from specific slot index
+     */
     public boolean removeItemFromSlot(int slotIndex) {
-        if (currentTab == null || slotIndex < 0 || slotIndex >= getTotalSlots()) {
+        // Get the actual item from filtered display
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        
+        if (slotIndex < 0 || slotIndex >= filteredItems.size()) {
             return false;
         }
         
-        Item[] items = tabItems.get(currentTab);
-        if (items != null && items[slotIndex] != null) {
-            items[slotIndex] = null;
-            UIInventorySlot slot = getSlot(slotIndex);
-            if (slot != null) {
-                slot.removeItem();
+        Item itemToRemove = filteredItems.get(slotIndex);
+        
+        // Find and remove from shared inventory
+        for (int i = 0; i < sharedInventory.length; i++) {
+            if (sharedInventory[i] == itemToRemove) {
+                sharedInventory[i] = null;
+                refreshSlotDisplay();
+                return true;
             }
-            return true;
         }
+        
         return false;
     }
     
+    /**
+     * Get item at filtered slot index
+     */
+    public Item getItemAtSlot(int slotIndex) {
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        if (slotIndex >= 0 && slotIndex < filteredItems.size()) {
+            return filteredItems.get(slotIndex);
+        }
+        return null;
+    }
+    
+    /**
+     * Get total item count (all items, not filtered)
+     */
+    public int getTotalItemCount() {
+        int count = 0;
+        for (Item item : sharedInventory) {
+            if (item != null) count++;
+        }
+        return count;
+    }
+    
+    /**
+     * Get filtered item count (current tab)
+     */
+    public int getFilteredItemCount() {
+        return getFilteredItems(currentTab).size();
+    }
+    
+    /**
+     * Clear all items
+     */
+    public void clearInventory() {
+        for (int i = 0; i < sharedInventory.length; i++) {
+            sharedInventory[i] = null;
+        }
+        refreshSlotDisplay();
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // RENDERING & UPDATES
+    // ═══════════════════════════════════════════════════════════════
+    
     private void updateSlotPositions() {
-        int slotIndex = 0;
-        for (int row = 0; row < totalRows; row++) {
-            for (int col = 0; col < columns; col++) {
-                UIInventorySlot slot = slots.get(slotIndex);
-                
-                int slotX = x + padding + (col * (slotSize + gap));
-                int slotY = y + padding + (row * (slotSize + gap)) - scrollOffsetY;
-                
-                slot.setPosition(slotX, slotY);
-                slotIndex++;
-            }
+        // Update positions of visible filtered slots
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = 0; i < visibleSlotCount; i++) {
+            UIInventorySlot slot = slots.get(i);
+            
+            int row = i / columns;
+            int col = i % columns;
+            
+            int slotX = x + padding + (col * (slotSize + gap));
+            int slotY = y + padding + (row * (slotSize + gap)) - scrollOffsetY;
+            
+            slot.setPosition(slotX, slotY);
         }
     }
     
@@ -260,17 +377,19 @@ public class UIScrollableInventoryPanel extends UIComponent {
                   width - padding * 2 - (showScrollbar ? 12 : 0), 
                   height - padding * 2);
         
-        // ⭐ OPTIMIZED: Only render visible slots
+        // Render visible slots
         updateVisibleRange();
         
-        for (int row = cachedFirstVisibleRow; row <= cachedLastVisibleRow; row++) {
-            for (int col = 0; col < columns; col++) {
-                int index = row * columns + col;
-                if (index < slots.size()) {
-                    UIInventorySlot slot = slots.get(index);
-                    if (slot.isVisible()) {
-                        slot.render(g);
-                    }
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = 0; i < visibleSlotCount; i++) {
+            int row = i / columns;
+            
+            if (row >= cachedFirstVisibleRow && row <= cachedLastVisibleRow) {
+                UIInventorySlot slot = slots.get(i);
+                if (slot.isVisible()) {
+                    slot.render(g);
                 }
             }
         }
@@ -282,11 +401,41 @@ public class UIScrollableInventoryPanel extends UIComponent {
         if (showScrollbar && scrollbarAlpha > 0) {
             drawScrollbar(g);
         }
+        
+        // Draw item count indicator
+        drawItemCount(g, filteredItems.size());
+    }
+    
+    /**
+     * Draw item count for current tab
+     */
+    private void drawItemCount(Graphics2D g, int count) {
+        String countText = count + " / " + sharedInventory.length;
+        
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 10));
+        java.awt.FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(countText);
+        
+        int textX = x + width - textWidth - padding - (showScrollbar ? 12 : 0);
+        int textY = y + height - 4;
+        
+        // Shadow
+        g.setColor(new Color(0, 0, 0, 150));
+        g.drawString(countText, textX + 1, textY + 1);
+        
+        // Text
+        g.setColor(new Color(180, 180, 180));
+        g.drawString(countText, textX, textY);
     }
     
     private void drawScrollbar(Graphics2D g) {
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int requiredRows = (int) Math.ceil((double) filteredItems.size() / columns);
+        
+        if (requiredRows <= visibleRows) return;  // No need for scrollbar
+        
         float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
-        float thumbRatio = (float)visibleRows / totalRows;
+        float thumbRatio = (float)visibleRows / requiredRows;
         
         thumbHeight = Math.max(20, (int)(scrollbarHeight * thumbRatio));
         thumbY = scrollbarY + (int)((scrollbarHeight - thumbHeight) * scrollRatio);
@@ -308,7 +457,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
     public void update(float delta) {
         if (!visible) return;
         
-        // ⭐ OPTIMIZED: Unified scrollbar fade logic
+        // Scrollbar fade
         if (scrollbarFadeTimer > 0) {
             scrollbarFadeTimer -= delta;
         } else if (!mouseOverScrollbar && scrollbarAlpha > 0) {
@@ -316,17 +465,24 @@ public class UIScrollableInventoryPanel extends UIComponent {
             if (scrollbarAlpha < 0) scrollbarAlpha = 0;
         }
         
-        // ⭐ OPTIMIZED: Only update visible slots
+        // Update visible slots
         updateVisibleRange();
-        for (int row = cachedFirstVisibleRow; row <= cachedLastVisibleRow; row++) {
-            for (int col = 0; col < columns; col++) {
-                int index = row * columns + col;
-                if (index < slots.size()) {
-                    slots.get(index).update(delta);
-                }
+        
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = 0; i < visibleSlotCount; i++) {
+            int row = i / columns;
+            
+            if (row >= cachedFirstVisibleRow && row <= cachedLastVisibleRow) {
+                slots.get(i).update(delta);
             }
         }
     }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // INPUT HANDLING
+    // ═══════════════════════════════════════════════════════════════
     
     public void handleMouseMove(int mouseX, int mouseY, boolean pressed) {
         // Check scrollbar hover
@@ -342,15 +498,17 @@ public class UIScrollableInventoryPanel extends UIComponent {
             scrollbarFadeTimer = 0;
         }
         
-        // ⭐ OPTIMIZED: Only check visible slots
+        // Update slot hovers
         updateVisibleRange();
         
-        for (int row = cachedFirstVisibleRow; row <= cachedLastVisibleRow; row++) {
-            for (int col = 0; col < columns; col++) {
-                int index = row * columns + col;
-                if (index >= slots.size()) continue;
-                
-                UIInventorySlot slot = slots.get(index);
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = 0; i < visibleSlotCount; i++) {
+            int row = i / columns;
+            
+            if (row >= cachedFirstVisibleRow && row <= cachedLastVisibleRow) {
+                UIInventorySlot slot = slots.get(i);
                 if (!slot.isVisible() || !slot.isEnabled()) continue;
                 
                 boolean contains = slot.contains(mouseX, mouseY);
@@ -384,15 +542,16 @@ public class UIScrollableInventoryPanel extends UIComponent {
     }
     
     public boolean handleClick(int mouseX, int mouseY) {
-        // ⭐ OPTIMIZED: Only check visible slots
         updateVisibleRange();
         
-        for (int row = cachedLastVisibleRow; row >= cachedFirstVisibleRow; row--) {
-            for (int col = columns - 1; col >= 0; col--) {
-                int index = row * columns + col;
-                if (index >= slots.size()) continue;
-                
-                UIInventorySlot slot = slots.get(index);
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = visibleSlotCount - 1; i >= 0; i--) {
+            int row = i / columns;
+            
+            if (row >= cachedFirstVisibleRow && row <= cachedLastVisibleRow) {
+                UIInventorySlot slot = slots.get(i);
                 if (!slot.isVisible() || !slot.isEnabled()) continue;
                 
                 if (slot.contains(mouseX, mouseY)) {
@@ -403,17 +562,22 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         // Handle scrollbar thumb
         if (showScrollbar) {
-            float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
-            float thumbRatio = (float)visibleRows / totalRows;
-            thumbHeight = Math.max(20, (int)(scrollbarHeight * thumbRatio));
-            thumbY = scrollbarY + (int)((scrollbarHeight - thumbHeight) * scrollRatio);
+            List<Item> items = getFilteredItems(currentTab);
+            int requiredRows = (int) Math.ceil((double) items.size() / columns);
             
-            if (mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&
-                mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
-                draggingThumb = true;
-                dragOffset = mouseY - thumbY;
-                scrollbarAlpha = 1.0f;
-                return true;
+            if (requiredRows > visibleRows) {
+                float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
+                float thumbRatio = (float)visibleRows / requiredRows;
+                thumbHeight = Math.max(20, (int)(scrollbarHeight * thumbRatio));
+                thumbY = scrollbarY + (int)((scrollbarHeight - thumbHeight) * scrollRatio);
+                
+                if (mouseX >= scrollbarX && mouseX <= scrollbarX + scrollbarWidth &&
+                    mouseY >= thumbY && mouseY <= thumbY + thumbHeight) {
+                    draggingThumb = true;
+                    dragOffset = mouseY - thumbY;
+                    scrollbarAlpha = 1.0f;
+                    return true;
+                }
             }
         }
         
@@ -421,15 +585,16 @@ public class UIScrollableInventoryPanel extends UIComponent {
     }
     
     public boolean handleRightClick(int mouseX, int mouseY) {
-        // ⭐ OPTIMIZED: Only check visible slots
         updateVisibleRange();
         
-        for (int row = cachedLastVisibleRow; row >= cachedFirstVisibleRow; row--) {
-            for (int col = columns - 1; col >= 0; col--) {
-                int index = row * columns + col;
-                if (index >= slots.size()) continue;
-                
-                UIInventorySlot slot = slots.get(index);
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = visibleSlotCount - 1; i >= 0; i--) {
+            int row = i / columns;
+            
+            if (row >= cachedFirstVisibleRow && row <= cachedLastVisibleRow) {
+                UIInventorySlot slot = slots.get(i);
                 if (!slot.isVisible() || !slot.isEnabled()) continue;
                 
                 if (slot.contains(mouseX, mouseY)) {
@@ -441,7 +606,10 @@ public class UIScrollableInventoryPanel extends UIComponent {
         return this.contains(mouseX, mouseY);
     }
     
-    // Public methods
+    // ═══════════════════════════════════════════════════════════════
+    // GETTERS
+    // ═══════════════════════════════════════════════════════════════
+    
     public UIInventorySlot getSlot(int index) {
         if (index >= 0 && index < slots.size()) {
             return slots.get(index);
@@ -466,15 +634,16 @@ public class UIScrollableInventoryPanel extends UIComponent {
     }
     
     public UIInventorySlot getHoveredSlot(int mouseX, int mouseY) {
-        // Check visible slots
         updateVisibleRange();
         
-        for (int row = cachedLastVisibleRow; row >= cachedFirstVisibleRow; row--) {
-            for (int col = columns - 1; col >= 0; col--) {
-                int index = row * columns + col;
-                if (index >= slots.size()) continue;
-                
-                UIInventorySlot slot = slots.get(index);
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        
+        for (int i = visibleSlotCount - 1; i >= 0; i--) {
+            int row = i / columns;
+            
+            if (row >= cachedFirstVisibleRow && row <= cachedLastVisibleRow) {
+                UIInventorySlot slot = slots.get(i);
                 if (!slot.isVisible() || !slot.isEnabled()) continue;
                 
                 if (slot.contains(mouseX, mouseY)) {
@@ -483,5 +652,9 @@ public class UIScrollableInventoryPanel extends UIComponent {
             }
         }
         return null;
+    }
+    
+    public String getCurrentTab() {
+        return currentTab;
     }
 }

@@ -1542,6 +1542,9 @@ public class GameLogic {
                 }
             }
             
+            // Notify UI of level up
+            state.getUIManager().notifyLevelUp();
+            
             System.out.println("╔════════════════════════════════╗");
             System.out.println("║        LEVEL UP!               ║");
             System.out.println("╠════════════════════════════════╣");

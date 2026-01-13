@@ -8,8 +8,12 @@ public class EntityFactory {
 	    Entity player = new Entity("Player", EntityType.PLAYER);
 	    
 	    player.addComponent(new Position(x, y));
-	    //player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f)); //eclipse
-        player.addComponent(new Sprite("resources/sprites/hero2.png", 64, 64, 0.2f));
+	    
+	    if(Engine.IDE == Engine.Eclipse)
+	    	player.addComponent(new Sprite("/sprites/hero2.png", 64, 64, 0.2f)); //eclipse
+        else if(Engine.IDE == Engine.VSCode)
+        	player.addComponent(new Sprite("resources/sprites/hero2.png", 64, 64, 0.2f));
+         
 	    player.addComponent(new Movement(100f, 200f));
 	    
 	    // Base stats
@@ -81,8 +85,11 @@ public class EntityFactory {
         // Configure monster type-specific properties
         switch(monsterType) {
             case "Goblin":
-                monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code 
-                 //monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code 
+                
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44)); 
@@ -93,8 +100,11 @@ public class EntityFactory {
                 break;
                 
             case "GoblinBoss":
-                monster.addComponent(new Sprite("resources/sprites/goblin_dark.png", 64, 64, 0.12f)); //VS code
-                //monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.12f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/goblin_dark.png", 64, 64, 0.12f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                    monster.addComponent(new Sprite("resources/sprites/goblin_dark.png", 64, 64, 0.12f)); //VS code
+                
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
                 monster.addComponent(new Movement(100f, 200f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -105,8 +115,13 @@ public class EntityFactory {
                 break;
                 
             case "BunnyBoss":
-                monster.addComponent(new Sprite("resources/sprites/bunny_boss.png", 64, 64, 0.12f)); //vs code
-                //monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/bunny_boss.png", 64, 64, 0.12f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/bunny_boss.png", 64, 64, 0.12f)); //vs code
+                
+            	
+           
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
                 monster.addComponent(new Movement(100f, 200f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -117,8 +132,12 @@ public class EntityFactory {
                 break;
                 
             case "MinotaurBoss":
-                monster.addComponent(new Sprite("resources/sprites/minotaur_boss.png", 64, 64, 0.12f)); //vs code
-                //monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/minotaur_boss.png", 64, 64, 0.12f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/minotaur_boss.png", 64, 64, 0.12f)); //vs code
+                
+                 
                 monster.addComponent(new Combat(1.0f, 0.20f, 0.05f));
                 monster.addComponent(new Movement(100f, 200f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -129,8 +148,11 @@ public class EntityFactory {
                 break;
                 
             case "Bunny":
-                monster.addComponent(new Sprite("resources/sprites/bunny.png", 64, 64, 0.15f)); //vs code
-                //monster.addComponent(new Sprite("/sprites/bunny.png", 64, 64, 0.15f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/bunny.png", 64, 64, 0.15f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/bunny.png", 64, 64, 0.15f)); //vs code
+               
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-10, -14, 22, 44));
@@ -142,8 +164,11 @@ public class EntityFactory {
                 
                 //me
             case "Ghost":
-                monster.addComponent(new Sprite("resources/sprites/ghost.png", 64, 64, 0.15f)); //vs code
-               // monster.addComponent(new Sprite("/sprites/ghost.png", 64, 64, 0.15f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/ghost.png", 64, 64, 0.15f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/ghost.png", 64, 64, 0.15f)); //vs code
+              
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-17, -14, 36, 42));
@@ -154,8 +179,11 @@ public class EntityFactory {
                 break;
                 //me
             case "Orc":
-                 monster.addComponent(new Sprite("resources/sprites/ro_orc.png", 95, 129, 0.15f)); //vs code
-                 //monster.addComponent(new Sprite("/sprites/ro_orc.png", 95, 129, 0.15f)); // eclipse
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/ro_orc.png", 95, 129, 0.15f)); // eclipse
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/ro_orc.png", 95, 129, 0.15f)); //vs code
+                  
                 monster.addComponent(new Combat(1.2f, 0.10f, 0.08f));
                 monster.addComponent(new Movement(80f, 160f));
                 monster.addComponent(new CollisionBox(-17, -14, 36, 42));
@@ -166,8 +194,12 @@ public class EntityFactory {
                 break;
             default:
                 // Default monster setup
-                monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code
-                 //monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse 
+            	if(Engine.IDE == Engine.Eclipse)
+            		monster.addComponent(new Sprite("/sprites/goblin.png", 64, 64, 0.15f)); // eclipse 
+                else if(Engine.IDE == Engine.VSCode)
+                	monster.addComponent(new Sprite("resources/sprites/goblin.png", 64, 64, 0.15f)); //VS Code
+                
+                 
                 monster.addComponent(new Combat(1.5f, 0.05f, 0.08f));
                 monster.addComponent(new Movement(50f, 100f));
                 monster.addComponent(new CollisionBox(-12, -12, 24, 24));
@@ -201,8 +233,16 @@ public class EntityFactory {
         npc.addComponent(new Position(x, y));
         
         // Use a simple sprite for NPCs (can be customized later)
-        //npc.addComponent(new Sprite("/sprites/npc_" + npcId + ".png", 64, 64, 0f));
-        npc.addComponent(new Sprite("resources/sprites/npc_" + npcId + ".png", 64, 64, 0f)); 
+        if(Engine.IDE == Engine.Eclipse) {
+        	npc.addComponent(new Sprite("/sprites/npc_left_" + npcId + ".png", 64, 64, 0f));
+        }
+        	
+        else if(Engine.IDE == Engine.VSCode) {
+        	npc.addComponent(new Sprite("resources/sprites/npc_left_" + npcId + ".png", 64, 64, 0f)); 
+        }
+        	
+   
+        
           
         // NPCs don't move
         // No Movement component needed
@@ -214,6 +254,7 @@ public class EntityFactory {
         // Add name tag (always visible)
         NameTag nameTag = new NameTag(npcName, -22);
         nameTag.show();  // Always show NPC names
+        //nameTag.hide(); 
         npc.addComponent(nameTag);
         
         // Add collision box (so player can't walk through NPC)
@@ -273,18 +314,72 @@ public class EntityFactory {
     /**
      * Create a simple tree environment entity
      */
-    public static Entity createTree(float x, float y) {
+    public static Entity createTree(float x, float y, String orientation) {
         Entity tree = new Entity("Tree", EntityType.ENVIRONMENT);
 
         tree.addComponent(new Position(x, y));
-        tree.addComponent(new Sprite("resources/sprites/tree.png", 481, 513, 0f)); //VS Code
-        //tree.addComponent(new Sprite("/sprites/willow.png", 481, 513, 0f)); //eclipse
-        tree.addComponent(new Renderable(RenderLayer.ENTITIES, 80));
+        
+        switch(orientation) {
+	        case "right":
+	        	if(Engine.IDE == Engine.Eclipse)
+	            	tree.addComponent(new Sprite("/sprites/tree01.png", 591, 545, 0f)); //eclipse
+	            else if(Engine.IDE == Engine.VSCode)
+	            	tree.addComponent(new Sprite("resources/sprites/tree01.png", 591, 545, 0f)); //VS Code
+	             
+	        	break;
+	        case "left":
+	        	if(Engine.IDE == Engine.Eclipse)
+	            	tree.addComponent(new Sprite("/sprites/tree02.png", 591, 545, 0f)); //eclipse
+	            else if(Engine.IDE == Engine.VSCode)
+	            	tree.addComponent(new Sprite("resources/sprites/tree02.png", 591, 545, 0f)); //VS Code
+	             
+	        	break;
+        }
+        
+        tree.addComponent(new Renderable(RenderLayer.ENTITIES, 120));
         NameTag nt = new NameTag("Tree", -40);
         nt.show();
         tree.addComponent(nt);
 
         return tree;
+    }
+    
+    public static Entity createBoulder(float x, float y) {
+    	Entity boulder = new Entity("Boulder", EntityType.ENVIRONMENT);
+    	
+    	boulder.addComponent(new Position(x, y));
+    	
+    	if(Engine.IDE == Engine.Eclipse)
+    		boulder.addComponent(new Sprite("/sprites/boulder01.png", 239, 226, 0f)); //eclipse
+        else if(Engine.IDE == Engine.VSCode)
+        	boulder.addComponent(new Sprite("resources/sprites/boulder01.png", 239, 226, 0f)); //VS Code
+      
+    	boulder.addComponent(new Renderable(RenderLayer.ENTITIES, 20));
+        NameTag nt = new NameTag("Boulder", -40);
+        nt.show();
+        boulder.addComponent(nt);
+    	
+    	
+    	return boulder;
+    }
+    
+    public static Entity createFountain(float x, float y) {
+    	Entity fountain = new Entity("Fountain", EntityType.ENVIRONMENT);
+    	
+    	fountain.addComponent(new Position(x, y));
+    	
+    	if(Engine.IDE == Engine.Eclipse)
+    		fountain.addComponent(new Sprite("/sprites/elvesfountain01.png", 239, 268, 0f)); //eclipse
+        else if(Engine.IDE == Engine.VSCode)
+        	fountain.addComponent(new Sprite("resources/sprites/elvesfountain01.png", 239, 268, 0f)); //VS Code
+      
+    	fountain.addComponent(new Renderable(RenderLayer.ENTITIES, 20));
+        NameTag nt = new NameTag("Fountain", -40);
+        nt.show();
+        fountain.addComponent(nt);
+    	
+    	
+    	return fountain;
     }
     
 }

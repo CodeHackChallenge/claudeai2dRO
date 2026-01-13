@@ -2,14 +2,15 @@ package dev.main;
 
 /**
  * Represents an item in the game with stats, durability, and properties
+ * UPDATED: ItemType matches inventory tab categories
  */
 public class Item {
     public enum ItemType {
-        WEAPON,
-        ARMOR,
-        ACCESSORY,
-        CONSUMABLE,
-        MATERIAL
+        WEAPON,      // "Weap" tab
+        ARMOR,       // "Arm" tab
+        ACCESSORY,   // "Acc" tab
+        CONSUMABLE,  // "Misc" tab (potions, food)
+        MATERIAL     // "Misc" or "Rune" tab (materials, runes)
     }
 
     public enum Rarity {
@@ -103,6 +104,8 @@ public class Item {
     public boolean isWeapon() { return type == ItemType.WEAPON; }
     public boolean isArmor() { return type == ItemType.ARMOR; }
     public boolean isAccessory() { return type == ItemType.ACCESSORY; }
+    public boolean isConsumable() { return type == ItemType.CONSUMABLE; }
+    public boolean isMaterial() { return type == ItemType.MATERIAL; }
 
     @Override
     public String toString() {

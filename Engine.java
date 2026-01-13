@@ -19,12 +19,17 @@ import javax.swing.JPanel;
 
 public class Engine extends Canvas implements Runnable, KeyListener {
 
+	//constants
+	public static final int Eclipse = 0;
+	public static final int VSCode = 1;
+	public static int IDE = -1;
+	
     // Display constants
     public static final int SPRITE_SIZE = 64;
     private static final int SCALE = 2;
     
     public static final int WIDTH = 640 * SCALE;
-    public static final int HEIGHT = 320 * SCALE; //320
+    public static final int HEIGHT = 320 * SCALE; //10x5
     
     // Game loop constants
     public static final int UPS = 60;
@@ -52,6 +57,11 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     private static Engine instance;
     
     public Engine() {
+    	//choose IDE
+    	setupIDE(Engine.Eclipse);
+    	
+    	
+    	
         instance = this;
         // Window setup
         JFrame window = new JFrame("RO-Style 2D Game v.1");
@@ -69,68 +79,74 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         window.setLocationRelativeTo(null);
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       
-        // VS Code
-        // Setup cursors
-        defaultCursor = Cursor.getDefaultCursor();
-        // Create attack cursor (you can replace with custom image)
-        try {
-            // Placeholder: Use built-in crosshair cursor
-           // attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
-            
-            // To use custom cursor image: load from classpath (safer than using bare paths)
-            Toolkit toolkit = Toolkit.getDefaultToolkit();
+        if(Engine.IDE == Engine.VSCode) {
+        	// VS Code
+            // Setup cursors
+            defaultCursor = Cursor.getDefaultCursor();
+            // Create attack cursor (you can replace with custom image)
             try {
-                java.net.URL cursorUrl = getClass().getResource("/dev/main/resources/icon/sword.png");
-                if (cursorUrl == null) {
-                    // fallback to .cur if present
-                    cursorUrl = getClass().getResource("/dev/main/resources/icon/sword2.cur");
-                }
+                // Placeholder: Use built-in crosshair cursor
+               // attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
+                
+                // To use custom cursor image: load from classpath (safer than using bare paths)
+                Toolkit toolkit = Toolkit.getDefaultToolkit();
+                try {
+                    java.net.URL cursorUrl = getClass().getResource("/dev/main/resources/icon/sword.png");
+                    if (cursorUrl == null) {
+                        // fallback to .cur if present
+                        cursorUrl = getClass().getResource("/dev/main/resources/icon/sword2.cur");
+                    }
 
-                if (cursorUrl != null) {
-                    System.out.println("Loading cursor from: " + cursorUrl);
-                    java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(cursorUrl);
-                    if (cursorImg != null) {
-                        attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
-                        System.out.println("Custom attack cursor created.");
+                    if (cursorUrl != null) {
+                        System.out.println("Loading cursor from: " + cursorUrl);
+                        java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(cursorUrl);
+                        if (cursorImg != null) {
+                            attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
+                            System.out.println("Custom attack cursor created.");
+                        } else {
+                            System.out.println("Cursor resource found but failed to read image; using default cursor.");
+                            attackCursor = defaultCursor;
+                        }
                     } else {
-                        System.out.println("Cursor resource found but failed to read image; using default cursor.");
-                        attackCursor = defaultCursor;
+                        System.out.println("Cursor resource not found on classpath; trying local file fallback.");
+                        // Last-resort: try relative file path (useful during IDE runs)
+                        java.io.File f = new java.io.File("bin/dev/main/resources/icon/sword.png");
+                        if (f.exists()) {
+                            java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(f);
+                            attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
+                        } else {
+                            attackCursor = defaultCursor;
+                        }
                     }
-                } else {
-                    System.out.println("Cursor resource not found on classpath; trying local file fallback.");
-                    // Last-resort: try relative file path (useful during IDE runs)
-                    java.io.File f = new java.io.File("bin/dev/main/resources/icon/sword.png");
-                    if (f.exists()) {
-                        java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(f);
-                        attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
-                    } else {
-                        attackCursor = defaultCursor;
-                    }
+                } catch (Exception ex) {
+                    attackCursor = defaultCursor;
                 }
-            } catch (Exception ex) {
+            } catch (Exception e) {
                 attackCursor = defaultCursor;
             }
-        } catch (Exception e) {
-            attackCursor = defaultCursor;
+        	
+        } else if (Engine.IDE == Engine.Eclipse) {
+        	//eclpise 
+            // Setup cursors
+            defaultCursor = Cursor.getDefaultCursor();
+            // Create attack cursor (you can replace with custom image)
+            try {
+                // Placeholder: Use built-in crosshair cursor
+               // attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
+                
+                // To use custom cursor image:
+                Toolkit toolkit = Toolkit.getDefaultToolkit();
+                Image cursorImage = toolkit.getImage("resources/icon/sword.png"); // /sprites/hero2.png
+                 attackCursor = toolkit.createCustomCursor(cursorImage, new Point(16, 16), "attack");
+            } catch (Exception e) {
+                attackCursor = defaultCursor;
+            }
         }
         
-    /*  
-        //eclpise 
-        // Setup cursors
-        defaultCursor = Cursor.getDefaultCursor();
-        // Create attack cursor (you can replace with custom image)
-        try {
-            // Placeholder: Use built-in crosshair cursor
-           // attackCursor = Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
-            
-            // To use custom cursor image:
-            Toolkit toolkit = Toolkit.getDefaultToolkit();
-            Image cursorImage = toolkit.getImage("resources/icon/sword.png"); // /sprites/hero2.png
-             attackCursor = toolkit.createCustomCursor(cursorImage, new Point(16, 16), "attack");
-        } catch (Exception e) {
-            attackCursor = defaultCursor;
-        }
-          */   
+        
+ 
+        
+           
         // Input
         mouse = new MouseInput();
         addMouseListener(mouse);
@@ -156,7 +172,16 @@ public class Engine extends Canvas implements Runnable, KeyListener {
         
     }
 
-    private void gameSetup() { 
+    private void setupIDE(int ide) {
+		switch(ide) {
+		case Eclipse: IDE = Eclipse; break;
+		case VSCode: IDE = VSCode; break;
+		
+		}
+		
+	}
+
+	private void gameSetup() { 
         // Initialize game systems
         gameState = new GameState();
         gameLogic = new GameLogic(gameState);
@@ -333,9 +358,6 @@ public class Engine extends Canvas implements Runnable, KeyListener {
          System.out.println("║   F - Full heal                      ║");
          System.out.println("║   X - Add XP                         ║");
          System.out.println("║   S - Show stats                     ║");
-         System.out.println("║   M - Spawn normal goblin            ║");
-         System.out.println("║   E - Spawn elite goblin             ║");
-         System.out.println("║   B - Spawn boss                     ║");
          System.out.println("╚═══════════════════════════════════════╝\n");
      }
      
@@ -472,51 +494,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
          }
      }
      
-     // Spawn test monsters (M, E, B keys)
-     if (e.getKeyCode() == KeyEvent.VK_M) {
-         Entity player = gameState.getPlayer();
-         Position playerPos = player.getComponent(Position.class);
-         Experience exp = player.getComponent(Experience.class);
-         
-         if (playerPos != null && exp != null) {
-             float spawnX = playerPos.x + 100;
-             float spawnY = playerPos.y;
-             int playerLevel = exp.level;
-             
-             gameState.spawnMonster("Goblin", spawnX, spawnY, playerLevel, MobTier.NORMAL);
-             System.out.println("Spawned Lv" + playerLevel + " NORMAL Goblin");
-         }
-     }
-     
-     if (e.getKeyCode() == KeyEvent.VK_E) {
-         Entity player = gameState.getPlayer();
-         Position playerPos = player.getComponent(Position.class);
-         Experience exp = player.getComponent(Experience.class);
-         
-         if (playerPos != null && exp != null) {
-             float spawnX = playerPos.x + 100;
-             float spawnY = playerPos.y;
-             int playerLevel = exp.level;
-             
-             gameState.spawnMonster("Goblin", spawnX, spawnY, playerLevel, MobTier.ELITE);
-             System.out.println("Spawned Lv" + playerLevel + " ELITE Goblin");
-         }
-     }
-     
-     if (e.getKeyCode() == KeyEvent.VK_B) {
-         Entity player = gameState.getPlayer();
-         Position playerPos = player.getComponent(Position.class);
-         Experience exp = player.getComponent(Experience.class);
-         
-         if (playerPos != null && exp != null) {
-             float spawnX = playerPos.x + 100;
-             float spawnY = playerPos.y;
-             int playerLevel = exp.level;
-             
-             gameState.spawnMonster("GoblinBoss", spawnX, spawnY, playerLevel, MobTier.MINIBOSS);
-             System.out.println("Spawned Lv" + playerLevel + " MINIBOSS");
-         }
-     }
+     // Spawn test monsters (M, E, B keys) - REMOVED for now
  }
     
  /**
@@ -549,6 +527,16 @@ public class Engine extends Canvas implements Runnable, KeyListener {
        }
 
        // Otherwise fall back to dialogue database or greeting
+       // Special case for Fionne - show appropriate dialogue
+       if (npcComponent.getNpcId().equals("fionne")) {
+           if (gameState.getUIManager().isFionneSecondQuestAvailable()) {
+               gameState.getUIManager().showSecondQuestDialogue();
+           } else {
+               gameState.getUIManager().showIntroDialogue();
+           }
+           return;
+       }
+       
        DialogueDatabase db = DialogueDatabase.getInstance();
        DialogueTree dialogue = db.getDialogueForNPC(npcComponent.getNpcId());
 

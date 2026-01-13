@@ -1,5 +1,7 @@
 package dev.main;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
@@ -38,6 +40,15 @@ public class UIManager implements MouseWheelListener {
     
     private UIStatsPanel statsPanel;
     private boolean isStatsVisible = false;
+    
+    // Quest flags
+    private boolean fionneSecondQuestAvailable = false;
+    private String fionneNotification = null;
+    private boolean secondQuestCompleted = false;
+    
+    public boolean isFionneSecondQuestAvailable() {
+        return fionneSecondQuestAvailable;
+    }
     
     public UIManager(GameState gameState) {
         this.gameState = gameState;
@@ -135,6 +146,127 @@ public class UIManager implements MouseWheelListener {
         dialogueBox.showConfirmation(title, message, confirmLabel, cancelLabel, onConfirm, onCancel);
     }
 
+    /**
+     * ★ MODIFIED: Show intro dialogue (unlocks inventory with NEW badge)
+     */
+    public void showIntroDialogue() {
+        dialogueBox.showMessageWithAccept(
+            "To return to the continent, you must craft a magical rune. For that, you'll need the proper recipes and materials. Take this. A gift from the Divine Elves.",
+            () -> {
+                dialogueBox.showMessageWithAccept(
+                    "She hands you a shimmering pouch.",
+                    () -> {
+                        dialogueBox.showMessageWithAccept(
+                            "Inventory Unlocked",
+                            () -> {
+                                // Unlock inventory (shows NEW badge automatically)
+                                unlockMenuButton("inventory");
+                                
+                                // Add item and show notification
+                                addItemToInventory(ItemManager.createWoodenShortSword());
+                                
+                                System.out.println("Intro quest completed! Inventory unlocked with NEW badge.");
+                                dialogueBox.setVisible(false);
+                            },
+                            () -> { dialogueBox.setVisible(false); }
+                        );
+                    },
+                    () -> { dialogueBox.setVisible(false); }
+                );
+            },
+            () -> {
+                dialogueBox.setVisible(false);
+            }
+        );
+    }
+    
+    /**
+     * Show second quest dialogue from Fionne
+     * FIXED: Updated to use new notification system
+     */
+    public void showSecondQuestDialogue() {
+        fionneNotification = "...";  // Change notification to in-progress
+        dialogueBox.showMessageWithAccept(
+            "To craft the rune, gather: Carved Wood, Clay, Carving Stone\nThese can be found by hunting the creatures roaming this island.\nBut be cautious. Some creatures will attack without hesitation.\nIf you fall, your journey ends here.",
+            () -> {
+                // Next: aura message
+                dialogueBox.showMessageWithAccept(
+                    "Fionne raises her staff. A soft aura surrounds you.",
+                    () -> {
+                        // Next: enchantment message
+                        dialogueBox.showMessageWithAccept(
+                            "This enchantment will help you survive the first trials. And take this as well.",
+                            () -> {
+                                // Final: item obtained
+                                dialogueBox.showMessageWithAccept(
+                                    "Item obtained: Rune of Return",
+                                    () -> {
+                                        // Add the rune to inventory
+                                        addItemToInventory(ItemManager.createRuneOfReturn());
+                                        
+                                        // ★ FIXED: Use new notification system
+                                        notifyInventoryUpdate();
+                                        
+                                        secondQuestCompleted = true;
+                                        fionneNotification = null;  // Remove notification
+                                        System.out.println("Second quest completed! Rune of Return obtained.");
+                                        dialogueBox.setVisible(false);
+                                    },
+                                    () -> { dialogueBox.setVisible(false); }
+                                );
+                            },
+                            () -> { dialogueBox.setVisible(false); }
+                        );
+                    },
+                    () -> { dialogueBox.setVisible(false); }
+                );
+            },
+            () -> { dialogueBox.setVisible(false); }
+        );
+    }
+    /**
+     * ★ NEW: Notify level up - show alert on stats button
+     */
+    public void notifyLevelUp() {
+        UIButton statsButton = getMenuButton("stats");
+        if (statsButton != null) {
+            statsButton.setAlertNotification();
+            System.out.println("Level up notification set on stats button");
+        }
+    }
+    /**
+     * ★ NEW: Notify new item in inventory
+     */
+    public void notifyInventoryUpdate() {
+        UIButton inventoryButton = getMenuButton("inventory");
+        if (inventoryButton != null) {
+            inventoryButton.setAlertNotification();
+            System.out.println("Inventory update notification set");
+        }
+    }
+    /**
+     * ★ NEW: Notify quest update (count shows number of active quests)
+     */
+    public void notifyQuestUpdate(int activeQuestCount) {
+        UIButton questButton = getMenuButton("quest");
+        if (questButton != null) {
+            if (activeQuestCount > 0) {
+                questButton.setCountNotification(activeQuestCount);
+            } else {
+                questButton.clearNotification();
+            }
+        }
+    }
+    /**
+     * ★ NEW: Notify quest completion (use info indicator)
+     */
+    public void notifyQuestComplete() {
+        UIButton questButton = getMenuButton("quest");
+        if (questButton != null) {
+            questButton.setInfoNotification();
+            System.out.println("Quest completion notification set");
+        }
+    }
     /**
      * ⭐ NEW: Handle quest acceptance
      */
@@ -294,7 +426,7 @@ public class UIManager implements MouseWheelListener {
             
             // ⭐ Special button handlers
             if (buttonIds[i].equals("inventory")) {
-                button.setLocked(false);
+                button.setLocked(true);  // Initially locked - unlocked by intro quest
                 button.setVisible(true);
                 button.setOnClick(() -> toggleInventory());
             } else if (buttonIds[i].equals("rune")) {
@@ -325,7 +457,7 @@ public class UIManager implements MouseWheelListener {
         panels.add(verticalMenu);
     }
     /**
-     * Toggle quest panel visibility
+     * ★ MODIFIED: Toggle quest panel (clears notification when opened)
      */
     private void toggleQuestPanel() {
         if (questPanel == null) {
@@ -337,17 +469,31 @@ public class UIManager implements MouseWheelListener {
         
         if (newVisibility) {
             questPanel.refreshQuestList();
+            
+            // Update quest count indicator
+            Entity player = gameState.getPlayer();
+            QuestLog questLog = player.getComponent(QuestLog.class);
+            if (questLog != null) {
+                int activeCount = questLog.getActiveQuestCount();
+                notifyQuestUpdate(activeCount);
+            }
         }
+        
+        // ★ Notification is automatically cleared by onClick() in UIButton
         
         System.out.println("Quest Panel " + (newVisibility ? "opened" : "closed"));
     }
     
     /**
-     * Toggle stats panel visibility
+     * ★ MODIFIED: Toggle stats panel (clears notification when opened)
      */
     public void toggleStatsPanel() {
         isStatsVisible = !isStatsVisible;
         statsPanel.setVisible(isStatsVisible);
+        
+        // ★ Notification is automatically cleared by onClick() in UIButton
+        // No manual clearing needed!
+        
         System.out.println("Stats Panel " + (isStatsVisible ? "opened" : "closed"));
     }
     /**
@@ -379,29 +525,52 @@ public class UIManager implements MouseWheelListener {
     }
 
     /**
-     * ⭐ NEW: Unlock quest button when first quest is accepted
+     * ★ MODIFIED: Unlock quest button when first quest is accepted
      */
     public void unlockQuestButton() {
         UIButton questButton = getMenuButton("quest");
         if (questButton != null && questButton.isLocked()) {
-            questButton.unlock();
+            questButton.unlock();  // Shows "NEW!" badge
             if (verticalMenu != null) {
                 verticalMenu.relayout();
             }
-            System.out.println("Quest button unlocked!");
+            
+            // Also show count notification for 1 active quest
+            notifyQuestUpdate(1);
+            
+            System.out.println("Quest button unlocked with NEW badge!");
         }
     }
 
     /**
-     * ⭐ NEW: Show quest indicator (called when quest is accepted/updated/completed)
+     * ★ MODIFIED: Update quest indicator
      */
     public void updateQuestIndicator() {
-        // This could add a visual indicator on the quest button
-        // For now, just refresh the panel if it's open
+        Entity player = gameState.getPlayer();
+        QuestLog questLog = player.getComponent(QuestLog.class);
+        
+        if (questLog != null) {
+            int activeCount = questLog.getActiveQuestCount();
+            
+            // Show count badge with number of active quests
+            notifyQuestUpdate(activeCount);
+            
+            // Check if any quest is completed
+            boolean hasCompleted = !questLog.getCompletedQuests().isEmpty();
+            if (hasCompleted) {
+                notifyQuestComplete();
+            }
+        }
+        
+        // Refresh quest panel if open
         if (questPanel != null && questPanel.isVisible()) {
             questPanel.refreshQuestList();
         }
     }
+    
+    /**
+     * ★ MODIFIED: Toggle inventory (clears notification when opened)
+     */
     private void toggleInventory() {
         if (inventoryContainer == null) {
             createInventorySystem();
@@ -409,6 +578,9 @@ public class UIManager implements MouseWheelListener {
         
         boolean newVisibility = !inventoryContainer.isVisible();
         inventoryContainer.setVisible(newVisibility);
+        
+        // ★ Notification is automatically cleared by onClick() in UIButton
+        // No manual clearing needed!
         
         System.out.println("Inventory " + (newVisibility ? "opened" : "closed"));
     }
@@ -662,6 +834,39 @@ public class UIManager implements MouseWheelListener {
         if (tooltipPanel != null && tooltipPanel.isVisible()) {
             tooltipPanel.render(g);
         }
+        
+        // Render hovered entity name
+        renderHoveredEntityName(g);
+    }
+    
+    private void renderHoveredEntityName(Graphics2D g) {
+        // Don't show hover names if dialogue is open
+        if ((dialogueBox != null && dialogueBox.isVisible()) || 
+            (enhancedDialogueBox != null && enhancedDialogueBox.isVisible())) {
+            return;
+        }
+        /*
+        // Show names for all NPCs
+        for (Entity entity : gameState.getEntities()) {
+            if (entity.getType() == EntityType.NPC) {
+                String name = entity.getName();
+                if (name != null && !name.isEmpty()) {
+                    Position pos = entity.getComponent(Position.class);
+                    if (pos != null) {
+                        int screenX = (int)(pos.x - gameState.getCameraX());
+                        int screenY = (int)(pos.y - gameState.getCameraY() - 40);
+                        
+                        g.setFont(new Font("Arial", Font.BOLD, 14));
+                        g.setColor(Color.BLACK);
+                        g.drawString(name, screenX + 1, screenY + 1);
+                        
+                        g.setColor(Color.WHITE);
+                        g.drawString(name, screenX, screenY);
+                         
+                    }
+                }
+            }
+        }*/
     }
     
     // Updated to accept pressed state for drag handling
@@ -969,15 +1174,17 @@ public class UIManager implements MouseWheelListener {
         }
         return null;
     }
-    
+    /**
+     * ★ MODIFIED: Unlock menu button (automatically shows NEW badge)
+     */
     public void unlockMenuButton(String id) {
         UIButton button = getMenuButton(id);
-        if (button != null) {
-            button.unlock();
+        if (button != null && button.isLocked()) {
+            button.unlock();  // Now shows "NEW!" badge automatically
             if (verticalMenu != null) {
                 verticalMenu.relayout();
             }
-            System.out.println("Unlocked: " + button.getLabel());
+            System.out.println("Unlocked: " + button.getLabel() + " (NEW badge shown)");
         }
     }
     
@@ -1005,6 +1212,9 @@ public class UIManager implements MouseWheelListener {
         return inventoryGrid.getSlot(index);
     }
     
+    /**
+     * ★ MODIFIED: Add item to inventory and show notification
+     */
     public boolean addItemToInventory(Item item) {
         if (inventoryContainer == null) {
             createInventorySystem();
@@ -1014,6 +1224,10 @@ public class UIManager implements MouseWheelListener {
             boolean added = inventoryGrid.addItemToCurrentTab(item);
             if (added) {
                 System.out.println("Added item to inventory (tab=" + currentInventoryTab + ")");
+                
+                // ★ Show notification on inventory button
+                notifyInventoryUpdate();
+                
                 return true;
             }
         }
@@ -1036,20 +1250,59 @@ public class UIManager implements MouseWheelListener {
         return null;
     }
     
+    /**
+     * ★ MODIFIED: Equip item (shows notification on stats button if needed)
+     */
     public boolean equipItem(UIGearSlot.SlotType slotType, Item item) {
         UIGearSlot slot = getGearSlot(slotType);
         if (slot == null) return false;
+        
         Item oldItem = slot.equipItem(item);
         if (oldItem != null) {
             addItemToInventory(oldItem);
             applyItemStats(oldItem, false);
         }
+        
         if (item != null) {
             applyItemStats(item, true);
+            
+            // Special: Unlock stats button when equipping wooden short sword
+            if (slotType == UIGearSlot.SlotType.WEAPON && "Wooden Short Sword".equals(item.getName())) {
+                unlockMenuButton("stats");  // Shows NEW badge automatically
+                fionneSecondQuestAvailable = true;
+                fionneNotification = "!";
+                System.out.println("Stats button unlocked with NEW badge! Second quest available from Fionne.");
+            }
         }
         return true;
     }
-    
+    /**
+     * ★ NEW: Clear all notifications (useful for debugging or reset)
+     */
+    public void clearAllNotifications() {
+        for (UIComponent child : verticalMenu.getChildren()) {
+            if (child instanceof UIButton) {
+                ((UIButton) child).clearNotification();
+            }
+        }
+        System.out.println("All button notifications cleared");
+    }
+
+	/**
+	 * ★ NEW: Get notification summary (for debugging)
+	 */
+	public void printNotificationStatus() {
+	    System.out.println("=== Button Notification Status ===");
+	    for (UIComponent child : verticalMenu.getChildren()) {
+	        if (child instanceof UIButton) {
+	            UIButton btn = (UIButton) child;
+	            String status = btn.hasNotification() ? 
+	                btn.getNotificationType().toString() : "NONE";
+	            System.out.println(btn.getLabel() + ": " + status);
+	        }
+	    }
+	    System.out.println("==================================");
+	}
     public Item unequipItem(UIGearSlot.SlotType slotType) {
         UIGearSlot slot = getGearSlot(slotType);
         if (slot == null) return null;

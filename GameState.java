@@ -36,7 +36,11 @@ public class GameState {
         cameraY = 0f;
         
         // Load map
-        map = new TileMap("/maps/world_map.png", "/maps/world_collision.txt");
+        if(Engine.IDE == Engine.Eclipse)
+        	map = new TileMap("/maps/env_fionne_map.png", "/maps/fionnes_introMap01.txt");
+        else if(Engine.IDE == Engine.VSCode)
+        	map = new TileMap("resources/maps/fionnes_introMap01.png", "resources/maps/fionnes_introMap01.txt");
+        
         pathfinder = new Pathfinder(map);
         
         initializeWorld();
@@ -76,9 +80,9 @@ public class GameState {
         entities.add(player);
         
         // ⭐ NEW: Create Fionne NPC
-        Entity fionne = EntityFactory.createFionne(10 * 64, 5 * 64);
+        Entity fionne = EntityFactory.createFionne(14 * 64 - 32, 6 * 64 - 31);
         entities.add(fionne);
-        System.out.println("Fionne NPC created at (10, 5)");
+        System.out.println("Fionne NPC created at (13, 5)");
        
         
         float normalRespawn = 30f;
@@ -96,14 +100,12 @@ public class GameState {
         // TRASH tier goblins (weak, low XP)
         addSpawnPoint("Goblin", 10 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 11 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
-        addSpawnPoint("Goblin", 5 * 64, 5 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 5 * 64, 6 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 7 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 8 * 64, 10 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 8 * 64, 9 * 64, normalRespawn, 1, MobTier.TRASH);
         addSpawnPoint("Goblin", 9 * 64, 2 * 64, normalRespawn, 1, MobTier.TRASH);
-        addSpawnPoint("Goblin", 9 * 64, 5 * 64, normalRespawn, 1, MobTier.TRASH);
-        addSpawnPoint("Goblin", 4 * 64, 6 * 64, normalRespawn, 1, MobTier.TRASH);
-        addSpawnPoint("Goblin", 4 * 64, 4 * 64, normalRespawn, 1, MobTier.TRASH);
+        addSpawnPoint("Goblin", 9 * 64, 5 * 64, normalRespawn, 1, MobTier.TRASH); 
         
         // NORMAL tier goblins
         addSpawnPoint("Goblin", 12 * 64, 10 * 64, normalRespawn, 2, MobTier.NORMAL);
@@ -115,7 +117,7 @@ public class GameState {
         
         // ELITE goblin
         addSpawnPoint("Goblin", 14 * 64, 10 * 64, normalRespawn, 3, MobTier.ELITE);
-        
+        /*
         // NORMAL bunnies
         addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn, 1, MobTier.NORMAL);
         addSpawnPoint("Bunny", 20 * 64, 21 * 64, normalRespawn, 2, MobTier.NORMAL);
@@ -130,21 +132,48 @@ public class GameState {
         addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn, 7, MobTier.MINIBOSS);
-         
+         */
         // Initial spawn of all monsters
         for (SpawnPoint sp : spawnPoints) {
             spawnMonsterAtPoint(sp);
         }
           
+        //add boulder
+        addBoulder(4 * 64 - 13,  3 * 64 - 18);
         // User-requested tree at tile (5,5)
-        addTree(7 * 64, 7 * 64);
+        addTree(2 * 64 - 30, 1 * 64 - 25, "right");
+        addTree(1 * 64 - 32, 8 * 64 - 66, "right");
+        addTree(3 * 64 - 6 , 14 * 64 -10  , "right");
+        //
+        addTree(19 * 64 - 6 , 0 * 64 - 10 , "right");
+        addTree(20 * 64 - 6 , 6 * 64 - 10 , "right");
+        addTree(18 * 64 - 6 , 12 * 64 - 10 , "right");
+        addTree(13 * 64 - 6 , 13 * 64 - 10 , "right");
+        //fountain
+        addFountain(15 * 64 - 6 , 4 * 64 - 10 );
+        
     } 
     
-    private void addTree(float x, float y) {
-    Entity tree = EntityFactory.createTree(x, y);
+    private void addFountain(float x, float y) {
+    	Entity fountain = EntityFactory.createFountain(x, y);
+        entities.add(fountain);
+        System.out.println("Added fountain at (" + (int)x + ", " + (int)y + ")");
+		
+	}
+
+	private void addBoulder(float x, float y) {
+    	Entity boulder = EntityFactory.createBoulder(x, y);
+        entities.add(boulder);
+        System.out.println("Added boulder at (" + (int)x + ", " + (int)y + ")");
+		
+	}
+
+	private void addTree(float x, float y, String orientation) {
+    Entity tree = EntityFactory.createTree(x, y, orientation);
     entities.add(tree);
     System.out.println("Added tree at (" + (int)x + ", " + (int)y + ")");
     }
+	
     public void addSpawnPoint(String monsterType, float x, float y, float respawnDelay, int level, MobTier tier) {
         SpawnPoint sp = new SpawnPoint(monsterType, x, y, respawnDelay, level, tier);
         spawnPoints.add(sp);

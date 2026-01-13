@@ -146,6 +146,26 @@ public class UIDialogueBox extends UIComponent {
     }
     
     /**
+     * Show message with accept/decline buttons (for intro, confirmations, etc.)
+     */
+    public void showMessageWithAccept(String message, Runnable onAccept, Runnable onDecline) {
+        this.npcName = "Fionne";
+        this.dialogueText = message;
+        this.offeredQuest = null;
+        this.onAccept = onAccept;
+        this.onDecline = onDecline;
+        
+        // Show accept/decline buttons
+        if (acceptButton != null) acceptButton.onMouseExit();
+        if (declineButton != null) declineButton.onMouseExit();
+        acceptButton.setVisible(true);
+        declineButton.setVisible(true);
+        closeButton.setVisible(false);
+        
+        this.setVisible(true);
+    }
+    
+    /**
      * Show quest completion dialogue
      */
     public void showQuestComplete(String npcName, Quest quest) {
