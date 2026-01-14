@@ -39,7 +39,7 @@ public class GameState {
         if(Engine.IDE == Engine.Eclipse)
         	map = new TileMap("/maps/env_fionne_map.png", "/maps/fionnes_introMap01.txt");
         else if(Engine.IDE == Engine.VSCode)
-        	map = new TileMap("resources/maps/fionnes_introMap01.png", "resources/maps/fionnes_introMap01.txt");
+        	map = new TileMap("resources/maps/env_fionne_map.png", "resources/maps/fionnes_introMap01.txt");
         
         pathfinder = new Pathfinder(map);
         

@@ -307,7 +307,7 @@ public class Renderer {
             // Health bar
             HealthBar hpBar = ro.entity.getComponent(HealthBar.class);
             if (stats != null && hpBar != null) {
-                drawHealthBar(g, screenX, screenY, stats, hpBar);
+                drawHealthBar(g, screenX, screenY, stats, hpBar, ro);
             }
             
             // Player-specific bars
@@ -606,7 +606,7 @@ public class Renderer {
         }
     }
     
-    private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar) {
+    private void drawHealthBar(Graphics2D g, int spriteX, int spriteY, Stats hp, HealthBar bar, RenderObject ro) {
         Stroke originalStroke = g.getStroke();
         
         int barX = spriteX - bar.width / 2;
@@ -621,9 +621,18 @@ public class Renderer {
         
         int filledWidth = (int)(bar.width * pct);
         
-        Color hpColor = pct > 0.50f ? HealthBar.HP_GREEN :
-                        pct > 0.25f ? HealthBar.HP_ORANGE :
-                        HealthBar.HP_RED;
+        EntityType et = ro.entity.getType();
+        Color hpColor = Color.GREEN; //default
+        if(et != null)  {//is this needed?
+            if(et == EntityType.PLAYER) {
+                hpColor = pct > 0.50f ? HealthBar.HP_GREEN :
+                           pct > 0.25f ? HealthBar.HP_ORANGE :
+                           HealthBar.HP_RED;
+            } else {
+                hpColor = HealthBar.HP_RED;
+
+            } 
+        } 
         
         g.setColor(HealthBar.BG_COLOR);
         g.fillRect(barX, barY, bar.width, bar.height);

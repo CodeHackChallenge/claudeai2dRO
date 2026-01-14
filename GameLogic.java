@@ -328,6 +328,30 @@ public class GameLogic {
             return;
         }
         
+        // NEW: Update buff manager
+        BuffManager buffManager = player.getComponent(BuffManager.class);
+        if (buffManager != null) {
+            buffManager.update(delta);
+            
+            // Health regen
+            float healthRegen = buffManager.getTotalHealthRegen();
+            if (healthRegen > 0 && stats.hp < stats.maxHp) {
+                stats.hp = Math.min(stats.maxHp, stats.hp + (int)(healthRegen * delta));
+            }
+            
+            // Mana regen boost
+            float manaBoost = buffManager.getTotalManaRegenBoost();
+            if (manaBoost > 0) {
+                stats.manaRegenRate += manaBoost;
+            }
+            
+            // Stamina regen boost
+            float staminaBoost = buffManager.getTotalStaminaRegenBoost();
+            if (staminaBoost > 0) {
+                stats.stamina = Math.min(stats.maxStamina, stats.stamina + staminaBoost * delta);
+            }
+        }
+        
         // Regenerate mana
         stats.regenerateMana(delta);
         
@@ -1488,8 +1512,18 @@ public class GameLogic {
         Stats stats = player.getComponent(Stats.class);
         SkillLevel skillLevel = player.getComponent(SkillLevel.class);
         LevelUpEffect levelUpEffect = player.getComponent(LevelUpEffect.class);
+        BuffManager buffManager = player.getComponent(BuffManager.class);
         
         if (exp == null || stats == null) return;
+        
+        // NEW: Apply EXP boost from buffs
+        float expBoost = buffManager != null ? buffManager.getTotalExpBoost() : 0f;
+        int finalXP = (int)(xpAmount * (1.0f + expBoost));
+        
+        if (expBoost > 0) {
+            System.out.println("EXP with bonus: " + xpAmount + " → " + finalXP + 
+                             " (+" + (int)(expBoost * 100) + "%)");
+        }
         
         System.out.println("Gained " + xpAmount + " XP!");
         
@@ -1542,6 +1576,7 @@ public class GameLogic {
                 }
             }
             
+            
             // Notify UI of level up
             state.getUIManager().notifyLevelUp();
             
@@ -1583,6 +1618,13 @@ public class GameLogic {
         int xpReward = calculateMonsterXP(monster);
         System.out.println("→ XP Reward: " + xpReward);
         awardExperience(player, xpReward);
+        
+        
+        // NEW: Notify buffs of kill
+        BuffManager buffManager = player.getComponent(BuffManager.class);
+        if (buffManager != null) {
+            buffManager.onMonsterKill();
+        }
         
         // ⭐ NEW: Update quest progress
         updateQuestProgress(player, monster);

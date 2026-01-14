@@ -2,7 +2,7 @@ package dev.main;
 
 /**
  * Manages item creation and templates
- * EXPANDED: Items for all tab categories
+ * UPDATED: Runes now use RuneManager instead
  */
 public class ItemManager {
 
@@ -15,16 +15,8 @@ public class ItemManager {
             "Wooden Short Sword",
             Item.ItemType.WEAPON,
             Item.Rarity.COMMON,
-            6,  // attack bonus
-            1,  // defense bonus
-            0,  // magic attack bonus
-            0,  // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            false, // tradable
-            false, // sellable
-            100  // dismantle threshold
+            6, 1, 0, 0, 999,
+            false, false, false, false, 100
         );
     }
     
@@ -33,16 +25,8 @@ public class ItemManager {
             "Iron Sword",
             Item.ItemType.WEAPON,
             Item.Rarity.COMMON,
-            12,  // attack bonus
-            2,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            800, // durability
-            true,  // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            100    // dismantle threshold
+            12, 2, 0, 0, 800,
+            true, false, true, true, 100
         );
     }
     
@@ -51,16 +35,8 @@ public class ItemManager {
             "Steel Longsword",
             Item.ItemType.WEAPON,
             Item.Rarity.UNCOMMON,
-            20,  // attack bonus
-            3,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            1000, // durability
-            true,  // upgradable
-            true,  // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            150    // dismantle threshold
+            20, 3, 0, 0, 1000,
+            true, true, true, true, 150
         );
     }
     
@@ -69,16 +45,8 @@ public class ItemManager {
             "Mystic Staff",
             Item.ItemType.WEAPON,
             Item.Rarity.RARE,
-            5,   // attack bonus
-            2,   // defense bonus
-            25,  // magic attack bonus
-            5,   // magic defense bonus
-            600, // durability
-            true,  // upgradable
-            true,  // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            200    // dismantle threshold
+            5, 2, 25, 5, 600,
+            true, true, true, true, 200
         );
     }
 
@@ -91,16 +59,8 @@ public class ItemManager {
             "Leather Armor",
             Item.ItemType.ARMOR,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            8,   // defense bonus
-            0,   // magic attack bonus
-            2,   // magic defense bonus
-            500, // durability
-            true,  // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            100    // dismantle threshold
+            0, 8, 0, 2, 500,
+            true, false, true, true, 100
         );
     }
     
@@ -109,16 +69,8 @@ public class ItemManager {
             "Chainmail",
             Item.ItemType.ARMOR,
             Item.Rarity.UNCOMMON,
-            0,   // attack bonus
-            15,  // defense bonus
-            0,   // magic attack bonus
-            3,   // magic defense bonus
-            800, // durability
-            true,  // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            150    // dismantle threshold
+            0, 15, 0, 3, 800,
+            true, false, true, true, 150
         );
     }
     
@@ -127,16 +79,8 @@ public class ItemManager {
             "Plate Armor",
             Item.ItemType.ARMOR,
             Item.Rarity.RARE,
-            0,   // attack bonus
-            25,  // defense bonus
-            0,   // magic attack bonus
-            5,   // magic defense bonus
-            1200, // durability
-            true,  // upgradable
-            true,  // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            200    // dismantle threshold
+            0, 25, 0, 5, 1200,
+            true, true, true, true, 200
         );
     }
 
@@ -144,39 +88,13 @@ public class ItemManager {
     // ACCESSORIES (Acc Tab)
     // ═══════════════════════════════════════════════════════════════
     
-    public static Item createRuneOfReturn() {
-        return new Item(
-            "Rune of Return",
-            Item.ItemType.ACCESSORY,
-            Item.Rarity.RARE,
-            0,  // attack bonus
-            2,  // defense bonus
-            1,  // magic attack bonus
-            1,  // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            false, // tradable
-            false, // sellable
-            100  // dismantle threshold
-        );
-    }
-    
     public static Item createPowerRing() {
         return new Item(
             "Ring of Power",
             Item.ItemType.ACCESSORY,
             Item.Rarity.UNCOMMON,
-            5,   // attack bonus
-            0,   // defense bonus
-            3,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            100    // dismantle threshold
+            5, 0, 3, 0, 999,
+            false, false, true, true, 100
         );
     }
     
@@ -185,16 +103,8 @@ public class ItemManager {
             "Amulet of Protection",
             Item.ItemType.ACCESSORY,
             Item.Rarity.RARE,
-            0,   // attack bonus
-            10,  // defense bonus
-            0,   // magic attack bonus
-            8,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            150    // dismantle threshold
+            0, 10, 0, 8, 999,
+            false, false, true, true, 150
         );
     }
     
@@ -203,21 +113,13 @@ public class ItemManager {
             "Boots of Speed",
             Item.ItemType.ACCESSORY,
             Item.Rarity.UNCOMMON,
-            0,   // attack bonus
-            3,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            600, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            100    // dismantle threshold
+            0, 3, 0, 0, 600,
+            false, false, true, true, 100
         );
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // MATERIALS & RUNES (Rune Tab)
+    // MATERIALS (Rune Tab)
     // ═══════════════════════════════════════════════════════════════
     
     public static Item createCarvedWood() {
@@ -225,16 +127,8 @@ public class ItemManager {
             "Carved Wood",
             Item.ItemType.MATERIAL,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
         );
     }
     
@@ -243,16 +137,8 @@ public class ItemManager {
             "Clay",
             Item.ItemType.MATERIAL,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
         );
     }
     
@@ -261,34 +147,50 @@ public class ItemManager {
             "Carving Stone",
             Item.ItemType.MATERIAL,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
         );
     }
     
+    // ★ NEW: Crafting materials for runes
+    public static Item createWoodenTablet() {
+        return new Item(
+            "Wooden Tablet",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createEssence() {
+        return new Item(
+            "Essence",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.UNCOMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createVerdantShard() {
+        return new Item(
+            "Verdant Shard",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.UNCOMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    // Elemental runes (materials for crafting)
     public static Item createFireRune() {
         return new Item(
             "Fire Rune",
             Item.ItemType.MATERIAL,
             Item.Rarity.UNCOMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
         );
     }
     
@@ -297,16 +199,8 @@ public class ItemManager {
             "Ice Rune",
             Item.ItemType.MATERIAL,
             Item.Rarity.UNCOMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
         );
     }
     
@@ -315,16 +209,8 @@ public class ItemManager {
             "Lightning Rune",
             Item.ItemType.MATERIAL,
             Item.Rarity.RARE,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            999, // durability
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
         );
     }
 
@@ -337,16 +223,8 @@ public class ItemManager {
             "Health Potion",
             Item.ItemType.CONSUMABLE,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            1,   // durability (single use)
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 1,
+            false, false, true, true, 0
         );
     }
     
@@ -355,16 +233,8 @@ public class ItemManager {
             "Mana Potion",
             Item.ItemType.CONSUMABLE,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            1,   // durability (single use)
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 1,
+            false, false, true, true, 0
         );
     }
     
@@ -373,16 +243,35 @@ public class ItemManager {
             "Stamina Potion",
             Item.ItemType.CONSUMABLE,
             Item.Rarity.COMMON,
-            0,   // attack bonus
-            0,   // defense bonus
-            0,   // magic attack bonus
-            0,   // magic defense bonus
-            1,   // durability (single use)
-            false, // upgradable
-            false, // can infuse elemental
-            true,  // tradable
-            true,  // sellable
-            0      // dismantle threshold
+            0, 0, 0, 0, 1,
+            false, false, true, true, 0
         );
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // ★ NEW: RUNES (Magical Consumables)
+    // ═══════════════════════════════════════════════════════════════
+    
+    /**
+     * ★ REFACTORED: Create Rune of Return using RuneManager
+     * @deprecated Use RuneManager.createRuneItem(RuneType.RETURN) instead
+     */
+    @Deprecated
+    public static Item createRuneOfReturn() {
+        return RuneManager.createRuneItem(Rune.RuneType.RETURN);
+    }
+    
+    /**
+     * ★ NEW: Create Rune of Spawn using RuneManager
+     */
+    public static Item createRuneOfSpawn() {
+        return RuneManager.createRuneItem(Rune.RuneType.SPAWN);
+    }
+    
+    /**
+     * ★ NEW: Create any rune by type
+     */
+    public static Item createRuneItem(Rune.RuneType type) {
+        return RuneManager.createRuneItem(type);
     }
 }

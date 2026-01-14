@@ -499,59 +499,91 @@ public class Engine extends Canvas implements Runnable, KeyListener {
     
  /**
   * Handle NPC interaction
-  */ private void handleNPCClick(Entity npc) {
-       NPC npcComponent = npc.getComponent(NPC.class);
-       if (npcComponent == null) return;
-       
-       Entity player = gameState.getPlayer();
-       
-       // Check range
-       if (!npcComponent.isPlayerInRange(player, npc)) {
-           System.out.println("Too far away to talk to " + npcComponent.getNpcName());
-           return;
-       }
-       
-       // Get dialogue from database
-       // If NPC has a completed quest for the player, show quest completion dialog
-       Quest completedQuest = npcComponent.getCompletedQuest();
-       if (completedQuest != null) {
-           gameState.getUIManager().showQuestComplete(npcComponent.getNpcName(), completedQuest);
-           return;
-       }
+  */
+ private void handleNPCClick(Entity npc) {
+     NPC npcComponent = npc.getComponent(NPC.class);
+     if (npcComponent == null) return;
+     
+     Entity player = gameState.getPlayer();
+     
+     // Check range
+     if (!npcComponent.isPlayerInRange(player, npc)) {
+         System.out.println("Too far away to talk to " + npcComponent.getNpcName());
+         return;
+     }
+     
+     // ★ SPECIAL HANDLING FOR FIONNE
+     if (npcComponent.getNpcId().equals("fionne")) {
+         UIManager uiManager = gameState.getUIManager();
+         
+         // Check if intro quest is completed
+         if (!uiManager.isIntroQuestCompleted()) {
+             // First time talking - show intro
+             uiManager.showIntroDialogue();
+             return;
+         }
+         
+         // Check if player has sword but hasn't equipped it
+         if (uiManager.hasSwordButNotEquipped()) {
+             // Remind player to equip the sword
+             uiManager.showEquipSwordReminder();
+             return;
+         }
+         
+         // Check if sword is equipped and second quest is available
+         if (uiManager.isFionneSecondQuestAvailable()) {
+             // Show second quest dialogue
+             uiManager.showSecondQuestDialogue();
+             return;
+         }
+         
+         // If second quest completed, show generic dialogue
+         if (uiManager.isIntroQuestCompleted() && uiManager.isWoodenSwordEquipped()) {
+             // Show generic "already helped you" dialogue
+             gameState.getUIManager().showDialogue(
+                 npcComponent.getNpcName(),
+                 "I have given you all the aid I can. May your journey be swift and safe."
+             );
+             return;
+         }
+         
+         // Default: show intro dialogue
+         uiManager.showIntroDialogue();
+         return;
+     }
+     
+     // ★ ORIGINAL CODE FOR OTHER NPCs
+     // Get dialogue from database
+     // If NPC has a completed quest for the player, show quest completion dialog
+     Quest completedQuest = npcComponent.getCompletedQuest();
+     if (completedQuest != null) {
+         gameState.getUIManager().showQuestComplete(npcComponent.getNpcName(), completedQuest);
+         return;
+     }
 
-       // If NPC has an active quest in-progress, show progress dialogue
-       Quest activeQuest = npcComponent.getActiveQuest();
-       if (activeQuest != null) {
-           gameState.getUIManager().showDialogue(npcComponent.getNpcName(), npcComponent.getDialogue());
-           return;
-       }
+     // If NPC has an active quest in-progress, show progress dialogue
+     Quest activeQuest = npcComponent.getActiveQuest();
+     if (activeQuest != null) {
+         gameState.getUIManager().showDialogue(npcComponent.getNpcName(), npcComponent.getDialogue());
+         return;
+     }
 
-       // Otherwise fall back to dialogue database or greeting
-       // Special case for Fionne - show appropriate dialogue
-       if (npcComponent.getNpcId().equals("fionne")) {
-           if (gameState.getUIManager().isFionneSecondQuestAvailable()) {
-               gameState.getUIManager().showSecondQuestDialogue();
-           } else {
-               gameState.getUIManager().showIntroDialogue();
-           }
-           return;
-       }
-       
-       DialogueDatabase db = DialogueDatabase.getInstance();
-       DialogueTree dialogue = db.getDialogueForNPC(npcComponent.getNpcId());
+     // Otherwise fall back to dialogue database or greeting
+     DialogueDatabase db = DialogueDatabase.getInstance();
+     DialogueTree dialogue = db.getDialogueForNPC(npcComponent.getNpcId());
 
-       if (dialogue != null) {
-           // Start dialogue using enhanced dialogue box
-           UIDialogueBoxEnhanced dialogueBox = gameState.getUIManager().getEnhancedDialogueBox();
-           dialogueBox.startDialogue(dialogue.getId(), npc, player);
-       } else {
-           // Fallback to simple greeting
-           gameState.getUIManager().showDialogue(
-               npcComponent.getNpcName(),
-               npcComponent.getGreetingDialogue()
-           );
-       }
-   }
+     if (dialogue != null) {
+         // Start dialogue using enhanced dialogue box
+         UIDialogueBoxEnhanced dialogueBox = gameState.getUIManager().getEnhancedDialogueBox();
+         dialogueBox.startDialogue(dialogue.getId(), npc, player);
+     } else {
+         // Fallback to simple greeting
+         gameState.getUIManager().showDialogue(
+             npcComponent.getNpcName(),
+             npcComponent.getGreetingDialogue()
+         );
+     }
+ }
    
     public boolean isDebugMode() {
         return debugMode;

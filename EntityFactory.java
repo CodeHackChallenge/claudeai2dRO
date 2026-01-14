@@ -60,6 +60,9 @@ public class EntityFactory {
 	    // Level-up effect
 	    player.addComponent(new LevelUpEffect());
 	    
+	    //buff
+	    player.addComponent(new BuffManager());
+	    
 	    return player;
 	}
     /**

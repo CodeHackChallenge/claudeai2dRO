@@ -41,14 +41,29 @@ public class UIManager implements MouseWheelListener {
     private UIStatsPanel statsPanel;
     private boolean isStatsVisible = false;
     
+    //buff
+    private UIBuffBar buffBar;
+    
     // Quest flags
     private boolean fionneSecondQuestAvailable = false;
     private String fionneNotification = null;
     private boolean secondQuestCompleted = false;
     
+    private boolean introQuestCompleted = false;
+    private boolean swordEquipped = false;
+    
     public boolean isFionneSecondQuestAvailable() {
-        return fionneSecondQuestAvailable;
+        return fionneSecondQuestAvailable && swordEquipped;
     }
+
+    public boolean isIntroQuestCompleted() {
+        return introQuestCompleted;
+    }
+    
+    public boolean hasSwordButNotEquipped() {
+        return hasWoodenSwordInInventory() && !isWoodenSwordEquipped();
+    }
+
     
     public UIManager(GameState gameState) {
         this.gameState = gameState;
@@ -65,13 +80,22 @@ public class UIManager implements MouseWheelListener {
     
     private void initializeUI() {
          createSkillBar();
+         createBuffBar();  // NEW
          createVerticalMenu();
          createDialogueBox();
          createEnhancedDialogueBox();  // NEW
          createStatsPanel();
     }
     
-    private void createEnhancedDialogueBox() {
+    private void createBuffBar() {
+        // Position above skill bar
+        int buffBarY = Engine.HEIGHT - 64 - 20 - 40;  // Above skill bar
+        int buffBarX = (Engine.WIDTH / 2);  // Centered
+        
+        buffBar = new UIBuffBar(buffBarX, buffBarY, gameState);
+    }
+
+	private void createEnhancedDialogueBox() {
          int width = 600;
          int height = 450;
          int x = (Engine.WIDTH - width) / 2;
@@ -149,6 +173,7 @@ public class UIManager implements MouseWheelListener {
     /**
      * ★ MODIFIED: Show intro dialogue (unlocks inventory with NEW badge)
      */
+    // 2. UPDATE showIntroDialogue() method to mark quest as completed:
     public void showIntroDialogue() {
         dialogueBox.showMessageWithAccept(
             "To return to the continent, you must craft a magical rune. For that, you'll need the proper recipes and materials. Take this. A gift from the Divine Elves.",
@@ -164,6 +189,9 @@ public class UIManager implements MouseWheelListener {
                                 
                                 // Add item and show notification
                                 addItemToInventory(ItemManager.createWoodenShortSword());
+                                
+                                // ★ MARK INTRO QUEST AS COMPLETED
+                                introQuestCompleted = true;
                                 
                                 System.out.println("Intro quest completed! Inventory unlocked with NEW badge.");
                                 dialogueBox.setVisible(false);
@@ -203,6 +231,15 @@ public class UIManager implements MouseWheelListener {
                                     () -> {
                                         // Add the rune to inventory
                                         addItemToInventory(ItemManager.createRuneOfReturn());
+                                        
+                                        // ★ NEW: Grant Fionne's Blessing buff
+                                        Entity player = gameState.getPlayer();
+                                        BuffManager buffManager = player.getComponent(BuffManager.class);
+                                        if (buffManager != null) {
+                                            Buff blessing = BuffFactory.createFionnesBlessing();
+                                            buffManager.addBuff(blessing);
+                                            System.out.println("Fionne's Blessing activated! +20% EXP for 20,000 kills");
+                                        }
                                         
                                         // ★ FIXED: Use new notification system
                                         notifyInventoryUpdate();
@@ -811,6 +848,11 @@ public class UIManager implements MouseWheelListener {
             }
         }
         
+        // NEW: Render buff bar
+        if (buffBar != null) {
+            buffBar.render(g);
+        }
+        
         // ⭐ NEW: Render quest panel (after regular panels, before dialogue)
         if (questPanel != null && questPanel.isVisible()) {
             questPanel.render(g);
@@ -877,6 +919,11 @@ public class UIManager implements MouseWheelListener {
             }
         }
         
+        // NEW: Update buff bar hover
+        if (buffBar != null) {
+            buffBar.handleMouseMove(mouseX, mouseY);
+        }
+        
         // Handle inventory grid hover/drag
         if (inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
             inventoryGrid.handleMouseMove(mouseX, mouseY, pressed);
@@ -904,6 +951,11 @@ public class UIManager implements MouseWheelListener {
     
     private void updateTooltips(int mouseX, int mouseY) {
         String tooltipText = null;
+        
+        // NEW: Check buff bar hover first
+        if (buffBar != null) {
+            tooltipText = buffBar.getTooltipText(mouseX, mouseY);
+        }
         
         // Check inventory slots
         if (inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
@@ -1266,8 +1318,9 @@ public class UIManager implements MouseWheelListener {
         if (item != null) {
             applyItemStats(item, true);
             
-            // Special: Unlock stats button when equipping wooden short sword
+            // ★ TRACK WHEN WOODEN SHORT SWORD IS EQUIPPED
             if (slotType == UIGearSlot.SlotType.WEAPON && "Wooden Short Sword".equals(item.getName())) {
+                swordEquipped = true;
                 unlockMenuButton("stats");  // Shows NEW badge automatically
                 fionneSecondQuestAvailable = true;
                 fionneNotification = "!";
@@ -1276,6 +1329,39 @@ public class UIManager implements MouseWheelListener {
         }
         return true;
     }
+    
+    public boolean isWoodenSwordEquipped() {
+        UIGearSlot weaponSlot = getGearSlot(UIGearSlot.SlotType.WEAPON);
+        if (weaponSlot == null) return false;
+        
+        Item equippedWeapon = weaponSlot.getItem();
+        return equippedWeapon != null && "Wooden Short Sword".equals(equippedWeapon.getName());
+    }
+    
+    public boolean hasWoodenSwordInInventory() {
+        if (inventoryGrid == null) return false;
+        
+        for (UIInventorySlot slot : inventoryGrid.getSlots()) {
+            Item item = slot.getItem();
+            if (item != null && "Wooden Short Sword".equals(item.getName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public void showEquipSwordReminder() {
+        dialogueBox.showMessageWithAccept(
+            "You need to equip the sword I gave you! Right-click it in your inventory to equip it.",
+            () -> {
+                dialogueBox.setVisible(false);
+            },
+            () -> {
+                dialogueBox.setVisible(false);
+            }
+        );
+    }
+    
     /**
      * ★ NEW: Clear all notifications (useful for debugging or reset)
      */
