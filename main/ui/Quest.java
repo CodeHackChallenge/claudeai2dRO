@@ -3,9 +3,9 @@ package dev.main.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.main.Entity;
-import dev.main.Experience;
-import dev.main.QuestObjective;
+import dev.main.entity.Entity;
+import dev.main.entity.Experience;
+import dev.main.quest.QuestObjective;
 
 /**
  * Quest system - tracks objectives, rewards, and completion status

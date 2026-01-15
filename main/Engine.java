@@ -17,6 +17,21 @@ import java.util.List;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import dev.main.dialogue.DialogueDatabase;
+import dev.main.dialogue.DialogueTree;
+import dev.main.entity.Entity;
+import dev.main.entity.EntityType;
+import dev.main.entity.Experience;
+import dev.main.entity.LevelUpEffect;
+import dev.main.entity.NPC;
+import dev.main.input.CollisionBox;
+import dev.main.input.MouseInput;
+import dev.main.input.Position;
+import dev.main.item.ItemManager;
+import dev.main.render.Renderer;
+import dev.main.state.GameLogic;
+import dev.main.state.GameState;
+import dev.main.stats.Stats;
 import dev.main.ui.Quest;
 import dev.main.ui.UIButton;
 import dev.main.ui.UIComponent;
@@ -24,6 +39,7 @@ import dev.main.ui.UIDialogueBoxEnhanced;
 import dev.main.ui.UIInventorySlot;
 import dev.main.ui.UIManager;
 import dev.main.ui.UIPanel;
+import dev.main.util.DamageText;
 
 public class Engine extends Canvas implements Runnable, KeyListener {
 
@@ -99,10 +115,10 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 // To use custom cursor image: load from classpath (safer than using bare paths)
                 Toolkit toolkit = Toolkit.getDefaultToolkit();
                 try {
-                    java.net.URL cursorUrl = getClass().getResource("/dev/main/resources/icon/sword.png");
+                    java.net.URL cursorUrl = getClass().getResource("/dev/main/resources/items/icons/sword.png");
                     if (cursorUrl == null) {
                         // fallback to .cur if present
-                        cursorUrl = getClass().getResource("/dev/main/resources/icon/sword2.cur");
+                        cursorUrl = getClass().getResource("/dev/main/resources/items/icons/sword2.cur");
                     }
 
                     if (cursorUrl != null) {
@@ -118,7 +134,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                     } else {
                         System.out.println("Cursor resource not found on classpath; trying local file fallback.");
                         // Last-resort: try relative file path (useful during IDE runs)
-                        java.io.File f = new java.io.File("bin/dev/main/resources/icon/sword.png");
+                        java.io.File f = new java.io.File("bin/dev/main/resources/items/icons/sword.png");
                         if (f.exists()) {
                             java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(f);
                             attackCursor = toolkit.createCustomCursor(cursorImg, new Point(16, 16), "attack");
@@ -144,7 +160,7 @@ public class Engine extends Canvas implements Runnable, KeyListener {
                 
                 // To use custom cursor image:
                 Toolkit toolkit = Toolkit.getDefaultToolkit();
-                Image cursorImage = toolkit.getImage("resources/icon/sword.png"); // /sprites/hero2.png
+                Image cursorImage = toolkit.getImage("resources/items/icons/sword.png"); // /sprites/hero2.png
                  attackCursor = toolkit.createCustomCursor(cursorImage, new Point(16, 16), "attack");
             } catch (Exception e) {
                 attackCursor = defaultCursor;

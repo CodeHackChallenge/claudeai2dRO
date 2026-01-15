@@ -4,7 +4,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-import dev.main.TextureManager;
+import dev.main.sprite.TextureManager;
 
 import java.awt.Color;
 
@@ -70,7 +70,7 @@ public class UIButton extends UIComponent {
     }
     
     /**
-     * Set icon paths (will be loaded when needed)
+     * Set items paths (will be loaded when needed)
      */
     public void setIcons(String normalPath, String hoverPath, String lockedPath) {
         this.iconPathNormal = normalPath;
@@ -90,7 +90,7 @@ public class UIButton extends UIComponent {
     }
     
     /**
-     * Set single icon (same for all states)
+     * Set single items (same for all states)
      */
     public void setIcon(String iconPath) {
         setIcons(iconPath, iconPath, iconPath);
@@ -176,7 +176,7 @@ public class UIButton extends UIComponent {
     public void render(Graphics2D g) {
         if (!visible) return;
         
-        // Choose which icon to display
+        // Choose which items to display
         BufferedImage currentIcon = null;
         
         if (locked && iconLocked != null) {
@@ -187,7 +187,7 @@ public class UIButton extends UIComponent {
             currentIcon = iconNormal;
         }
         
-        // Draw icon
+        // Draw items
         if (currentIcon != null) {
             if (locked) {
                 // Apply transparency to locked icons
@@ -198,13 +198,13 @@ public class UIButton extends UIComponent {
                 g.drawImage(currentIcon, x, y, width, height, null);
                 g.setComposite(oldComposite);
                 
-                // Draw small lock icon overlay
+                // Draw small lock items overlay
                 drawLockOverlay(g);
             } else {
                 g.drawImage(currentIcon, x, y, width, height, null);
             }
         } else {
-            // Fallback: draw colored rectangle if no icon
+            // Fallback: draw colored rectangle if no items
             if (locked) {
                 g.setColor(new java.awt.Color(80, 80, 80, 120));
             } else if (hovered) {
@@ -389,7 +389,7 @@ public class UIButton extends UIComponent {
     }
     
     /**
-     * Draw lock icon overlay for locked buttons
+     * Draw lock items overlay for locked buttons
      */
     private void drawLockOverlay(Graphics2D g) {
         int lockSize = width / 3;

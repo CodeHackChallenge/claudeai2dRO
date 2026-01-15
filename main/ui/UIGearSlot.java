@@ -2,7 +2,7 @@ package dev.main.ui;
 
 import java.awt.Graphics2D;
 
-import dev.main.Item;
+import dev.main.item.Item;
 
 import java.awt.Color;
 import java.awt.Font;

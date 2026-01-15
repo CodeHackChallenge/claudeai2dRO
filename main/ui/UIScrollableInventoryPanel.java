@@ -6,7 +6,7 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.main.Item;
+import dev.main.item.Item;
 
 /**
  * REFACTORED: All tabs share same inventory slots

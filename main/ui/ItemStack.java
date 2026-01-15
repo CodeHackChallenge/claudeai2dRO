@@ -1,6 +1,6 @@
 package dev.main.ui;
 
-import dev.main.Item;
+import dev.main.item.Item;
 
 /**
  * ★ NEW: Wrapper to store item + stack count together

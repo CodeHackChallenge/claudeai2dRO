@@ -1,6 +1,6 @@
 package dev.main.drops;
 
-import dev.main.Item;
+import dev.main.item.Item;
 
 /**
  * Template for items that can be dropped

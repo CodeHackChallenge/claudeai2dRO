@@ -7,13 +7,13 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.main.DialogueChoice;
-import dev.main.DialogueManager;
-import dev.main.DialogueNode;
 import dev.main.Engine;
-import dev.main.Entity;
-import dev.main.NPC;
-import dev.main.QuestLog;
+import dev.main.dialogue.DialogueChoice;
+import dev.main.dialogue.DialogueManager;
+import dev.main.dialogue.DialogueNode;
+import dev.main.entity.Entity;
+import dev.main.entity.NPC;
+import dev.main.quest.QuestLog;
 
 /**
  * Enhanced dialogue box with support for branching dialogue trees

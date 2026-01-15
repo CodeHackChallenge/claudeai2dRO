@@ -7,10 +7,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.util.List;
 
-import dev.main.Buff;
-import dev.main.BuffManager;
-import dev.main.Entity;
-import dev.main.GameState;
+import dev.main.buffs.Buff;
+import dev.main.buffs.BuffManager;
+import dev.main.entity.Entity;
+import dev.main.state.GameState;
 
 /**
  * UIBuffBar - Displays active buffs as small icons above the skill bar
@@ -109,7 +109,7 @@ public class UIBuffBar extends UIComponent {
         }
         g.drawRect(iconX, iconY, iconSize, iconSize);
         
-        // Draw icon letter (first letter of name)
+        // Draw items letter (first letter of name)
         String letter = buff.getName().substring(0, 1).toUpperCase();
         Font letterFont = new Font("Arial", Font.BOLD, 16);
         g.setFont(letterFont);

@@ -7,8 +7,8 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-import dev.main.Skill;
-import dev.main.TextureManager;
+import dev.main.skill.Skill;
+import dev.main.sprite.TextureManager;
 
 /**
  * OPTIMIZED: Cached Font objects to eliminate per-frame Font creation
@@ -73,7 +73,7 @@ public class UISkillSlot extends UIComponent {
         g.drawRect(x, y, width, height);
         
         if (skill != null) {
-            // Draw skill icon
+            // Draw skill items
             if (skill.getIconPath() != null) {
                 BufferedImage icon = TextureManager.load(skill.getIconPath());
                 if (icon != null) {

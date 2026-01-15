@@ -6,20 +6,20 @@ import java.awt.event.MouseWheelListener;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.main.Buff;
-import dev.main.BuffFactory;
-import dev.main.BuffManager;
 import dev.main.Engine;
-import dev.main.Entity;
-import dev.main.Experience;
-import dev.main.GameLogic;
-import dev.main.GameState;
-import dev.main.Item;
-import dev.main.ItemManager;
-import dev.main.QuestLog;
-import dev.main.Skill;
-import dev.main.SkillLevel;
-import dev.main.Stats;
+import dev.main.buffs.Buff;
+import dev.main.buffs.BuffFactory;
+import dev.main.buffs.BuffManager;
+import dev.main.entity.Entity;
+import dev.main.entity.Experience;
+import dev.main.item.Item;
+import dev.main.item.ItemManager;
+import dev.main.quest.QuestLog;
+import dev.main.skill.Skill;
+import dev.main.skill.SkillLevel;
+import dev.main.state.GameLogic;
+import dev.main.state.GameState;
+import dev.main.stats.Stats;
 
 /**
  * UI Manager with fixed layout:
@@ -201,7 +201,8 @@ public class UIManager implements MouseWheelListener {
                                 unlockMenuButton("inventory");
                                 
                                 // Add item and show notification
-                                addItemToInventory(ItemManager.createWoodenShortSword());
+                                Item sword = ItemManager.createWoodenShortSword();
+                                addItemToInventory(sword);
                                 
                                 // ★ MARK INTRO QUEST AS COMPLETED
                                 introQuestCompleted = true;
@@ -810,8 +811,8 @@ public class UIManager implements MouseWheelListener {
         Skill fireball = new Skill("fireball", "Fireball", "Launch a blazing fireball", 
             Skill.SkillType.ATTACK, 3.0f, 12, 1);
         Skill heal = new Skill("heal", "Heal", "Restore health", 
-            Skill.SkillType.HEAL, 8.0f, 12, 1); 
-        heal.setIconPath("/icon/heal.png");
+            Skill.SkillType.HEAL, 8.0f, 12, 1); heal.setIconPath("/items/icons/heal.png");
+        
         Skill shield = new Skill("shield", "Shield", "Create a barrier", 
             Skill.SkillType.DEFENSE, 12.0f, 12, 3);
         Skill haste = new Skill("haste", "Haste", "Increase speed", 

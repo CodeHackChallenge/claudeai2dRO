@@ -6,12 +6,12 @@ import java.awt.image.BufferedImage;
 
 /**
  * Generates placeholder UI icons programmatically
- * Replace with actual icon images later
+ * Replace with actual items images later
  */
 public class UIIconGenerator {
     
     /**
-     * Generate a simple colored icon
+     * Generate a simple colored items
      */
     public static BufferedImage generateIcon(int size, Color color, String letter) {
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);

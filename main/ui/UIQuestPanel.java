@@ -7,11 +7,11 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.main.Entity;
-import dev.main.GameState;
-import dev.main.NPC;
-import dev.main.QuestLog;
-import dev.main.QuestObjective;
+import dev.main.entity.Entity;
+import dev.main.entity.NPC;
+import dev.main.quest.QuestLog;
+import dev.main.quest.QuestObjective;
+import dev.main.state.GameState;
 
 /**
  * Quest panel UI - Shows active and completed quests

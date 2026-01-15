@@ -1,7 +1,8 @@
 package dev.main.drops;
 
-import dev.main.ItemManager;
 import java.util.*;
+
+import dev.main.item.ItemManager;
 
 /**
  * Configuration for all available drops organized by rarity

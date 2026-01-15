@@ -2,11 +2,11 @@ package dev.main.ui;
 
 import java.awt.Graphics2D;
 
-import dev.main.Entity;
-import dev.main.Experience;
-import dev.main.GameState;
-import dev.main.SkillLevel;
-import dev.main.Stats;
+import dev.main.entity.Entity;
+import dev.main.entity.Experience;
+import dev.main.skill.SkillLevel;
+import dev.main.state.GameState;
+import dev.main.stats.Stats;
 
 import java.awt.Color;
 import java.awt.Font;

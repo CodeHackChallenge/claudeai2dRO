@@ -3,7 +3,7 @@ package dev.main.ui;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-import dev.main.Item;
+import dev.main.item.Item;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -16,10 +16,8 @@ import java.awt.FontMetrics;
 public class UIInventorySlot extends UIComponent {
     private static final Font SLOT_FONT = new Font("Arial", Font.PLAIN, 10);
    
-    private int stackCount = 1;  // ★ NEW: Current stack count
-
-    
-    private Item item;  // TODO: Replace with actual Item class later
+    private int stackCount = 1;
+    private Item item;
     private int slotIndex;
     
     // Reference to UIManager for equipping
@@ -68,8 +66,8 @@ public class UIInventorySlot extends UIComponent {
         if (item == null) {
             drawEmptySlotPattern(g);
         } else {
-            // TODO: Draw item icon here when item system is implemented
-            drawPlaceholderItem(g);
+            // ★ UPDATED: Draw item icon
+            drawItemIcon(g);
         }
         
         // Draw hover effect
@@ -78,7 +76,7 @@ public class UIInventorySlot extends UIComponent {
             g.fillRect(x, y, width, height);
         }
         
-     // ★ NEW: Draw stack count if stackable
+        // Draw stack count if stackable
         if (item != null && item.isStackable() && stackCount > 1) {
             Font originalFont = g.getFont();
             g.setFont(new Font("Arial", Font.BOLD, 12));
@@ -118,19 +116,144 @@ public class UIInventorySlot extends UIComponent {
     }
     
     /**
-     * Draw placeholder for item (for testing)
+     * ★ UPDATED: Draw actual item icon (with extensive debugging)
      */
-    private void drawPlaceholderItem(Graphics2D g) {
-        // Draw colored square as placeholder
-        g.setColor(new Color(150, 100, 50));
-        int itemSize = (int)(width * 0.7f);
+    private void drawItemIcon(Graphics2D g) {
+        if (item == null) {
+            System.out.println("⚠️ drawItemIcon called but item is null!");
+            return;
+        }
+        
+        // Calculate icon position and size
+        int itemSize = (int)(width * 0.75f);
         int itemX = x + (width - itemSize) / 2;
         int itemY = y + (height - itemSize) / 2;
-        g.fillRect(itemX, itemY, itemSize, itemSize);
+        
+        // Try to load item icon
+        String iconPath = item.getIconPath();
+        BufferedImage icon = null;
+        
+        // ★ DEBUG: Print icon loading attempt
+        //System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        //System.out.println("🔍 Loading icon for: " + item.getName());
+        //System.out.println("📁 Icon path: " + iconPath);
+        
+        if (iconPath != null && !iconPath.isEmpty()) {
+            try {
+                icon = dev.main.sprite.TextureManager.load(iconPath);
+                
+                if (icon != null) {
+                   // System.out.println("✅ Icon loaded successfully!");
+                   // System.out.println("   Size: " + icon.getWidth() + "x" + icon.getHeight());
+                } else {
+                   // System.out.println("❌ TextureManager.load() returned null");
+                }
+            } catch (Exception e) {
+               // System.out.println("❌ Exception loading icon: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            //System.out.println("❌ Icon path is null or empty!");
+        }
+      
+        if (icon != null) {
+            // ★ Draw the actual icon image
+            //System.out.println("🎨 Drawing icon at (" + itemX + ", " + itemY + ") size: " + itemSize);
+            g.drawImage(icon, itemX, itemY, itemSize, itemSize, null);
+            
+            // Draw rarity border
+            drawRarityBorder(g, itemX, itemY, itemSize);
+        } else {
+            // ★ Fallback: Draw enhanced placeholder
+            //System.out.println("🔸 Using fallback placeholder");
+            drawFallbackPlaceholder(g, itemX, itemY, itemSize);
+        }
+        
+        //System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+         
+    }
+    
+    /**
+     * ★ NEW: Draw fallback placeholder
+     */
+    private void drawFallbackPlaceholder(Graphics2D g, int x, int y, int size) {
+        // Draw colored square based on rarity
+        Color rarityColor = getRarityColor(item.getRarity());
+        g.setColor(rarityColor);
+        g.fillRect(x, y, size, size);
         
         // Draw border
-        g.setColor(new Color(200, 150, 100));
-        g.drawRect(itemX, itemY, itemSize, itemSize);
+        g.setColor(rarityColor.brighter());
+        g.setStroke(new java.awt.BasicStroke(2f));
+        g.drawRect(x, y, size, size);
+        
+        // Draw first letter of item name
+        drawItemInitial(g, x, y, size);
+        
+        // Draw rarity border
+        drawRarityBorder(g, x, y, size);
+    }
+    
+    /**
+     * ★ NEW: Draw rarity border around icon
+     */
+    private void drawRarityBorder(Graphics2D g, int x, int y, int size) {
+        Color rarityColor = getRarityColor(item.getRarity());
+        g.setColor(new Color(rarityColor.getRed(), rarityColor.getGreen(), 
+                            rarityColor.getBlue(), 180));
+        g.setStroke(new java.awt.BasicStroke(2f));
+        g.drawRect(x - 1, y - 1, size + 2, size + 2);
+    }
+    
+    /**
+     * ★ NEW: Get color based on rarity
+     */
+    private Color getRarityColor(Item.Rarity rarity) {
+        switch (rarity) {
+            case COMMON:
+                return new Color(180, 180, 180);  // Gray
+            case UNCOMMON:
+                return new Color(100, 200, 100);  // Green
+            case RARE:
+                return new Color(80, 120, 220);   // Blue
+            case EPIC:
+                return new Color(160, 80, 220);   // Purple
+            case LEGENDARY:
+                return new Color(255, 165, 0);    // Orange/Gold
+            default:
+                return new Color(150, 150, 150);
+        }
+    }
+    
+    /**
+     * ★ NEW: Draw item initial letter (fallback)
+     */
+    private void drawItemInitial(Graphics2D g, int x, int y, int size) {
+        if (item == null || item.getName() == null || item.getName().isEmpty()) {
+            return;
+        }
+        
+        String initial = item.getName().substring(0, 1).toUpperCase();
+        
+        Font originalFont = g.getFont();
+        g.setFont(new Font("Arial", Font.BOLD, size / 2));
+        
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(initial);
+        int textHeight = fm.getAscent();
+        
+        int textX = x + (size - textWidth) / 2;
+        int textY = y + (size + textHeight) / 2 - 2;
+        
+        // Shadow
+        g.setColor(new Color(0, 0, 0, 200));
+        g.drawString(initial, textX + 2, textY + 2);
+        
+        // Text
+        g.setColor(Color.WHITE);
+        g.drawString(initial, textX, textY);
+        
+        g.setFont(originalFont);
     }
     
     @Override
@@ -143,21 +266,19 @@ public class UIInventorySlot extends UIComponent {
         if (item == null) {
             System.out.println("Clicked empty inventory slot " + slotIndex);
         } else {
-            System.out.println("Clicked inventory slot " + slotIndex + " with item");
-            // TODO: Handle item click (use, move, etc.)
+            System.out.println("Clicked inventory slot " + slotIndex + " with item: " + item.getName());
+            System.out.println("  Icon path: " + item.getIconPath());
         }
-        return true;  // Consume click
+        return true;
     }
     
     @Override
     public boolean onRightClick() {
         if (item != null) {
-            String itemName = item.getName();  // Store name before any modifications
-            // Try to equip the item if it's a weapon
+            String itemName = item.getName();
             if (item.isWeapon()) {
                 boolean equipped = uiManager.equipItem(UIGearSlot.SlotType.WEAPON, item);
                 if (equipped) {
-                    // Remove from inventory
                     UIScrollableInventoryPanel inventoryPanel = uiManager.getInventoryGrid();
                     inventoryPanel.removeItemFromSlot(slotIndex);
                     System.out.println("Equipped " + itemName + " to weapon slot");
@@ -169,16 +290,20 @@ public class UIInventorySlot extends UIComponent {
                 System.out.println("Cannot equip " + itemName + " - not a weapon");
             }
         }
-        return true;  // Consume click
+        return true;
     }
     
- // ★ MODIFIED: Update setItem to reset stack count
     public void setItem(Item item) {
         this.item = item;
         this.stackCount = (item != null) ? 1 : 0;
+        
+        // ★ DEBUG: Print when item is set
+        if (item != null) {
+            System.out.println("📦 Item set in slot " + slotIndex + ": " + item.getName());
+            System.out.println("   Icon path: " + item.getIconPath());
+        }
     }
     
- // ★ MODIFIED: Update removeItem to reset stack count
     public Item removeItem() {
         Item removed = this.item;
         this.item = null;
@@ -198,7 +323,6 @@ public class UIInventorySlot extends UIComponent {
         return slotIndex;
     }
      
- // ★ MODIFIED: Update tooltip to show stack info
     @Override
     public String getTooltipText() {
         if (item == null) return null;
@@ -207,12 +331,10 @@ public class UIInventorySlot extends UIComponent {
         tooltip.append(item.getName()).append("\n");
         tooltip.append(item.getRarity()).append(" ").append(item.getType()).append("\n");
         
-        // ★ NEW: Show stack info
         if (item.isStackable()) {
             tooltip.append("Stack: ").append(stackCount).append("/").append(item.getMaxStackSize()).append("\n");
         }
         
-        // Stats
         if (item.getAttackBonus() > 0) {
             tooltip.append("Attack: +").append(item.getAttackBonus()).append("\n");
         }
@@ -220,7 +342,6 @@ public class UIInventorySlot extends UIComponent {
             tooltip.append("Defense: +").append(item.getDefenseBonus()).append("\n");
         }
         
-        // Durability
         if (item.getMaxDurability() > 0) {
             tooltip.append("Durability: ").append(item.getCurrentDurability())
                    .append("/").append(item.getMaxDurability());
@@ -229,43 +350,6 @@ public class UIInventorySlot extends UIComponent {
         return tooltip.toString();
     }
     
-    private String getItemDescription(Item item) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(item.getName()).append("\n");
-        sb.append("Type: ").append(item.getType()).append("\n");
-        sb.append("Rarity: ").append(item.getRarity()).append("\n");
-        
-        if (item.getAttackBonus() > 0) {
-            sb.append("Attack: +").append(item.getAttackBonus()).append("\n");
-        }
-        if (item.getDefenseBonus() > 0) {
-            sb.append("Defense: +").append(item.getDefenseBonus()).append("\n");
-        }
-        if (item.getMagicAttackBonus() > 0) {
-            sb.append("Magic Attack: +").append(item.getMagicAttackBonus()).append("\n");
-        }
-        if (item.getMagicDefenseBonus() > 0) {
-            sb.append("Magic Defense: +").append(item.getMagicDefenseBonus()).append("\n");
-        }
-        
-        sb.append("Durability: ").append(item.getCurrentDurability()).append("/").append(item.getMaxDurability()).append("\n");
-        
-        if (!item.isUpgradable()) {
-            sb.append("Not upgradable\n");
-        }
-        if (!item.canInfuseElemental()) {
-            sb.append("Cannot infuse elemental stones\n");
-        }
-        if (!item.isTradable()) {
-            sb.append("Cannot be traded\n");
-        }
-        if (!item.isSellable()) {
-            sb.append("Cannot be sold\n");
-        }
-        
-        return sb.toString().trim();
-    }
- // ★ NEW: Set stack count
     public void setStackCount(int count) {
         if (item != null && item.isStackable()) {
             this.stackCount = Math.min(count, item.getMaxStackSize());
@@ -274,7 +358,6 @@ public class UIInventorySlot extends UIComponent {
         }
     }
 
-    // ★ NEW: Add to stack
     public boolean addToStack(int amount) {
         if (item == null || !item.isStackable()) {
             return false;
@@ -287,12 +370,10 @@ public class UIInventorySlot extends UIComponent {
             stackCount = newCount;
             return true;
         } else {
-            // Stack is full
             return false;
         }
     }
 
-    // ★ NEW: Remove from stack
     public int removeFromStack(int amount) {
         int removed = Math.min(amount, stackCount);
         stackCount -= removed;
@@ -304,7 +385,6 @@ public class UIInventorySlot extends UIComponent {
         return removed;
     }
 
-    // ★ NEW: Check if stack has room
     public boolean hasRoomInStack(int amount) {
         if (item == null || !item.isStackable()) {
             return false;
@@ -312,14 +392,13 @@ public class UIInventorySlot extends UIComponent {
         return (stackCount + amount) <= item.getMaxStackSize();
     }
 
-    // ★ NEW: Get remaining stack space
     public int getRemainingStackSpace() {
         if (item == null || !item.isStackable()) {
             return 0;
         }
         return item.getMaxStackSize() - stackCount;
     }
- // ★ NEW: Get stack count
+
     public int getStackCount() {
         return stackCount;
     }
