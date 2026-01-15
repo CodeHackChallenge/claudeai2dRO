@@ -1302,7 +1302,7 @@ public class UIManager implements MouseWheelListener {
         System.out.println("Inventory full!");
         return false;
     }
-    
+   
     public UIGearSlot getGearSlot(UIGearSlot.SlotType slotType) {
         if (inventoryContainer == null) return null;
         
@@ -1323,7 +1323,7 @@ public class UIManager implements MouseWheelListener {
     public boolean equipItem(UIGearSlot.SlotType slotType, Item item) {
         UIGearSlot slot = getGearSlot(slotType);
         if (slot == null) return false;
-        
+         
         Item oldItem = slot.equipItem(item);
         if (oldItem != null) {
             addItemToInventory(oldItem);

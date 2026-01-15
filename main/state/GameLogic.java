@@ -36,8 +36,8 @@ import dev.main.ui.UIManager;
 import dev.main.ui.UIScrollableInventoryPanel;
 import dev.main.util.Alert;
 import dev.main.util.DamageText;
-import dev.main.util.Dead;
-import dev.main.util.DamageText.Type;
+import dev.main.util.Dead; 
+import dev.main.ui.UIGearSlot;
 
 public class GameLogic {
     
@@ -217,10 +217,13 @@ public class GameLogic {
         // Check evasion
         float evasionRoll = ThreadLocalRandom.current().nextFloat();
         float evasionChance = targetCombat != null ? targetCombat.evasionChance : 0f;
-        
+       
         if (evasionRoll < evasionChance) {
             DamageText missText = new DamageText("MISS", DamageText.Type.MISS, targetPos.x, targetPos.y - 30);
-            state.addDamageText(missText);
+            state.addDamageText(missText); 
+            
+            reduceDurability();
+            
             return;
         }
         
@@ -239,7 +242,7 @@ public class GameLogic {
         
         if (isCrit && attackerCombat != null) {
             baseDamage = (int)(baseDamage * attackerCombat.critMultiplier);
-        }
+        } 
         
         // Apply damage
         targetStats.hp -= baseDamage;
@@ -266,7 +269,7 @@ public class GameLogic {
         // Spawn damage text
         DamageText damageText = new DamageText(String.valueOf(baseDamage), textType, targetPos.x, targetPos.y - 30);
         state.addDamageText(damageText);
-        
+         
         // Check death
         if (targetStats.hp <= 0) {
             Dead alreadyDead = target.getComponent(Dead.class);
@@ -315,7 +318,21 @@ public class GameLogic {
             }
         }
     }
-    /**
+    
+    private void reduceDurability() {
+    	//reduce durability when attack is a miss! - execute only when weapon is equipped
+        if(state.getUIManager().getGearSlot(UIGearSlot.SlotType.WEAPON) != null &&
+           state.getUIManager().getGearSlot(UIGearSlot.SlotType.WEAPON).getItem() != null &&
+           state.getUIManager().getGearSlot(UIGearSlot.SlotType.WEAPON).getItem().getCurrentDurability() > 0) {
+        	
+        	state.getUIManager().getGearSlot(UIGearSlot.SlotType.WEAPON).getItem().reduceDurability(1);
+            System.out.println("****NOTIFICATION: \n GameLogic.performAttack()>Reduced durability!");
+        }
+		
+	}
+
+
+	/**
      * Handle player death
      */
     private void handlePlayerDeath(Entity player, Sprite sprite) {
@@ -1570,162 +1587,7 @@ public class GameLogic {
         // Show XP progress
         System.out.println("XP: " + (int)exp.currentXP + "/" + (int)exp.xpToNextLevel + 
                            " (" + (int)(exp.getXPProgress() * 100) + "%)");
-    }
-
-    /**
-     * Handle monster death with tier-based XP
-      
-    private void handleMonsterDeath(Entity monster, Sprite sprite) {
-        // Get monster info for logging
-        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
-        String monsterInfo = monster.getName();
-        if (monsterLevel != null) {
-            monsterInfo += " Lv" + monsterLevel.level + " " + monsterLevel.tier;
-        }
-        
-        System.out.println(monsterInfo + " has died!");
-        
-        // Award XP to player
-        Entity player = state.getPlayer();
-        int xpReward = calculateMonsterXP(monster);
-        System.out.println("→ XP Reward: " + xpReward);
-        awardExperience(player, xpReward);
-        
-        
-        // NEW: Notify buffs of kill
-        BuffManager buffManager = player.getComponent(BuffManager.class);
-        if (buffManager != null) {
-            buffManager.onMonsterKill();
-        }
-        
-        // ⭐ NEW: Update quest progress
-        updateQuestProgress(player, monster);
-        
-        // Clear as auto-attack target
-        if (state.getAutoAttackTarget() == monster) {
-            state.clearAutoAttackTarget();
-        }
-        
-        // Clear as targeted entity
-        if (state.getTargetedEntity() == monster) {
-            state.setTargetedEntity(null);
-        }
-        
-        // Notify spawn point of death
-        state.onMonsterDeath(monster);
-        
-        // Add dead component
-        monster.addComponent(new Dead(1.5f));
-        
-        // Stop movement
-        Movement movement = monster.getComponent(Movement.class);
-        if (movement != null) {
-            movement.stopMoving();
-        }
-        
-        Path path = monster.getComponent(Path.class);
-        if (path != null) {
-            path.clear();
-        }
-        
-        // Set AI to dead state
-        AI ai = monster.getComponent(AI.class);
-        if (ai != null) {
-            ai.currentState = AI.State.DEAD;
-        }
-        
-        // Play death animation
-        if (sprite != null) {
-            sprite.setAnimation(Sprite.ANIM_DEAD);
-        }
-    }
-   
-    private void handleMonsterDeath(Entity monster, Sprite sprite) {
-        // Get monster info for logging
-        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
-        String monsterInfo = monster.getName();
-        if (monsterLevel != null) {
-            monsterInfo += " Lv" + monsterLevel.level + " " + monsterLevel.tier;
-        }
-        
-        System.out.println(monsterInfo + " has died!");
-        
-        // ★ NEW: Generate drops
-        int dropCapacity = calculateDropCapacity(monster);
-        List<DroppedItem> drops = dropSystem.generateDrops(dropCapacity);
-        
-        // ★ NEW: Display drops to player
-        if (!drops.isEmpty()) {
-            if (dropSystem.isLuckyDrop(drops)) {
-                System.out.println("✨ ✨ ✨ LUCKY DROP! ✨ ✨ ✨");
-            }
-            
-            System.out.println(monsterInfo + " dropped:");
-            for (DroppedItem drop : drops) {
-                System.out.println("  • " + drop.toString());
-            }
-            
-            // ★ NEW: Add items to player inventory
-            Entity player = state.getPlayer();
-            addDropsToInventory(player, drops);
-        } else {
-            System.out.println("  No drops...");
-        }
-        
-        // Award XP to player
-        Entity player = state.getPlayer();
-        int xpReward = calculateMonsterXP(monster);
-        System.out.println("→ XP Reward: " + xpReward);
-        awardExperience(player, xpReward);
-        
-        // Notify buffs of kill
-        BuffManager buffManager = player.getComponent(BuffManager.class);
-        if (buffManager != null) {
-            buffManager.onMonsterKill();
-        }
-        
-        // Update quest progress
-        updateQuestProgress(player, monster);
-        
-        // Clear as auto-attack target
-        if (state.getAutoAttackTarget() == monster) {
-            state.clearAutoAttackTarget();
-        }
-        
-        // Clear as targeted entity
-        if (state.getTargetedEntity() == monster) {
-            state.setTargetedEntity(null);
-        }
-        
-        // Notify spawn point of death
-        state.onMonsterDeath(monster);
-        
-        // Add dead component
-        monster.addComponent(new Dead(1.5f));
-        
-        // Stop movement
-        Movement movement = monster.getComponent(Movement.class);
-        if (movement != null) {
-            movement.stopMoving();
-        }
-        
-        Path path = monster.getComponent(Path.class);
-        if (path != null) {
-            path.clear();
-        }
-        
-        // Set AI to dead state
-        AI ai = monster.getComponent(AI.class);
-        if (ai != null) {
-            ai.currentState = AI.State.DEAD;
-        }
-        
-        // Play death animation
-        if (sprite != null) {
-            sprite.setAnimation(Sprite.ANIM_DEAD);
-        }
-    }
-*/
+    } 
     /**
      * Handle monster death with drops
      * REPLACE your existing handleMonsterDeath() method with this:

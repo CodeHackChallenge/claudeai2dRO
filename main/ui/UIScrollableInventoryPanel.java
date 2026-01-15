@@ -256,7 +256,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
             if (matchesTabFilter(item, tabName)) {
                 filtered.add(stack);
             }
-        }
+        } 
         
         return filtered;
     }
@@ -338,28 +338,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         System.out.println("Inventory full!");
         return false;
-    }
-    /**
-     * ★ NEW: Find slot displaying a specific inventory index
-    
-    private UIInventorySlot findSlotForInventoryIndex(int inventoryIndex) {
-        if (inventoryIndex < 0 || inventoryIndex >= sharedInventory.length) {
-            return null;
-        }
-         
-        Item item = sharedInventory[inventoryIndex];
-        if (item == null) return null;
-        
-        // Find which slot is displaying this item
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        for (int i = 0; i < filteredItems.size() && i < slots.size(); i++) {
-            if (filteredItems.get(i) == item) {
-                return slots.get(i);
-            }
-        }
-        
-        return null;
-    } */
+    } 
     /**
      * ★ COMPLETELY FIXED: Add multiple items with stacking
      */

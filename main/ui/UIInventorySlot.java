@@ -117,6 +117,7 @@ public class UIInventorySlot extends UIComponent {
     
     /**
      * ★ UPDATED: Draw actual item icon (with extensive debugging)
+     * 
      */
     private void drawItemIcon(Graphics2D g) {
         if (item == null) {
@@ -140,7 +141,7 @@ public class UIInventorySlot extends UIComponent {
         
         if (iconPath != null && !iconPath.isEmpty()) {
             try {
-                icon = dev.main.sprite.TextureManager.load(iconPath);
+                icon = dev.main.sprite.TextureManager.load(iconPath); //Is this doing it on the fly reading from the disk to load the image?
                 
                 if (icon != null) {
                    // System.out.println("✅ Icon loaded successfully!");

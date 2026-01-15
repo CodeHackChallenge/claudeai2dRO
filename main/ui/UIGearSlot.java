@@ -143,7 +143,7 @@ public class UIGearSlot extends UIComponent {
     /**
      * Draw placeholder for equipped item
      */
-    private void drawPlaceholderItem(Graphics2D g) {
+    private void drawPlaceholderItem(Graphics2D g) { 
         // Draw colored square as placeholder
         Color itemColor = getSlotColor();
         g.setColor(itemColor);
@@ -260,7 +260,7 @@ public class UIGearSlot extends UIComponent {
         if (item.getMagicDefenseBonus() > 0) {
             sb.append("Magic Defense: +").append(item.getMagicDefenseBonus()).append("\n");
         }
-        
+        //durability
         sb.append("Durability: ").append(item.getCurrentDurability()).append("/").append(item.getMaxDurability()).append("\n");
         
         if (!item.isUpgradable()) {
