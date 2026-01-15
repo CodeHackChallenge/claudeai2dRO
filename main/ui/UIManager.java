@@ -810,7 +810,8 @@ public class UIManager implements MouseWheelListener {
         Skill fireball = new Skill("fireball", "Fireball", "Launch a blazing fireball", 
             Skill.SkillType.ATTACK, 3.0f, 12, 1);
         Skill heal = new Skill("heal", "Heal", "Restore health", 
-            Skill.SkillType.HEAL, 8.0f, 12, 1);
+            Skill.SkillType.HEAL, 8.0f, 12, 1); 
+        heal.setIconPath("/icon/heal.png");
         Skill shield = new Skill("shield", "Shield", "Create a barrier", 
             Skill.SkillType.DEFENSE, 12.0f, 12, 3);
         Skill haste = new Skill("haste", "Haste", "Increase speed", 

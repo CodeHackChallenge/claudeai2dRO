@@ -49,7 +49,10 @@ public class UIScrollableInventoryPanel extends UIComponent {
     private int dragOffset = 0;
     
     // ★ NEW: Single shared inventory storage
-    private Item[] sharedInventory;  // All items stored here
+    //private Item[] sharedInventory;  // All items stored here
+    // NEW:
+    private ItemStack[] sharedInventory;  // All items WITH stack counts
+
     private String currentTab;
     
     // Reference to UIManager
@@ -100,7 +103,9 @@ public class UIScrollableInventoryPanel extends UIComponent {
         this.scrollbarHeight = height - (padding * 2);
         
         // ★ NEW: Single shared inventory (5x10 = 50 slots)
-        this.sharedInventory = new Item[getTotalSlots()];
+        //this.sharedInventory = new Item[getTotalSlots()];
+        this.sharedInventory = new ItemStack[getTotalSlots()];  // ★ Changed to ItemStack[]
+
         this.currentTab = "Misc";
         
         // Create slots
@@ -170,11 +175,11 @@ public class UIScrollableInventoryPanel extends UIComponent {
     }
     
     /**
-     * Refresh slot display based on current tab filter
+     * ★ FIXED: Refresh slot display preserving stack counts
      */
     private void refreshSlotDisplay() {
-        // Get filtered items for current tab
-        List<Item> filteredItems = getFilteredItems(currentTab);
+        // Get filtered item stacks for current tab
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
         
         // Clear all slots first
         for (UIInventorySlot slot : slots) {
@@ -182,20 +187,33 @@ public class UIScrollableInventoryPanel extends UIComponent {
             slot.setVisible(false);
         }
         
-        // Populate visible slots with filtered items
-        for (int i = 0; i < filteredItems.size() && i < slots.size(); i++) {
+        // Populate visible slots with filtered items AND their stack counts
+        for (int i = 0; i < filteredStacks.size() && i < slots.size(); i++) {
             UIInventorySlot slot = slots.get(i);
-            slot.setItem(filteredItems.get(i));
-            slot.setVisible(true);
+            ItemStack stack = filteredStacks.get(i);
+            
+            if (stack != null && stack.getItem() != null) {
+                slot.setItem(stack.getItem());
+                slot.setStackCount(stack.getStackCount());  // ★ Preserve stack count!
+                slot.setVisible(true);
+            }
         }
         
         // Update scroll limits based on filtered item count
-        updateScrollLimitsForFilteredItems(filteredItems.size());
+        updateScrollLimitsForFilteredItems(filteredStacks.size());
     }
-    
+    /**
+     * ★ NEW: Get stack count for an item from shared inventory
+     */
+    private int getStackCountForItem(Item item) {
+        // For now, return 1 as default
+        // You'll need to track stack counts separately or store them with items
+        // This is a simplified version
+        return 1;
+    }
     /**
      * Get items filtered by tab category
-     */
+     
     private List<Item> getFilteredItems(String tabName) {
         List<Item> filtered = new ArrayList<>();
         
@@ -216,7 +234,32 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         return filtered;
     }
-    
+    */
+    /**
+     * Get items filtered by tab category (WITH stack counts)
+     */
+    private List<ItemStack> getFilteredItemStacks(String tabName) {
+        List<ItemStack> filtered = new ArrayList<>();
+        
+        for (ItemStack stack : sharedInventory) {
+            if (stack == null || stack.getItem() == null) continue;
+            
+            Item item = stack.getItem();
+            
+            // "Misc" shows everything
+            if (tabName.equals("Misc")) {
+                filtered.add(stack);
+                continue;
+            }
+            
+            // Filter by category
+            if (matchesTabFilter(item, tabName)) {
+                filtered.add(stack);
+            }
+        }
+        
+        return filtered;
+    }
     /**
      * Check if item matches tab filter
      */
@@ -260,36 +303,141 @@ public class UIScrollableInventoryPanel extends UIComponent {
     // ═══════════════════════════════════════════════════════════════
     
     /**
-     * Add item to shared inventory (finds first empty slot)
+     * ★ COMPLETELY FIXED: Add item with proper stacking
      */
     public boolean addItemToCurrentTab(Item item) {
-        // Find first empty slot in shared inventory
+        if (item == null) return false;
+        
+        // ★ If item is stackable, try to stack with existing items first
+        if (item.isStackable()) {
+            for (int i = 0; i < sharedInventory.length; i++) {
+                ItemStack stack = sharedInventory[i];
+                
+                if (stack != null && stack.canStackWith(item)) {
+                    if (stack.hasRoom(1)) {
+                        stack.addToStack(1);
+                        refreshSlotDisplay();  // Refresh to update display
+                        System.out.println("Stacked item: " + item.getName() + 
+                                         " (now " + stack.getStackCount() + "/" + 
+                                         item.getMaxStackSize() + ")");
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // ★ If can't stack (or not stackable), find empty slot
         for (int i = 0; i < sharedInventory.length; i++) {
             if (sharedInventory[i] == null) {
-                sharedInventory[i] = item;
+                sharedInventory[i] = new ItemStack(item, 1);
                 refreshSlotDisplay();
+                System.out.println("Added " + item.getName() + " to inventory slot " + i);
                 return true;
             }
         }
-        return false;  // Inventory full
+        
+        System.out.println("Inventory full!");
+        return false;
     }
+    /**
+     * ★ NEW: Find slot displaying a specific inventory index
     
+    private UIInventorySlot findSlotForInventoryIndex(int inventoryIndex) {
+        if (inventoryIndex < 0 || inventoryIndex >= sharedInventory.length) {
+            return null;
+        }
+         
+        Item item = sharedInventory[inventoryIndex];
+        if (item == null) return null;
+        
+        // Find which slot is displaying this item
+        List<Item> filteredItems = getFilteredItems(currentTab);
+        for (int i = 0; i < filteredItems.size() && i < slots.size(); i++) {
+            if (filteredItems.get(i) == item) {
+                return slots.get(i);
+            }
+        }
+        
+        return null;
+    } */
+    /**
+     * ★ COMPLETELY FIXED: Add multiple items with stacking
+     */
+    public boolean addItemStack(Item item, int quantity) {
+        if (item == null || quantity <= 0) return false;
+        
+        if (!item.isStackable()) {
+            // If not stackable, add each individually
+            int added = 0;
+            for (int i = 0; i < quantity; i++) {
+                if (addItemToCurrentTab(item)) {
+                    added++;
+                } else {
+                    break;
+                }
+            }
+            return added == quantity;
+        }
+        
+        // ★ Stackable items: distribute across stacks
+        int remaining = quantity;
+        
+        // First pass: add to existing stacks
+        for (int i = 0; i < sharedInventory.length && remaining > 0; i++) {
+            ItemStack stack = sharedInventory[i];
+            
+            if (stack != null && stack.canStackWith(item)) {
+                int roomInStack = stack.getRemainingSpace();
+                if (roomInStack > 0) {
+                    int toAdd = Math.min(remaining, roomInStack);
+                    stack.addToStack(toAdd);
+                    remaining -= toAdd;
+                    System.out.println("Added " + toAdd + " to existing stack of " + item.getName());
+                }
+            }
+        }
+        
+        // Second pass: create new stacks in empty slots
+        while (remaining > 0) {
+            int emptyIndex = -1;
+            
+            for (int i = 0; i < sharedInventory.length; i++) {
+                if (sharedInventory[i] == null) {
+                    emptyIndex = i;
+                    break;
+                }
+            }
+            
+            if (emptyIndex == -1) {
+                System.out.println("⚠ Inventory full! Lost " + remaining + " items");
+                return false;
+            }
+            
+            int toAdd = Math.min(remaining, item.getMaxStackSize());
+            sharedInventory[emptyIndex] = new ItemStack(item, toAdd);
+            remaining -= toAdd;
+            System.out.println("Created new stack: " + toAdd + "x " + item.getName());
+        }
+        
+        // Refresh display once at the end
+        refreshSlotDisplay();
+        return true;
+    }
     /**
      * Remove item from specific slot index
      */
     public boolean removeItemFromSlot(int slotIndex) {
-        // Get the actual item from filtered display
-        List<Item> filteredItems = getFilteredItems(currentTab);
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
         
-        if (slotIndex < 0 || slotIndex >= filteredItems.size()) {
+        if (slotIndex < 0 || slotIndex >= filteredStacks.size()) {
             return false;
         }
         
-        Item itemToRemove = filteredItems.get(slotIndex);
+        ItemStack stackToRemove = filteredStacks.get(slotIndex);
         
         // Find and remove from shared inventory
         for (int i = 0; i < sharedInventory.length; i++) {
-            if (sharedInventory[i] == itemToRemove) {
+            if (sharedInventory[i] == stackToRemove) {
                 sharedInventory[i] = null;
                 refreshSlotDisplay();
                 return true;
@@ -298,14 +446,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         return false;
     }
-    
     /**
      * Get item at filtered slot index
      */
     public Item getItemAtSlot(int slotIndex) {
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        if (slotIndex >= 0 && slotIndex < filteredItems.size()) {
-            return filteredItems.get(slotIndex);
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        if (slotIndex >= 0 && slotIndex < filteredStacks.size()) {
+            ItemStack stack = filteredStacks.get(slotIndex);
+            return stack != null ? stack.getItem() : null;
         }
         return null;
     }
@@ -315,8 +463,8 @@ public class UIScrollableInventoryPanel extends UIComponent {
      */
     public int getTotalItemCount() {
         int count = 0;
-        for (Item item : sharedInventory) {
-            if (item != null) count++;
+        for (ItemStack stack : sharedInventory) {
+            if (stack != null && stack.getItem() != null) count++;
         }
         return count;
     }
@@ -325,9 +473,8 @@ public class UIScrollableInventoryPanel extends UIComponent {
      * Get filtered item count (current tab)
      */
     public int getFilteredItemCount() {
-        return getFilteredItems(currentTab).size();
+        return getFilteredItemStacks(currentTab).size();
     }
-    
     /**
      * Clear all items
      */
@@ -342,10 +489,12 @@ public class UIScrollableInventoryPanel extends UIComponent {
     // RENDERING & UPDATES
     // ═══════════════════════════════════════════════════════════════
     
+    /**
+     * Update slot positions (FIXED to use ItemStack)
+     */
     private void updateSlotPositions() {
-        // Update positions of visible filtered slots
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = 0; i < visibleSlotCount; i++) {
             UIInventorySlot slot = slots.get(i);
@@ -359,7 +508,9 @@ public class UIScrollableInventoryPanel extends UIComponent {
             slot.setPosition(slotX, slotY);
         }
     }
-    
+    /**
+     * Render (FIXED to use ItemStack)
+     */
     @Override
     public void render(Graphics2D g) {
         if (!visible) return;
@@ -382,8 +533,8 @@ public class UIScrollableInventoryPanel extends UIComponent {
         // Render visible slots
         updateVisibleRange();
         
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = 0; i < visibleSlotCount; i++) {
             int row = i / columns;
@@ -405,7 +556,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
         }
         
         // Draw item count indicator
-        drawItemCount(g, filteredItems.size());
+        drawItemCount(g, filteredStacks.size());
     }
     
     /**
@@ -430,11 +581,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
         g.drawString(countText, textX, textY);
     }
     
+    /**
+     * Draw scrollbar (FIXED to use ItemStack)
+     */
     private void drawScrollbar(Graphics2D g) {
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int requiredRows = (int) Math.ceil((double) filteredItems.size() / columns);
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int requiredRows = (int) Math.ceil((double) filteredStacks.size() / columns);
         
-        if (requiredRows <= visibleRows) return;  // No need for scrollbar
+        if (requiredRows <= visibleRows) return;
         
         float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
         float thumbRatio = (float)visibleRows / requiredRows;
@@ -455,6 +609,9 @@ public class UIScrollableInventoryPanel extends UIComponent {
         g.fillRoundRect(scrollbarX, thumbY, scrollbarWidth, thumbHeight, 4, 4);
     }
     
+    /**
+     * Update (FIXED to use ItemStack)
+     */
     @Override
     public void update(float delta) {
         if (!visible) return;
@@ -470,8 +627,8 @@ public class UIScrollableInventoryPanel extends UIComponent {
         // Update visible slots
         updateVisibleRange();
         
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = 0; i < visibleSlotCount; i++) {
             int row = i / columns;
@@ -481,11 +638,17 @@ public class UIScrollableInventoryPanel extends UIComponent {
             }
         }
     }
-    
+
+    /**
+     * Handle mouse move (FIXED to use ItemStack)
+     */
+  
     // ═══════════════════════════════════════════════════════════════
     // INPUT HANDLING
     // ═══════════════════════════════════════════════════════════════
-    
+    /**
+     * Handle mouse move (FIXED to use ItemStack)
+     */
     public void handleMouseMove(int mouseX, int mouseY, boolean pressed) {
         // Check scrollbar hover
         boolean wasOverScrollbar = mouseOverScrollbar;
@@ -503,8 +666,8 @@ public class UIScrollableInventoryPanel extends UIComponent {
         // Update slot hovers
         updateVisibleRange();
         
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = 0; i < visibleSlotCount; i++) {
             int row = i / columns;
@@ -542,12 +705,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
             }
         }
     }
-    
+    /**
+     * Handle click (FIXED to use ItemStack)
+     */
     public boolean handleClick(int mouseX, int mouseY) {
         updateVisibleRange();
         
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = visibleSlotCount - 1; i >= 0; i--) {
             int row = i / columns;
@@ -564,8 +729,8 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         // Handle scrollbar thumb
         if (showScrollbar) {
-            List<Item> items = getFilteredItems(currentTab);
-            int requiredRows = (int) Math.ceil((double) items.size() / columns);
+            List<ItemStack> stacks = getFilteredItemStacks(currentTab);
+            int requiredRows = (int) Math.ceil((double) stacks.size() / columns);
             
             if (requiredRows > visibleRows) {
                 float scrollRatio = maxScrollY > 0 ? (float)scrollOffsetY / maxScrollY : 0;
@@ -585,12 +750,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         return this.contains(mouseX, mouseY);
     }
-    
+    /**
+     * Handle right click (FIXED to use ItemStack)
+     */
     public boolean handleRightClick(int mouseX, int mouseY) {
         updateVisibleRange();
         
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = visibleSlotCount - 1; i >= 0; i--) {
             int row = i / columns;
@@ -635,11 +802,14 @@ public class UIScrollableInventoryPanel extends UIComponent {
         this.borderColor = color;
     }
     
+    /**
+     * Get hovered slot (FIXED to use ItemStack)
+     */
     public UIInventorySlot getHoveredSlot(int mouseX, int mouseY) {
         updateVisibleRange();
         
-        List<Item> filteredItems = getFilteredItems(currentTab);
-        int visibleSlotCount = Math.min(filteredItems.size(), slots.size());
+        List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+        int visibleSlotCount = Math.min(filteredStacks.size(), slots.size());
         
         for (int i = visibleSlotCount - 1; i >= 0; i--) {
             int row = i / columns;

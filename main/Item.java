@@ -2,7 +2,7 @@ package dev.main;
 
 /**
  * Represents an item in the game with stats, durability, and properties
- * UPDATED: ItemType matches inventory tab categories
+ * UPDATED: Added stackable support
  */
 public class Item {
     public enum ItemType {
@@ -44,6 +44,10 @@ public class Item {
 
     // Dismantle threshold
     private int dismantleThreshold;
+    
+    // ★ NEW: Stackable properties
+    private boolean stackable;
+    private int maxStackSize;
 
     public Item(String name, ItemType type, Rarity rarity,
                 int attackBonus, int defenseBonus, int magicAttackBonus, int magicDefenseBonus,
@@ -63,9 +67,94 @@ public class Item {
         this.tradable = tradable;
         this.sellable = sellable;
         this.dismantleThreshold = dismantleThreshold;
+        
+        // ★ NEW: Auto-determine stackability based on type
+        this.stackable = determineStackability(type);
+        this.maxStackSize = determineMaxStackSize(type);
+    }
+    
+    // ★ NEW: Constructor with explicit stackable parameters
+    public Item(String name, ItemType type, Rarity rarity,
+                int attackBonus, int defenseBonus, int magicAttackBonus, int magicDefenseBonus,
+                int durability, boolean upgradable, boolean canInfuseElemental,
+                boolean tradable, boolean sellable, int dismantleThreshold,
+                boolean stackable, int maxStackSize) {
+        this.name = name;
+        this.type = type;
+        this.rarity = rarity;
+        this.attackBonus = attackBonus;
+        this.defenseBonus = defenseBonus;
+        this.magicAttackBonus = magicAttackBonus;
+        this.magicDefenseBonus = magicDefenseBonus;
+        this.maxDurability = durability;
+        this.currentDurability = durability;
+        this.upgradable = upgradable;
+        this.canInfuseElemental = canInfuseElemental;
+        this.tradable = tradable;
+        this.sellable = sellable;
+        this.dismantleThreshold = dismantleThreshold;
+        this.stackable = stackable;
+        this.maxStackSize = maxStackSize;
+    }
+    
+    /**
+     * ★ NEW: Auto-determine if item should be stackable based on type
+     */
+    private boolean determineStackability(ItemType type) {
+        switch (type) {
+            case WEAPON:
+            case ARMOR:
+            case ACCESSORY:
+                return false; // Gear is not stackable
+            case CONSUMABLE:
+            case MATERIAL:
+                return true;  // Consumables and materials are stackable
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * ★ NEW: Auto-determine max stack size based on type
+     */
+    private int determineMaxStackSize(ItemType type) {
+        switch (type) {
+            case CONSUMABLE:
+                return 99;   // Potions stack to 99
+            case MATERIAL:
+                return 999;  // Materials stack to 999
+            case WEAPON:
+            case ARMOR:
+            case ACCESSORY:
+            default:
+                return 1;    // Gear doesn't stack
+        }
     }
 
-    // Getters
+    // ★ NEW: Stackable getters
+    public boolean isStackable() { 
+        return stackable; 
+    }
+    
+    public int getMaxStackSize() { 
+        return maxStackSize; 
+    }
+    
+    /**
+     * ★ NEW: Check if this item can stack with another
+     */
+    public boolean canStackWith(Item other) {
+        if (!this.stackable || !other.stackable) {
+            return false;
+        }
+        
+        // Items can stack if they have the same name and type
+        return this.name.equals(other.name) && 
+               this.type == other.type &&
+               this.rarity == other.rarity;
+    }
+
+    // Existing getters
     public String getName() { return name; }
     public ItemType getType() { return type; }
     public Rarity getRarity() { return rarity; }
@@ -109,6 +198,13 @@ public class Item {
 
     @Override
     public String toString() {
-        return name + " (" + rarity + " " + type + ") - Dur: " + currentDurability + "/" + maxDurability;
+        String base = name + " (" + rarity + " " + type + ")";
+        if (stackable) {
+            base += " [Stackable: " + maxStackSize + "]";
+        }
+        if (maxDurability > 0) {
+            base += " - Dur: " + currentDurability + "/" + maxDurability;
+        }
+        return base;
     }
 }

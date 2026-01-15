@@ -7,6 +7,7 @@ import dev.main.drops.DropSystem;
 import dev.main.drops.DroppedItem;
 import dev.main.ui.Quest; 
 import dev.main.ui.UIManager;
+import dev.main.ui.UIScrollableInventoryPanel;
 
 public class GameLogic {
     
@@ -929,35 +930,7 @@ public class GameLogic {
                 sprite.setAnimation(getIdleAnimationForDirection(movement.lastDirection));
             }
         }
-    }
-    /**
-     * Make two entities face each other
-     
-    private void makeFaceEachOther(Entity entity1, Entity entity2) {
-        Position pos1 = entity1.getComponent(Position.class);
-        Position pos2 = entity2.getComponent(Position.class);
-        Movement move1 = entity1.getComponent(Movement.class);
-        Movement move2 = entity2.getComponent(Movement.class);
-        
-        if (pos1 == null || pos2 == null) return;
-        
-        // Entity1 faces Entity2
-        if (move1 != null) {
-            float dx = pos2.x - pos1.x;
-            float dy = pos2.y - pos1.y;
-            move1.direction = calculateDirection(dx, dy);
-            move1.lastDirection = move1.direction;
-        }
-        
-        // Entity2 faces Entity1
-        if (move2 != null) {
-            float dx = pos1.x - pos2.x;
-            float dy = pos1.y - pos2.y;
-            move2.direction = calculateDirection(dx, dy);
-            move2.lastDirection = move2.direction;
-        }
-    }
-    */
+    } 
     private void handleAttackingState(Entity monster, AI ai, Movement movement, Sprite sprite, Position playerPos, Stats stats, float delta) {
     	Position monsterPos = monster.getComponent(Position.class);
         Entity player = state.getPlayer();
@@ -1010,50 +983,7 @@ public class GameLogic {
                 }
             }
         }
-    }
-    /*
-    private void handleMonsterDeath(Entity monster, Sprite sprite) {
-        System.out.println(monster.getName() + " has died!");
-        
-        // Clear as auto-attack target
-        if (state.getAutoAttackTarget() == monster) {
-            state.clearAutoAttackTarget();
-        }
-        
-        // Clear as targeted entity
-        if (state.getTargetedEntity() == monster) {
-            state.setTargetedEntity(null);
-        }
-        
-        // Notify spawn point of death
-        state.onMonsterDeath(monster);  // NEW
-        
-        // Add dead component
-        monster.addComponent(new Dead(1.5f));
-        
-        // Stop movement
-        Movement movement = monster.getComponent(Movement.class);
-        if (movement != null) {
-            movement.stopMoving();
-        }
-        
-        Path path = monster.getComponent(Path.class);
-        if (path != null) {
-            path.clear();
-        }
-        
-        // Set AI to dead state
-        AI ai = monster.getComponent(AI.class);
-        if (ai != null) {
-            ai.currentState = AI.State.DEAD;
-        }
-        
-        // Play death animation
-        if (sprite != null) {
-            sprite.setAnimation(Sprite.ANIM_DEAD);
-        }
-    }
-    */
+    } 
     /**
      * Detect player using distance check (can add dot product later for FOV)
      */
@@ -1679,7 +1609,7 @@ public class GameLogic {
             sprite.setAnimation(Sprite.ANIM_DEAD);
         }
     }
-    */
+   
     private void handleMonsterDeath(Entity monster, Sprite sprite) {
         // Get monster info for logging
         MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
@@ -1765,6 +1695,96 @@ public class GameLogic {
             sprite.setAnimation(Sprite.ANIM_DEAD);
         }
     }
+*/
+    /**
+     * Handle monster death with drops
+     * REPLACE your existing handleMonsterDeath() method with this:
+     */
+    private void handleMonsterDeath(Entity monster, Sprite sprite) {
+        // Get monster info for logging
+        MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class);
+        String monsterInfo = monster.getName();
+        if (monsterLevel != null) {
+            monsterInfo += " Lv" + monsterLevel.level + " " + monsterLevel.tier;
+        }
+        
+        System.out.println(monsterInfo + " has died!");
+        
+        // ★ NEW: Generate drops
+        int dropCapacity = calculateDropCapacity(monster);
+        List<DroppedItem> drops = dropSystem.generateDrops(dropCapacity);
+        
+        // ★ NEW: Display drops to player
+        if (!drops.isEmpty()) {
+            if (dropSystem.isLuckyDrop(drops)) {
+                System.out.println("✨ ✨ ✨ LUCKY DROP! ✨ ✨ ✨");
+            }
+            
+            System.out.println(monsterInfo + " dropped:");
+            for (DroppedItem drop : drops) {
+                System.out.println("  • " + drop.toString());
+            }
+            
+            // ★ NEW: Add items to player inventory (with stacking)
+            Entity player = state.getPlayer();
+            addDropsToInventory(player, drops);
+        } else {
+            System.out.println("  No drops...");
+        }
+        
+        // Award XP to player
+        Entity player = state.getPlayer();
+        int xpReward = calculateMonsterXP(monster);
+        System.out.println("→ XP Reward: " + xpReward);
+        awardExperience(player, xpReward);
+        
+        // Notify buffs of kill
+        BuffManager buffManager = player.getComponent(BuffManager.class);
+        if (buffManager != null) {
+            buffManager.onMonsterKill();
+        }
+        
+        // Update quest progress
+        updateQuestProgress(player, monster);
+        
+        // Clear as auto-attack target
+        if (state.getAutoAttackTarget() == monster) {
+            state.clearAutoAttackTarget();
+        }
+        
+        // Clear as targeted entity
+        if (state.getTargetedEntity() == monster) {
+            state.setTargetedEntity(null);
+        }
+        
+        // Notify spawn point of death
+        state.onMonsterDeath(monster);
+        
+        // Add dead component
+        monster.addComponent(new Dead(1.5f));
+        
+        // Stop movement
+        Movement movement = monster.getComponent(Movement.class);
+        if (movement != null) {
+            movement.stopMoving();
+        }
+        
+        Path path = monster.getComponent(Path.class);
+        if (path != null) {
+            path.clear();
+        }
+        
+        // Set AI to dead state
+        AI ai = monster.getComponent(AI.class);
+        if (ai != null) {
+            ai.currentState = AI.State.DEAD;
+        }
+        
+        // Play death animation
+        if (sprite != null) {
+            sprite.setAnimation(Sprite.ANIM_DEAD);
+        }
+    }
 
     /**
      * ★ NEW: Calculate drop capacity based on monster tier
@@ -1790,31 +1810,54 @@ public class GameLogic {
                 return 2;
         }
     }
-
     /**
-     * ★ NEW: Add dropped items to player inventory
+     * ★ UPDATED: Add dropped items to player inventory with stacking support
      */
     private void addDropsToInventory(Entity player, List<DroppedItem> drops) {
         UIManager uiManager = state.getUIManager();
+        UIScrollableInventoryPanel inventory = uiManager.getInventoryGrid();
+        
+        if (inventory == null) {
+            System.out.println("⚠ Inventory not initialized!");
+            return;
+        }
+        
         int itemsAdded = 0;
+        int totalQuantity = 0;
         int itemsFailed = 0;
         
         for (DroppedItem drop : drops) {
-            // Create actual Item instances
-            Item[] items = drop.createItems();
+            int quantity = drop.getQuantity();
+            totalQuantity += quantity;
             
-            for (Item item : items) {
-                boolean added = uiManager.addItemToInventory(item);
-                if (added) {
-                    itemsAdded++;
+            // Create one item template
+            Item itemTemplate = drop.getDropTemplate().createItem();
+            
+            // ★ NEW: Use stacking system
+            if (itemTemplate.isStackable()) {
+                // Add as stack
+                boolean success = inventory.addItemStack(itemTemplate, quantity);
+                if (success) {
+                    itemsAdded += quantity;
                 } else {
-                    itemsFailed++;
+                    itemsFailed += quantity;
+                }
+            } else {
+                // Add individually (non-stackable like gear)
+                for (int i = 0; i < quantity; i++) {
+                    Item item = drop.getDropTemplate().createItem();
+                    boolean added = uiManager.addItemToInventory(item);
+                    if (added) {
+                        itemsAdded++;
+                    } else {
+                        itemsFailed++;
+                    }
                 }
             }
         }
         
         if (itemsAdded > 0) {
-            System.out.println("Added " + itemsAdded + " items to inventory");
+            System.out.println("✓ Added " + itemsAdded + " items to inventory");
         }
         
         if (itemsFailed > 0) {

@@ -16,6 +16,9 @@ import java.awt.FontMetrics;
 public class UIInventorySlot extends UIComponent {
     private static final Font SLOT_FONT = new Font("Arial", Font.PLAIN, 10);
    
+    private int stackCount = 1;  // ★ NEW: Current stack count
+
+    
     private Item item;  // TODO: Replace with actual Item class later
     private int slotIndex;
     
@@ -73,6 +76,29 @@ public class UIInventorySlot extends UIComponent {
         if (hovered) {
             g.setColor(new Color(255, 255, 255, 30));
             g.fillRect(x, y, width, height);
+        }
+        
+     // ★ NEW: Draw stack count if stackable
+        if (item != null && item.isStackable() && stackCount > 1) {
+            Font originalFont = g.getFont();
+            g.setFont(new Font("Arial", Font.BOLD, 12));
+            
+            String countText = String.valueOf(stackCount);
+            FontMetrics fm = g.getFontMetrics();
+            int textWidth = fm.stringWidth(countText);
+            
+            int textX = x + width - textWidth - 4;
+            int textY = y + height - 4;
+            
+            // Shadow
+            g.setColor(Color.BLACK);
+            g.drawString(countText, textX + 1, textY + 1);
+            
+            // Text
+            g.setColor(Color.WHITE);
+            g.drawString(countText, textX, textY);
+            
+            g.setFont(originalFont);
         }
     }
     
@@ -146,13 +172,18 @@ public class UIInventorySlot extends UIComponent {
         return true;  // Consume click
     }
     
-    // Item management methods
+ // ★ MODIFIED: Update setItem to reset stack count
     public void setItem(Item item) {
         this.item = item;
+        this.stackCount = (item != null) ? 1 : 0;
     }
     
-    public void removeItem() {
+ // ★ MODIFIED: Update removeItem to reset stack count
+    public Item removeItem() {
+        Item removed = this.item;
         this.item = null;
+        this.stackCount = 0;
+        return removed;
     }
     
     public Item getItem() {
@@ -166,13 +197,36 @@ public class UIInventorySlot extends UIComponent {
     public int getSlotIndex() {
         return slotIndex;
     }
-    
+     
+ // ★ MODIFIED: Update tooltip to show stack info
     @Override
     public String getTooltipText() {
-        if (item != null) {
-            return getItemDescription(item);
+        if (item == null) return null;
+        
+        StringBuilder tooltip = new StringBuilder();
+        tooltip.append(item.getName()).append("\n");
+        tooltip.append(item.getRarity()).append(" ").append(item.getType()).append("\n");
+        
+        // ★ NEW: Show stack info
+        if (item.isStackable()) {
+            tooltip.append("Stack: ").append(stackCount).append("/").append(item.getMaxStackSize()).append("\n");
         }
-        return null;
+        
+        // Stats
+        if (item.getAttackBonus() > 0) {
+            tooltip.append("Attack: +").append(item.getAttackBonus()).append("\n");
+        }
+        if (item.getDefenseBonus() > 0) {
+            tooltip.append("Defense: +").append(item.getDefenseBonus()).append("\n");
+        }
+        
+        // Durability
+        if (item.getMaxDurability() > 0) {
+            tooltip.append("Durability: ").append(item.getCurrentDurability())
+                   .append("/").append(item.getMaxDurability());
+        }
+        
+        return tooltip.toString();
     }
     
     private String getItemDescription(Item item) {
@@ -210,5 +264,63 @@ public class UIInventorySlot extends UIComponent {
         }
         
         return sb.toString().trim();
+    }
+ // ★ NEW: Set stack count
+    public void setStackCount(int count) {
+        if (item != null && item.isStackable()) {
+            this.stackCount = Math.min(count, item.getMaxStackSize());
+        } else {
+            this.stackCount = 1;
+        }
+    }
+
+    // ★ NEW: Add to stack
+    public boolean addToStack(int amount) {
+        if (item == null || !item.isStackable()) {
+            return false;
+        }
+        
+        int maxStack = item.getMaxStackSize();
+        int newCount = stackCount + amount;
+        
+        if (newCount <= maxStack) {
+            stackCount = newCount;
+            return true;
+        } else {
+            // Stack is full
+            return false;
+        }
+    }
+
+    // ★ NEW: Remove from stack
+    public int removeFromStack(int amount) {
+        int removed = Math.min(amount, stackCount);
+        stackCount -= removed;
+        
+        if (stackCount <= 0) {
+            removeItem();
+        }
+        
+        return removed;
+    }
+
+    // ★ NEW: Check if stack has room
+    public boolean hasRoomInStack(int amount) {
+        if (item == null || !item.isStackable()) {
+            return false;
+        }
+        return (stackCount + amount) <= item.getMaxStackSize();
+    }
+
+    // ★ NEW: Get remaining stack space
+    public int getRemainingStackSpace() {
+        if (item == null || !item.isStackable()) {
+            return 0;
+        }
+        return item.getMaxStackSize() - stackCount;
+    }
+ // ★ NEW: Get stack count
+    public int getStackCount() {
+        return stackCount;
     }
 }
