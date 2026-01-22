@@ -14,6 +14,7 @@ import dev.main.entity.Entity;
 import dev.main.entity.Experience;
 import dev.main.item.Item;
 import dev.main.item.ItemManager;
+import dev.main.quest.IntroQuestHandler;
 import dev.main.quest.QuestLog;
 import dev.main.skill.Skill;
 import dev.main.skill.SkillLevel;
@@ -98,6 +99,8 @@ public class UIManager implements MouseWheelListener {
          createDialogueBox();
          createEnhancedDialogueBox();  // NEW
          createStatsPanel();
+         
+         
     }
     
     private void createBuffBar() {
@@ -185,7 +188,7 @@ public class UIManager implements MouseWheelListener {
 
     /**
      * ★ MODIFIED: Show intro dialogue (unlocks inventory with NEW badge)
-     */
+      
     // 2. UPDATE showIntroDialogue() method to mark quest as completed:
     public void showIntroDialogue() {
         dialogueBox.showMessageWithAccept(
@@ -209,6 +212,8 @@ public class UIManager implements MouseWheelListener {
                                 
                                 System.out.println("Intro quest completed! Inventory unlocked with NEW badge.");
                                 dialogueBox.setVisible(false);
+                                //test item
+                                addTestGearItems();
                             },
                             () -> { dialogueBox.setVisible(false); }
                         );
@@ -225,7 +230,7 @@ public class UIManager implements MouseWheelListener {
     /**
      * Show second quest dialogue from Fionne
      * FIXED: Updated to use new notification system
-     */
+    
     public void showSecondQuestDialogue() {
         fionneNotification = "...";  // Change notification to in-progress
         dialogueBox.showMessageWithAccept(
@@ -275,6 +280,7 @@ public class UIManager implements MouseWheelListener {
             () -> { dialogueBox.setVisible(false); }
         );
     }
+    */
     /**
      * ★ NEW: Notify level up - show alert on stats button
      */
@@ -458,12 +464,12 @@ public class UIManager implements MouseWheelListener {
         
         String[] buttonLabels = {
             "Settings", "World", "Trade", "Message", "Quest",
-            "Stats", "Character Info", "Skill Tree", "Rune", "Inventory"
+            "Stats", "Character Info", "Skill Tree", "Crafting", "Inventory"
         };
         
         String[] buttonIds = {
             "settings", "world", "trade", "message", "quest",
-            "stats", "character", "skilltree", "rune", "inventory"
+            "stats", "character", "skilltree", "crafting", "inventory"
         };
         
         for (int i = 0; i < buttonLabels.length; i++) {
@@ -480,7 +486,7 @@ public class UIManager implements MouseWheelListener {
                 button.setLocked(true);  // Initially locked - unlocked by intro quest
                 button.setVisible(true);
                 button.setOnClick(() -> toggleInventory());
-            } else if (buttonIds[i].equals("rune")) {
+            } else if (buttonIds[i].equals("crafting")) {
                 button.setLocked(true);
                 button.setVisible(true);
                 button.setOnClick(() -> toggleInventory());
@@ -506,6 +512,8 @@ public class UIManager implements MouseWheelListener {
         }
         
         panels.add(verticalMenu);
+        
+        setupMenuButtonTooltips();
     }
     /**
      * ★ MODIFIED: Toggle quest panel (clears notification when opened)
@@ -712,7 +720,7 @@ public class UIManager implements MouseWheelListener {
         // CENTER HERO PREVIEW
         int heroX = leftGearX + columnWidth + gap;
         int heroY = currentY;
-        
+         
         heroPreviewPanel = new UIPanel(heroX, heroY, heroWidth, heroPreviewHeight);
         heroPreviewPanel.setBackgroundColor(new java.awt.Color(30, 30, 40, 180));
         heroPreviewPanel.setBorderColor(new java.awt.Color(80, 80, 100));
@@ -963,45 +971,62 @@ public class UIManager implements MouseWheelListener {
         // Handle tooltips
         updateTooltips(mouseX, mouseY);
     }
-    
-    private void updateTooltips(int mouseX, int mouseY) {
-        String tooltipText = null;
-        
-        // NEW: Check buff bar hover first
-        if (buffBar != null) {
-            tooltipText = buffBar.getTooltipText(mouseX, mouseY);
-        }
-        
-        // Check inventory slots
-        if (inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
-            if (inventoryContainer.contains(mouseX, mouseY)) {
-                UIInventorySlot slot = inventoryGrid.getHoveredSlot(mouseX, mouseY);
-                if (slot != null) {
-                    tooltipText = slot.getTooltipText();
-                }
-            }
-        }
-        
-        // Check gear slots
-        for (UIPanel panel : panels) {
-            if (panel.isVisible() && panel.contains(mouseX, mouseY)) {
-                // Check if it's a gear slot container
-                for (UIComponent child : panel.getChildren()) {
-                    if (child instanceof UIGearSlot && child.contains(mouseX, mouseY)) {
-                        tooltipText = child.getTooltipText();
-                        break;
-                    }
-                }
-                if (tooltipText != null) break;
-            }
-        }
-        
-        if (tooltipText != null) {
-            showTooltip(tooltipText, mouseX, mouseY);
-        } else {
-            hideTooltip();
-        }
-    }
+ // ═══════════════════════════════════════════════════════════════════
+ // UPDATE THE updateTooltips() METHOD IN UIManager.java
+ // This makes tooltips work for menu buttons
+ // ═══════════════════════════════════════════════════════════════════
+
+ private void updateTooltips(int mouseX, int mouseY) {
+     String tooltipText = null;
+     
+     // NEW: Check buff bar hover first
+     if (buffBar != null) {
+         tooltipText = buffBar.getTooltipText(mouseX, mouseY);
+     }
+     
+     // ★ NEW: Check menu buttons (vertical menu)
+     if (tooltipText == null && verticalMenu != null && verticalMenu.isVisible()) {
+         for (UIComponent child : verticalMenu.getChildren()) {
+             if (child instanceof UIButton && child.contains(mouseX, mouseY)) {
+                 tooltipText = child.getTooltipText();
+                 break;
+             }
+         }
+     }
+     
+     // Check inventory slots
+     if (tooltipText == null && inventoryGrid != null && inventoryContainer != null && inventoryContainer.isVisible()) {
+         if (inventoryContainer.contains(mouseX, mouseY)) {
+             UIInventorySlot slot = inventoryGrid.getHoveredSlot(mouseX, mouseY);
+             if (slot != null) {
+                 tooltipText = slot.getTooltipText();
+             }
+         }
+     }
+     
+     // Check gear slots
+     if (tooltipText == null) {
+         for (UIPanel panel : panels) {
+             if (panel.isVisible() && panel.contains(mouseX, mouseY)) {
+                 // Check if it's a gear slot container
+                 for (UIComponent child : panel.getChildren()) {
+                     if (child instanceof UIGearSlot && child.contains(mouseX, mouseY)) {
+                         tooltipText = child.getTooltipText();
+                         break;
+                     }
+                 }
+                 if (tooltipText != null) break;
+             }
+         }
+     }
+     
+     // Show or hide tooltip
+     if (tooltipText != null) {
+         showTooltip(tooltipText, mouseX, mouseY);
+     } else {
+         hideTooltip();
+     }
+ }
     
     public boolean handleClick(int mouseX, int mouseY) {
     	 // NEW: Check enhanced dialogue box first
@@ -1278,31 +1303,50 @@ public class UIManager implements MouseWheelListener {
         if (inventoryGrid == null) return null;
         return inventoryGrid.getSlot(index);
     }
-    
-    /**
-     * ★ MODIFIED: Add item to inventory and show notification
-     */
-    public boolean addItemToInventory(Item item) {
-        if (inventoryContainer == null) {
-            createInventorySystem();
-        }
-        
-        if (inventoryGrid != null) {
-            boolean added = inventoryGrid.addItemToCurrentTab(item);
-            if (added) {
-                System.out.println("Added item to inventory (tab=" + currentInventoryTab + ")");
-                
-                // ★ Show notification on inventory button
-                notifyInventoryUpdate();
-                
-                return true;
-            }
-        }
+	 // ═══════════════════════════════════════════════════════════════════
+	 // UPDATE UIManager.java - Replace addItemToInventory method
+	 // This version marks new items with a "NEW" badge
+	 // ═══════════════════════════════════════════════════════════════════
+	
+	 /**
+	  * ★ UPDATED: Add item to inventory (default: mark as new)
+	  */
+	 public boolean addItemToInventory(Item item) {
+	     return addItemToInventory(item, true);
+	 }
+	 /**
+	  * ★ NEW: Add item to inventory with optional "NEW" badge
+	  */
+	 public boolean addItemToInventory(Item item, boolean markAsNew) {
+	     if (inventoryContainer == null) {
+	         createInventorySystem();
+	     }
+	     
+	     if (inventoryGrid != null) {
+	         boolean added;
+	         
+	         if (markAsNew) {
+	             // Use the new marking system
+	             added = inventoryGrid.addItemToCurrentTab(item, true);
+	         } else {
+	             // Add without marking
+	             added = inventoryGrid.addItemToCurrentTab(item, false);
+	         }
+	         
+	         if (added) {
+	             System.out.println("Added item to inventory (tab=" + currentInventoryTab + 
+	                              ", marked as new=" + markAsNew + ")");
+	             
+	             // Show notification on inventory button
+	             notifyInventoryUpdate();
+	             
+	             return true;
+	         }
+	     }
 
-        System.out.println("Inventory full!");
-        return false;
-    }
-   
+	     System.out.println("Inventory full!");
+	     return false;
+	 }
     public UIGearSlot getGearSlot(UIGearSlot.SlotType slotType) {
         if (inventoryContainer == null) return null;
         
@@ -1316,9 +1360,8 @@ public class UIManager implements MouseWheelListener {
         }
         return null;
     }
-    
     /**
-     * ★ MODIFIED: Equip item (shows notification on stats button if needed)
+     * ★ UPDATED: Equip item and notify quest handler
      */
     public boolean equipItem(UIGearSlot.SlotType slotType, Item item) {
         UIGearSlot slot = getGearSlot(slotType);
@@ -1339,6 +1382,13 @@ public class UIManager implements MouseWheelListener {
                 unlockMenuButton("stats");  // Shows NEW badge automatically
                 fionneSecondQuestAvailable = true;
                 fionneNotification = "!";
+                
+                // ★ NEW: Notify intro quest handler
+                IntroQuestHandler introHandler = gameState.getIntroQuestHandler();
+                if (introHandler != null) {
+                    introHandler.checkSwordEquipStatus();
+                }
+                
                 System.out.println("Stats button unlocked with NEW badge! Second quest available from Fionne.");
             }
         }
@@ -1447,4 +1497,213 @@ public class UIManager implements MouseWheelListener {
             tooltipPanel = null;
         }
     }
+    /**
+     * ★ NEW: Setup tooltips for menu buttons
+     * Call this at the end of createVerticalMenu()
+     */
+    private void setupMenuButtonTooltips() {
+        // Settings
+        UIButton settingsButton = getMenuButton("settings");
+        if (settingsButton != null) {
+            settingsButton.setTooltipText(
+                "Settings\n\n" +
+                "Configure game options and preferences."
+            );
+        }
+        
+        // World
+        UIButton worldButton = getMenuButton("world");
+        if (worldButton != null) {
+            worldButton.setTooltipText(
+                "World Map\n\n" +
+                "View the world map and travel to different locations.\n\n" +
+                "(Currently locked)"
+            );
+        }
+        
+        // Trade
+        UIButton tradeButton = getMenuButton("trade");
+        if (tradeButton != null) {
+            tradeButton.setTooltipText(
+                "Trade\n\n" +
+                "Trade items with NPCs and other players.\n\n" +
+                "(Currently locked)"
+            );
+        }
+        
+        // Message
+        UIButton messageButton = getMenuButton("message");
+        if (messageButton != null) {
+            messageButton.setTooltipText(
+                "Messages\n\n" +
+                "View messages, mail, and communications.\n\n" +
+                "(Currently locked)"
+            );
+        }
+        
+        // Quest
+        UIButton questButton = getMenuButton("quest");
+        if (questButton != null) {
+            questButton.setTooltipText(
+                "Quest Log\n\n" +
+                "View active quests and completed objectives.\n\n" +
+                "Hotkey: J"
+            );
+        }
+        
+        // Stats
+        UIButton statsButton = getMenuButton("stats");
+        if (statsButton != null) {
+            statsButton.setTooltipText(
+                "Character Stats\n\n" +
+                "View your character's attributes and statistics.\n\n" +
+                "Hotkey: S"
+            );
+        }
+        
+        // Character Info
+        UIButton characterButton = getMenuButton("character");
+        if (characterButton != null) {
+            characterButton.setTooltipText(
+                "Character Info\n\n" +
+                "View detailed character information and biography.\n\n" +
+                "(Currently locked)"
+            );
+        }
+        
+        // Skill Tree
+        UIButton skilltreeButton = getMenuButton("skilltree");
+        if (skilltreeButton != null) {
+            skilltreeButton.setTooltipText(
+                "Skill Tree\n\n" +
+                "Upgrade and unlock new skills and abilities.\n\n" +
+                "(Currently locked)"
+            );
+        }
+        
+        // Rune
+        UIButton runeButton = getMenuButton("rune");
+        if (runeButton != null) {
+            runeButton.setTooltipText(
+                "Rune Crafting\n\n" +
+                "Craft magical runes and inscriptions.\n\n" +
+                "(Currently locked)"
+            );
+        }
+        
+        // Inventory
+        UIButton inventoryButton = getMenuButton("inventory");
+        if (inventoryButton != null) {
+            inventoryButton.setTooltipText(
+                "Inventory\n\n" +
+                "View and manage your items and equipment.\n\n" +
+                "Hotkey: I"
+            );
+        }
+    }
+
+ // ═══════════════════════════════════════════════════════════════════
+ // ADD THIS METHOD TO YOUR UIManager OR WHEREVER YOU TEST ITEMS
+ // Call it once to populate your inventory with test gear
+ // ═══════════════════════════════════════════════════════════════════
+
+ public void addTestGearItems() {
+     System.out.println("\n🎮 ADDING TEST GEAR ITEMS...\n");
+     
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     // WEAPONS (Should go in Weapon slot)
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     addItemToInventory(ItemManager.createWoodenShortSword());
+     //System.out.println("✅ Added: Wooden Short Sword (COMMON)");
+     
+     addItemToInventory(ItemManager.createIronSword());
+     //System.out.println("✅ Added: Iron Sword (COMMON)");
+     
+     addItemToInventory(ItemManager.createSteelLongsword());
+     //System.out.println("✅ Added: Steel Longsword (UNCOMMON)");
+     
+     addItemToInventory(ItemManager.createMysticStaff());
+     //System.out.println("✅ Added: Mystic Staff (RARE)");
+     
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     // ARMOR (Should go in Armor slots)
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     addItemToInventory(ItemManager.createLeatherArmor());
+     //System.out.println("✅ Added: Leather Armor (COMMON)");
+     
+     addItemToInventory(ItemManager.createChainmail());
+     //System.out.println("✅ Added: Chainmail (UNCOMMON)");
+     
+     addItemToInventory(ItemManager.createPlateArmor());
+     //System.out.println("✅ Added: Plate Armor (RARE)");
+     
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     // ACCESSORIES (Should go in Accessory slots)
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     addItemToInventory(ItemManager.createPowerRing());
+     //System.out.println("✅ Added: Ring of Power (UNCOMMON)");
+     
+     addItemToInventory(ItemManager.createAmuletOfProtection());
+     //System.out.println("✅ Added: Amulet of Protection (RARE)");
+     
+     addItemToInventory(ItemManager.createSpeedBoots());
+     //System.out.println("✅ Added: Boots of Speed (UNCOMMON)");
+     
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     // CONSUMABLES (Stackable items)
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     //addItemToInventory(ItemManager.createHealthPotion());
+     //addItemToInventory(ItemManager.createHealthPotion());
+     //addItemToInventory(ItemManager.createHealthPotion());
+     //System.out.println("✅ Added: 3x Health Potion (Should stack)");
+     
+     //addItemToInventory(ItemManager.createManaPotion());
+     //addItemToInventory(ItemManager.createManaPotion());
+    // System.out.println("✅ Added: 2x Mana Potion (Should stack)");
+     
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     // MATERIALS (Stackable items)
+     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     for (int i = 0; i < 5; i++) {
+         addItemToInventory(ItemManager.createCarvedWood());
+     }
+     //System.out.println("✅ Added: 5x Carved Wood (Should stack)");
+     
+     for (int i = 0; i < 3; i++) {
+         addItemToInventory(ItemManager.createFireRune());
+     }
+     //System.out.println("✅ Added: 3x Fire Rune (Should stack)");
+     /*
+     System.out.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+     System.out.println("✅ TEST ITEMS ADDED SUCCESSFULLY!");
+     System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+     System.out.println("\nTEST INSTRUCTIONS:");
+     System.out.println("1. Press [I] to open inventory");
+     System.out.println("2. RIGHT-CLICK weapons to equip (Weapon slot)");
+     System.out.println("3. RIGHT-CLICK armor to equip (Armor slots)");
+     System.out.println("4. RIGHT-CLICK accessories to equip (Ring/Neck slots)");
+     System.out.println("5. Check different tabs to see items");
+     System.out.println("6. Hover items to see tooltips");
+     System.out.println("\nExpected Results:");
+     System.out.println("- Icons should appear in inventory slots");
+     System.out.println("- Rarity borders: Gray/Green/Blue/Purple/Gold");
+     System.out.println("- Stackable items show count (e.g., '5' for wood)");
+     System.out.println("- Equipped items show in gear slots with icons");
+     System.out.println("\n");
+     */
+ }
+
+ // ═══════════════════════════════════════════════════════════════════
+ // CALL THIS AFTER YOUR UI IS INITIALIZED
+ // Example: In your Engine or Game initialization
+ // ═══════════════════════════════════════════════════════════════════
+
+ // After creating UIManager:
+ // uiManager.addTestGearItems();
+
+ // OR add a keybind to test anytime:
+ // if (keyCode == KeyEvent.VK_T) {  // Press T to add test items
+//      uiManager.addTestGearItems();
+ // }
+    
 }

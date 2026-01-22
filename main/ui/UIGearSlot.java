@@ -1,6 +1,7 @@
 package dev.main.ui;
 
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 import dev.main.item.Item;
 
@@ -10,9 +11,9 @@ import java.awt.FontMetrics;
 
 /**
  * UI component representing a gear/equipment slot
+ * UPDATED: Now displays item icons
  */
 public class UIGearSlot extends UIComponent {
-	 // ⭐ ADD THIS at the top of the class:
     private static final Font LABEL_FONT = new Font("Arial", Font.PLAIN, 9);
    
     public enum SlotType {
@@ -80,9 +81,9 @@ public class UIGearSlot extends UIComponent {
             drawSlotLabel(g);
         }
         
-        // If not empty, draw item
+        // ★ UPDATED: Draw item icon if equipped
         if (item != null) {
-            drawPlaceholderItem(g);
+            drawItemIcon(g);
         }
         
         // Draw hover effect
@@ -95,10 +96,9 @@ public class UIGearSlot extends UIComponent {
     /**
      * Draw slot type label
      */
-    // ⭐ UPDATE drawSlotLabel() to use cached font:
     private void drawSlotLabel(Graphics2D g) {
         Font originalFont = g.getFont();
-        g.setFont(LABEL_FONT);  // ⭐ Use cached font (was: new Font(...))
+        g.setFont(LABEL_FONT);
         
         String label = getSlotLabel();
         FontMetrics fm = g.getFontMetrics();
@@ -141,47 +141,122 @@ public class UIGearSlot extends UIComponent {
     }
     
     /**
-     * Draw placeholder for equipped item
+     * ★ NEW: Draw item icon (same system as inventory slots)
      */
-    private void drawPlaceholderItem(Graphics2D g) { 
-        // Draw colored square as placeholder
-        Color itemColor = getSlotColor();
-        g.setColor(itemColor);
+    private void drawItemIcon(Graphics2D g) {
+        if (item == null) return;
         
-        int itemSize = (int)(Math.min(width, height) * 0.7f);
+        // Calculate icon position and size
+        int itemSize = (int)(Math.min(width, height) * 0.75f);
         int itemX = x + (width - itemSize) / 2;
         int itemY = y + (height - itemSize) / 2;
-        g.fillRect(itemX, itemY, itemSize, itemSize);
         
-        // Draw border
-        g.setColor(itemColor.brighter());
-        g.drawRect(itemX, itemY, itemSize, itemSize);
+        // Try to load item icon
+        String iconPath = item.getIconPath();
+        BufferedImage icon = null;
+        
+        if (iconPath != null && !iconPath.isEmpty()) {
+            try {
+                icon = dev.main.sprite.TextureManager.load(iconPath);
+            } catch (Exception e) {
+                // Icon not found, will use fallback
+                icon = null;
+            }
+        }
+        
+        if (icon != null) {
+            // ★ Draw the actual icon image
+            g.drawImage(icon, itemX, itemY, itemSize, itemSize, null);
+            
+            // Draw rarity border
+            drawRarityBorder(g, itemX, itemY, itemSize);
+        } else {
+            // ★ Fallback: Draw enhanced placeholder
+            drawFallbackPlaceholder(g, itemX, itemY, itemSize);
+        }
     }
     
     /**
-     * Get color based on slot type
+     * ★ NEW: Draw fallback placeholder
      */
-    private Color getSlotColor() {
-        switch (slotType) {
-            case HEAD:
-            case TOP_ARMOR:
-            case PANTS:
-            case GLOVES:
-            case SHOES:
-                return new Color(120, 80, 60);  // Brown for armor
-            
-            case WEAPON:
-                return new Color(100, 100, 80);  // Tan for accessories
-            case EARRINGS:
-            	 return new Color(150, 150, 180);  // Silver for earrings                 
-            case NECKLACE:
-            case BRACELET:
-            case RING_1:
-            case RING_2: 
-            case SPECIAL: 
+    private void drawFallbackPlaceholder(Graphics2D g, int x, int y, int size) {
+        // Draw colored square based on rarity
+        Color rarityColor = getRarityColor(item.getRarity());
+        g.setColor(rarityColor);
+        g.fillRect(x, y, size, size);
+        
+        // Draw border
+        g.setColor(rarityColor.brighter());
+        g.setStroke(new java.awt.BasicStroke(2f));
+        g.drawRect(x, y, size, size);
+        
+        // Draw first letter of item name
+        drawItemInitial(g, x, y, size);
+        
+        // Draw rarity border
+        drawRarityBorder(g, x, y, size);
+    }
+    
+    /**
+     * ★ NEW: Draw rarity border around icon
+     */
+    private void drawRarityBorder(Graphics2D g, int x, int y, int size) {
+        Color rarityColor = getRarityColor(item.getRarity());
+        g.setColor(new Color(rarityColor.getRed(), rarityColor.getGreen(), 
+                            rarityColor.getBlue(), 180));
+        g.setStroke(new java.awt.BasicStroke(2f));
+        g.drawRect(x - 1, y - 1, size + 2, size + 2);
+    }
+    
+    /**
+     * ★ NEW: Get color based on rarity
+     */
+    private Color getRarityColor(Item.Rarity rarity) {
+        switch (rarity) {
+            case COMMON:
+                return new Color(180, 180, 180);  // Gray
+            case UNCOMMON:
+                return new Color(100, 200, 100);  // Green
+            case RARE:
+                return new Color(80, 120, 220);   // Blue
+            case EPIC:
+                return new Color(160, 80, 220);   // Purple
+            case LEGENDARY:
+                return new Color(255, 165, 0);    // Orange/Gold
             default:
-                return new Color(100, 100, 100);
+                return new Color(150, 150, 150);
         }
+    }
+    
+    /**
+     * ★ NEW: Draw item initial letter (fallback)
+     */
+    private void drawItemInitial(Graphics2D g, int x, int y, int size) {
+        if (item == null || item.getName() == null || item.getName().isEmpty()) {
+            return;
+        }
+        
+        String initial = item.getName().substring(0, 1).toUpperCase();
+        
+        Font originalFont = g.getFont();
+        g.setFont(new Font("Arial", Font.BOLD, size / 2));
+        
+        FontMetrics fm = g.getFontMetrics();
+        int textWidth = fm.stringWidth(initial);
+        int textHeight = fm.getAscent();
+        
+        int textX = x + (size - textWidth) / 2;
+        int textY = y + (size + textHeight) / 2 - 2;
+        
+        // Shadow
+        g.setColor(new Color(0, 0, 0, 200));
+        g.drawString(initial, textX + 2, textY + 2);
+        
+        // Text
+        g.setColor(Color.WHITE);
+        g.drawString(initial, textX, textY);
+        
+        g.setFont(originalFont);
     }
     
     @Override
@@ -194,31 +269,40 @@ public class UIGearSlot extends UIComponent {
         if (item == null) {
             System.out.println("Clicked empty gear slot: " + slotType);
         } else {
-            System.out.println("Clicked gear slot: " + slotType + " with item");
-            // TODO: Handle item click (unequip, view stats, etc.)
+            System.out.println("Clicked gear slot: " + slotType + " with item: " + item.getName());
         }
-        return true;  // Consume click
+        return true;
     }
     
     @Override
     public boolean onRightClick() {
         if (item != null) {
-            System.out.println("Right-clicked gear slot: " + slotType + " - unequipping");
+            System.out.println("Right-clicked gear slot: " + slotType + " - unequipping " + item.getName());
             uiManager.unequipItem(slotType);
         }
-        return true;  // Consume click
+        return true;
     }
     
     // Item management
     public Item equipItem(Item item) {
         Item oldItem = this.item;
         this.item = item;
+        
+        if (item != null) {
+            System.out.println("✅ Equipped " + item.getName() + " in " + slotType + " slot");
+        }
+        
         return oldItem;
     }
     
     public Item unequipItem() {
         Item oldItem = this.item;
         this.item = null;
+        
+        if (oldItem != null) {
+            System.out.println("⬇️ Unequipped " + oldItem.getName() + " from " + slotType + " slot");
+        }
+        
         return oldItem;
     }
     
@@ -233,7 +317,10 @@ public class UIGearSlot extends UIComponent {
     public SlotType getSlotType() {
         return slotType;
     }
-    
+    /**
+     * Get tooltip text for this item
+     * UNIFIED FORMAT: Shows all item properties
+     */
     @Override
     public String getTooltipText() {
         if (item != null) {
@@ -241,13 +328,25 @@ public class UIGearSlot extends UIComponent {
         }
         return null;
     }
-    
+
+    /**
+     * ★ UPDATED: Unified item description format
+     * Same format as UIInventorySlot for consistency
+     */
     private String getItemDescription(Item item) {
         StringBuilder sb = new StringBuilder();
+        
+        // Header: Name
         sb.append(item.getName()).append("\n");
+        
+        // Type and Rarity
         sb.append("Type: ").append(item.getType()).append("\n");
         sb.append("Rarity: ").append(item.getRarity()).append("\n");
         
+        // Blank line before stats
+        sb.append("\n");
+        
+        // Stats (only show if > 0)
         if (item.getAttackBonus() > 0) {
             sb.append("Attack: +").append(item.getAttackBonus()).append("\n");
         }
@@ -260,11 +359,22 @@ public class UIGearSlot extends UIComponent {
         if (item.getMagicDefenseBonus() > 0) {
             sb.append("Magic Defense: +").append(item.getMagicDefenseBonus()).append("\n");
         }
-        //durability
-        sb.append("Durability: ").append(item.getCurrentDurability()).append("/").append(item.getMaxDurability()).append("\n");
         
+        // Durability (show if item has durability)
+        if (item.getMaxDurability() > 0) {
+            sb.append("\n");
+            sb.append("Durability: ").append(item.getCurrentDurability())
+               .append("/").append(item.getMaxDurability()).append("\n");
+        }
+        
+        // ★ Note: Gear slots don't stack, so no stack info needed
+        
+        // Blank line before flags
+        sb.append("\n");
+        
+        // Flags/Properties (only show restrictions)
         if (!item.isUpgradable()) {
-            sb.append("Not upgradable\n");
+            sb.append("Cannot be upgraded\n");
         }
         if (!item.canInfuseElemental()) {
             sb.append("Cannot infuse elemental stones\n");

@@ -13,7 +13,7 @@ import dev.main.item.Item;
  * Tabs filter items by category (Misc shows all)
  */
 public class UIScrollableInventoryPanel extends UIComponent {
-    
+			  
     private List<UIInventorySlot> slots;
     private int columns;
     private int totalRows;
@@ -160,7 +160,30 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         updateSlotPositions();
     }
-    
+    /**
+     * ★ NEW: Add item and mark slot as new
+     */
+    public boolean addItemToCurrentTabAsNew(Item item) {
+        boolean added = addItemToCurrentTab(item);
+        
+        if (added) {
+            // Find the slot where item was added and mark it as new
+            List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+            
+            for (int i = 0; i < filteredStacks.size() && i < slots.size(); i++) {
+                ItemStack stack = filteredStacks.get(i);
+                UIInventorySlot slot = slots.get(i);
+                
+                if (stack != null && stack.getItem() == item) {
+                    slot.markAsNew();
+                    System.out.println("✨ New item added: " + item.getName());
+                    break;
+                }
+            }
+        }
+        
+        return added;
+    }
     // ═══════════════════════════════════════════════════════════════
     // ★ NEW: TAB FILTERING SYSTEM
     // ═══════════════════════════════════════════════════════════════
@@ -210,31 +233,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
         // You'll need to track stack counts separately or store them with items
         // This is a simplified version
         return 1;
-    }
-    /**
-     * Get items filtered by tab category
-     
-    private List<Item> getFilteredItems(String tabName) {
-        List<Item> filtered = new ArrayList<>();
-        
-        for (Item item : sharedInventory) {
-            if (item == null) continue;
-            
-            // "Misc" shows everything
-            if (tabName.equals("Misc")) {
-                filtered.add(item);
-                continue;
-            }
-            
-            // Filter by category
-            if (matchesTabFilter(item, tabName)) {
-                filtered.add(item);
-            }
-        }
-        
-        return filtered;
-    }
-    */
+    } 
     /**
      * Get items filtered by tab category (WITH stack counts)
      */
@@ -301,10 +300,78 @@ public class UIScrollableInventoryPanel extends UIComponent {
     // ═══════════════════════════════════════════════════════════════
     // ★ NEW: INVENTORY MANAGEMENT (Shared Storage)
     // ═══════════════════════════════════════════════════════════════
-    
+    /**
+     * ★ MODIFIED: Update the existing addItemToCurrentTab to use the new version
+     * This maintains backwards compatibility
+     */
+    public boolean addItemToCurrentTab(Item item) { 
+        return addItemToCurrentTab(item, true);  // Mark as new by default
+    }
+    /**
+     * ★ NEW: Add item with optional "NEW" badge marking
+     * This is the main method that supports the badge system
+     */
+    public boolean addItemToCurrentTab(Item item, boolean markAsNew) {
+        if (item == null) return false;
+        
+        int addedToSlotIndex = -1;
+        
+        // ★ If item is stackable, try to stack with existing items first
+        if (item.isStackable()) {
+            for (int i = 0; i < sharedInventory.length; i++) {
+                ItemStack stack = sharedInventory[i];
+                
+                if (stack != null && stack.canStackWith(item)) {
+                    if (stack.hasRoom(1)) {
+                        stack.addToStack(1);
+                        addedToSlotIndex = i;
+                        refreshSlotDisplay();
+                        System.out.println("Stacked item: " + item.getName() + 
+                                         " (now " + stack.getStackCount() + "/" + 
+                                         item.getMaxStackSize() + ")");
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // ★ If can't stack (or not stackable), find empty slot
+        if (addedToSlotIndex == -1) {
+            for (int i = 0; i < sharedInventory.length; i++) {
+                if (sharedInventory[i] == null) {
+                    sharedInventory[i] = new ItemStack(item, 1);
+                    addedToSlotIndex = i;
+                    refreshSlotDisplay();
+                    System.out.println("Added " + item.getName() + " to inventory slot " + i);
+                    break;
+                }
+            }
+        }
+        
+        // ★ NEW: Mark slot as new if requested
+        if (markAsNew && addedToSlotIndex != -1) {
+            // Find the display slot for this inventory index
+            List<ItemStack> filteredStacks = getFilteredItemStacks(currentTab);
+            for (int i = 0; i < filteredStacks.size() && i < slots.size(); i++) {
+                ItemStack stack = filteredStacks.get(i);
+                if (stack != null && sharedInventory[addedToSlotIndex] == stack) {
+                    slots.get(i).markAsNew();
+                    System.out.println("✨ Marked slot " + i + " as NEW");
+                    break;
+                }
+            }
+        }
+        
+        if (addedToSlotIndex == -1) {
+            System.out.println("Inventory full!");
+            return false;
+        }
+        
+        return true;
+    }
     /**
      * ★ COMPLETELY FIXED: Add item with proper stacking
-     */
+     
     public boolean addItemToCurrentTab(Item item) {
         if (item == null) return false;
         
@@ -338,7 +405,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         System.out.println("Inventory full!");
         return false;
-    } 
+    } */
     /**
      * ★ COMPLETELY FIXED: Add multiple items with stacking
      */
@@ -753,7 +820,7 @@ public class UIScrollableInventoryPanel extends UIComponent {
         
         return this.contains(mouseX, mouseY);
     }
-    
+   
     // ═══════════════════════════════════════════════════════════════
     // GETTERS
     // ═══════════════════════════════════════════════════════════════

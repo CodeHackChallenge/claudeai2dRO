@@ -40,6 +40,8 @@ public class UIButton extends UIComponent {
     private String iconPathHover;
     private String iconPathLocked;
     
+    private String tooltipText;
+    
     // Callback for when button is clicked
     private Runnable onClickCallback;
     
@@ -192,7 +194,7 @@ public class UIButton extends UIComponent {
             if (locked) {
                 // Apply transparency to locked icons
                 java.awt.AlphaComposite alphaComposite = java.awt.AlphaComposite.getInstance(
-                    java.awt.AlphaComposite.SRC_OVER, 0.4f);
+                java.awt.AlphaComposite.SRC_OVER, 0.4f);
                 java.awt.Composite oldComposite = g.getComposite();
                 g.setComposite(alphaComposite);
                 g.drawImage(currentIcon, x, y, width, height, null);
@@ -475,7 +477,25 @@ public class UIButton extends UIComponent {
         setVisible(true);
         clearNotification();  // Clear notifications when locking
     }
-    
+    /**
+     * ★ NEW: Get tooltip text (implements UIComponent tooltip system)
+     */
+    @Override
+    public String getTooltipText() {
+        // Don't show tooltip if button is locked
+        if (locked) {
+            return label + "\n(Locked)";
+        }
+        
+        // Return custom tooltip if set, otherwise return label
+        return tooltipText != null ? tooltipText : label;
+    }
+    /**
+     * ★ NEW: Set tooltip text for this button
+     */
+    public void setTooltipText(String tooltipText) {
+        this.tooltipText = tooltipText;
+    }
     // ═══════════════════════════════════════════════════════════════
     // GETTERS/SETTERS
     // ═══════════════════════════════════════════════════════════════

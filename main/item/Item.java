@@ -236,4 +236,84 @@ public class Item {
         }
         return base;
     }
+ // ═══════════════════════════════════════════════════════════════════
+ // ADD THESE METHODS TO YOUR Item.java CLASS
+ // These help determine which gear slot an item can go into
+ // ═══════════════════════════════════════════════════════════════════
+
+ /**
+  * ★ NEW: Determine which gear slot this item can be equipped in
+  * Returns null if item cannot be equipped
+  */
+ public String getEquipSlot() {
+     // Weapons go to weapon slot
+     if (isWeapon()) {
+         return "WEAPON";
+     }
+     
+     // Armor items - need to check item name for specific type
+     if (isArmor()) {
+         String nameLower = name.toLowerCase();
+         
+         if (nameLower.contains("helmet") || nameLower.contains("hat") || 
+             nameLower.contains("crown") || nameLower.contains("hood")) {
+             return "HEAD";
+         }
+         if (nameLower.contains("chest") || nameLower.contains("armor") || 
+             nameLower.contains("mail") || nameLower.contains("plate") ||
+             nameLower.contains("tunic") || nameLower.contains("robe")) {
+             return "TOP_ARMOR";
+         }
+         if (nameLower.contains("pants") || nameLower.contains("leggings") || 
+             nameLower.contains("greaves") || nameLower.contains("leg")) {
+             return "PANTS";
+         }
+         if (nameLower.contains("gloves") || nameLower.contains("gauntlet") || 
+             nameLower.contains("hand")) {
+             return "GLOVES";
+         }
+         if (nameLower.contains("boots") || nameLower.contains("shoes") || 
+             nameLower.contains("sandals") || nameLower.contains("feet")) {
+             return "SHOES";
+         }
+         
+         // Default armor to chest slot
+         return "TOP_ARMOR";
+     }
+     
+     // Accessories
+     if (isAccessory()) {
+         String nameLower = name.toLowerCase();
+         
+         if (nameLower.contains("earring")) {
+             return "EARRINGS";
+         }
+         if (nameLower.contains("necklace") || nameLower.contains("amulet") || 
+             nameLower.contains("pendant") || nameLower.contains("neck")) {
+             return "NECKLACE";
+         }
+         if (nameLower.contains("bracelet") || nameLower.contains("wrist")) {
+             return "BRACELET";
+         }
+         if (nameLower.contains("ring")) {
+             return "RING_1";  // Will try RING_1 first, then RING_2
+         }
+         if (nameLower.contains("boots") || nameLower.contains("shoes")) {
+             return "SHOES";
+         }
+         
+         // Default accessory to special slot
+         return "SPECIAL";
+     }
+     
+     // Consumables and materials cannot be equipped
+     return null;
+ }
+
+ /**
+  * ★ NEW: Can this item be equipped?
+  */
+ public boolean isEquippable() {
+     return getEquipSlot() != null;
+ }
 }

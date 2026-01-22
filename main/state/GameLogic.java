@@ -23,6 +23,7 @@ import dev.main.input.Position;
 import dev.main.item.Item;
 import dev.main.pathfinder.Path;
 import dev.main.pathfinder.Pathfinder;
+import dev.main.quest.IntroQuestHandler;
 import dev.main.quest.QuestIndicator;
 import dev.main.quest.QuestLog;
 import dev.main.quest.QuestObjective;
@@ -59,6 +60,12 @@ public class GameLogic {
 	public void update(float delta) {
 	    state.incrementGameTime(delta);
 	    
+	    // ★ NEW: Update intro quest handler (initializes indicator on first frame)
+	    IntroQuestHandler introHandler = state.getIntroQuestHandler();
+	    if (introHandler != null) {
+	        introHandler.update(delta);
+	    }
+	    
 	    Entity player = state.getPlayer();
 	    Position playerPos = player.getComponent(Position.class);
 	    
@@ -77,14 +84,22 @@ public class GameLogic {
 	        } 
 	        // ⭐ NEW: Update NPCs
 	        else if (entityType == EntityType.NPC) {
-	            updateNPC(entity, player, delta);
+	           // updateNPC(entity, player, delta);
 	        }
 	        
 	        Sprite sprite = entity.getComponent(Sprite.class);
 	        if (sprite != null) {
 	            sprite.update(delta);
-	        }
+	        } 
 	        
+	        
+	        // ★ NEW: Update quest indicators
+	        QuestIndicator questIndicator = entity.getComponent(QuestIndicator.class);
+	        if (questIndicator != null) { 
+	            questIndicator.update(delta); 
+	            //updateNPCQuestIndicators();
+	        }
+	      
 	        TargetIndicator indicator = entity.getComponent(TargetIndicator.class);
 	        if (indicator != null) {
 	            indicator.update(delta);
@@ -97,14 +112,27 @@ public class GameLogic {
 	        }
 	    }
 	    
+	 // ★ UPDATE QUEST INDICATORS (add this near the end of update method)
+	    updateQuestIndicators(delta);
 	    state.updateDamageTexts(delta);
 	    state.updateSpawnPoints(delta);
 	    state.removeMarkedEntities();
 	    updateCamera(delta);
 	}
 	/**
-	 * Update NPC quest indicators based on player's quest status
+	 * ★ NEW: Update all quest indicators for animation
 	 */
+	private void updateQuestIndicators(float delta) {
+	    for (Entity entity : state.getEntities()) {
+	        QuestIndicator indicator = entity.getComponent(QuestIndicator.class);
+	        if (indicator != null) {
+	            indicator.update(delta);
+	        }
+	    }
+	}
+	/**
+	 * Update NPC quest indicators based on player's quest status
+	 
 	private void updateNPC(Entity npc, Entity player, float delta) {
 	    NPC npcComponent = npc.getComponent(NPC.class);
 	    QuestIndicator questIndicator = npc.getComponent(QuestIndicator.class);
@@ -1731,6 +1759,9 @@ public class GameLogic {
                 boolean success = inventory.addItemStack(itemTemplate, quantity);
                 if (success) {
                     itemsAdded += quantity;
+                    //notify inventory when an item is added
+                    uiManager.notifyInventoryUpdate();
+                    uiManager.getInventoryGrid().addItemToCurrentTab(itemTemplate, true);
                 } else {
                     itemsFailed += quantity;
                 }
@@ -1741,6 +1772,10 @@ public class GameLogic {
                     boolean added = uiManager.addItemToInventory(item);
                     if (added) {
                         itemsAdded++;
+                      //notify inventory when an item is added
+                        uiManager.notifyInventoryUpdate();
+                        uiManager.getInventoryGrid().addItemToCurrentTab(itemTemplate, true);
+                         
                     } else {
                         itemsFailed++;
                     }
@@ -1790,15 +1825,15 @@ public class GameLogic {
     /**
      * ⭐ NEW: Update all NPC quest indicators
      * Call this when quest status changes
-     */
+    
     private void updateNPCQuestIndicators() {
-        for (Entity entity : state.getEntities()) {
+        for (Entity entity : state.getEntities()) { 
             if (entity.getType() == EntityType.NPC) {
                 NPC npcComponent = entity.getComponent(NPC.class);
                 QuestIndicator questIndicator = entity.getComponent(QuestIndicator.class);
-                
+                	
                 if (npcComponent != null && questIndicator != null) {
-                    updateNPCIndicator(entity, npcComponent, questIndicator);
+                    updateNPCIndicator(entity, npcComponent, questIndicator);  
                 }
             }
         }
@@ -1806,7 +1841,7 @@ public class GameLogic {
 
     /**
      * ⭐ NEW: Update individual NPC quest indicator
-     */
+      
     private void updateNPCIndicator(Entity npc, NPC npcComponent, QuestIndicator questIndicator) {
         // Check quest status
         Quest completedQuest = npcComponent.getCompletedQuest();
@@ -1833,6 +1868,6 @@ public class GameLogic {
         // No quests - hide indicator
         questIndicator.hide();
     }
-    
+    */
     
 } 
