@@ -134,12 +134,14 @@ public class IntroQuestHandler {
                 // Check if sword equipped
                 if (isSwordEquipped()) {
                     advanceToStage2Complete(ui);
+                    /*
                     // ★ FIX: Return TRUE to prevent JSON dialogue from loading
                     // Stage is now STAGE_2_COMPLETE, next click will show Stage 3
                     ui.showDialogue(
                         npc.getNpcName(),
                         "I see you've equipped the sword. It will help you in your journey. Try to use it them speak with me again."
                     );
+                    */
                     return true;
                 } else {
                     showEquipSwordReminder(ui);
@@ -153,12 +155,12 @@ public class IntroQuestHandler {
                 
             case STAGE_3_COMPLETE:
             	 
-            case ALL_COMPLETE:
+            case ALL_COMPLETE:/*
                 // Intro quests done, show generic dialogue
                 ui.showDialogue(
                     npc.getNpcName(),
                     "I have given you all the aid I can. May your journey be swift and safe."
-                );
+                );*/
                 //return true;
                 return false; //go straight to collect recipe for run crafting
                 
@@ -272,10 +274,10 @@ public class IntroQuestHandler {
                             "This enchantment will help you survive the first trials. And take this as well.",
                             () -> {
                                 dialogueBox.showMessageWithAccept(
-                                    "Item obtained: Rune of Return", 
+                                    "Quest Unlocked!", 
                                     () -> {
                                     	dialogueBox.showMessageWithAccept(
-                                    	"Quest Unlocked",
+                                    	"Item obtained: Rune of Return",
                                     	() -> completeStage3(ui),
                                     	() -> dialogueBox.setVisible(false)
                                     	);
@@ -296,15 +298,7 @@ public class IntroQuestHandler {
                 System.out.println("[INTRO QUEST] Player declined Stage 3 - will retry on next interaction");
             }
         );
-    }    
-    /*
-     * 							dialogueBox.showMessageWithAccept(
-                                    "Item obtained: Rune of Return", 
-                                    () -> completeStage3(ui),
-                                    () -> dialogueBox.setVisible(false)
-                                );
-     * 
-     * */
+    }   
     /**
      * Complete Stage 3: Grant rune and blessing
      */
@@ -326,6 +320,7 @@ public class IntroQuestHandler {
         ui.notifyInventoryUpdate();
         
         currentStage = IntroStage.STAGE_3_COMPLETE;
+        
         updateQuestIndicator();  // ★ Update indicator (hide or show completion)
         
         System.out.println("[INTRO QUEST] Stage 3 Complete: Rune received, blessing granted");
@@ -431,7 +426,7 @@ public class IntroQuestHandler {
             case ALL_COMPLETE:
                 // All done, hide indicator
                 //indicator.hide();
-                indicator.show(IndicatorType.AVAILABLE);
+                indicator.show(IndicatorType.IN_PROGRESS);
                 //System.out.println("[INTRO QUEST] Set indicator: Hidden (All Complete)");
                 break;
                 

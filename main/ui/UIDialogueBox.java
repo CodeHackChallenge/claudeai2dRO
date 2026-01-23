@@ -76,7 +76,7 @@ public class UIDialogueBox extends UIComponent {
             buttonWidth,
             buttonHeight,
             "accept",
-            "Accept"
+            "oAccept"
         );
         acceptButton.setOnClick(() -> {
             if (onAccept != null) onAccept.run();
@@ -311,8 +311,8 @@ public class UIDialogueBox extends UIComponent {
             questInfoY += 16;
         }
         
-        if (offeredQuest.getGoldReward() > 0) {
-            g.drawString("• " + offeredQuest.getGoldReward() + " Gold", x + padding + 10, questInfoY);
+        if (offeredQuest.getAurelReward() > 0) {
+            g.drawString("• " + offeredQuest.getAurelReward() + " Gold", x + padding + 10, questInfoY);
             questInfoY += 16;
         }
         

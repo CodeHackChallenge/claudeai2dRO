@@ -329,24 +329,39 @@ public class EntityFactory {
         //npcComponent.setFarewellDialogue("May fortune favor you on your journey!");
         
         // Create a starter quest
-        Quest goblinSlayerQuest = new Quest(
-            "goblin_slayer",
-            "Goblin Slayer",
-            "The goblins have to be dealt with! Help us by defeating 5 of them.",
-            Quest.QuestType.KILL
+        Quest runeCratingQuest = new Quest(
+            //"goblin_slayer",
+            //"Goblin Slayer",
+            "rune_crafting",
+            "Rune Crafting",
+            //"The goblins have to be dealt with! Help us by defeating 5 of them.",
+            "You need to collect all recipies to craft a rune",
+            Quest.QuestType.COLLECT
         );
-        
-        // Add objective: Kill 5 goblins
-        goblinSlayerQuest.addObjective(new QuestObjective(
-            "kill_goblins",
-            "Defeat 5 Goblins",
-            5
+        //quest type
+        runeCratingQuest.questType(Quest.QUEST_MAIN);
+        // Crafting
+        runeCratingQuest.addObjective(new QuestObjective( 
+            "rune_crafting", 
+            "Carved Wood",
+            1
         ));
-         
+        // Crafting
+        runeCratingQuest.addObjective(new QuestObjective( 
+            "rune_crafting", 
+            "Clay",
+            1
+        ));
+        // Crafting
+        runeCratingQuest.addObjective(new QuestObjective( 
+            "rune_crafting", 
+            "Carving Stone",
+            1
+        ));
         // Set rewards
-        goblinSlayerQuest.setExpReward(150);
-        goblinSlayerQuest.setGoldReward(50);
-        goblinSlayerQuest.addItemReward("Potion of Minor Healing");
+        runeCratingQuest.setExpReward(150);
+        runeCratingQuest.setAurelReward(50);
+        runeCratingQuest.addItemReward("Potion of Minor Healing");
         
         // Set quest dialogue
         //goblinSlayerQuest.setAcceptDialogue("Excellent! The goblins won't know what hit them. Return when you've slain 5 of them.");
@@ -354,7 +369,7 @@ public class EntityFactory {
         //goblinSlayerQuest.setCompleteDialogue("Amazing work! The village is safer thanks to you. Here's your reward.");
         
         // Add quest to NPC
-        npcComponent.addQuest(goblinSlayerQuest);
+        npcComponent.addQuest(runeCratingQuest);
         
         return fionne;
     }
