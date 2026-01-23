@@ -230,7 +230,7 @@ public class UIQuestPanel extends UIComponent {
     @Override
     public void render(Graphics2D g) {
         if (!visible) return;
-        
+     
         // Refresh quest list each frame (in case quests updated)
         refreshQuestList();
         

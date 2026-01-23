@@ -47,14 +47,14 @@ public class Pathfinder {
             float goalWorldY = goalY * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
             
             if (map.collidesWithTiles(entityCollisionBox, goalWorldX, goalWorldY)) {
-                System.out.println("⚠ Goal tile can't fit collision box - trying nearby tiles...");
+               // System.out.println("⚠ Goal tile can't fit collision box - trying nearby tiles...");
                 
                 // Try to find a nearby walkable tile
                 int[] nearbyGoal = findNearestWalkableTile(goalX, goalY, 3);
                 if (nearbyGoal != null) {
                     goalX = nearbyGoal[0];
                     goalY = nearbyGoal[1];
-                    System.out.println("✓ Using nearby tile: (" + goalX + ", " + goalY + ")");
+                   // System.out.println("✓ Using nearby tile: (" + goalX + ", " + goalY + ")");
                 } else {
                     return null; // No nearby walkable tiles
                 }

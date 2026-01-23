@@ -202,14 +202,14 @@ public class Renderer {
             Color color;
             
             if (qi.type == QuestIndicator.IndicatorType.IN_PROGRESS) {
-                symbol = "...";
-                color = new Color(150, 150, 150);
+                symbol = qi.getSymbol();//"...";
+                color = qi.getColor();//new Color(150, 150, 150);
             } else if (qi.type == QuestIndicator.IndicatorType.COMPLETE) {
-                symbol = "?";
-                color = new Color(255, 215, 0);
+                symbol = qi.getSymbol();//"?";
+                color = qi.getColor();//new Color(255, 215, 0);
             } else {
-                symbol = "!";
-                color = new Color(255, 215, 0);
+                symbol = qi.getSymbol();//"!";
+                color = qi.getColor();//new Color(255, 215, 0);
             }
             
             // Draw indicator
@@ -894,46 +894,6 @@ public class Renderer {
         
         g.setFont(originalFont);
     }
-    /*
-    private void drawQuestIndicator(Graphics2D g, int spriteX, int spriteY, QuestIndicator indicator) {
-        if (!indicator.isVisible()) return;
-        
-        // ★ DEBUG MODE: Print every frame if enabled
-        if (engine.rendererDebugMode) {
-            System.out.println("[Renderer] Frame " + System.currentTimeMillis() + ":");
-            System.out.println("  indicator.active = " + indicator.active);
-            System.out.println("  indicator.type = " + indicator.type);
-            System.out.println("  indicator.getSymbol() = '" + indicator.getSymbol() + "'");
-            System.out.println("  indicator.getColor() = " + indicator.getColor());
-        }
-        
-        Font originalFont = g.getFont();
-        g.setFont(QUEST_INDICATOR_FONT);
-        
-        // Calculate position with bounce animation
-        int indicatorX = spriteX;
-        int indicatorY = (int)(spriteY + indicator.offsetY + indicator.bounceOffset);
-        
-        // Get symbol and color from indicator
-        String symbol = indicator.getSymbol();
-        Color color = indicator.getColor();
-        
-        FontMetrics fm = g.getFontMetrics();
-        int textWidth = fm.stringWidth(symbol);
-        int textHeight = fm.getHeight();
-        
-        int textX = indicatorX - textWidth / 2;
-        int textY = indicatorY + textHeight / 4;
-        
-        // Draw shadow
-        g.setColor(new Color(0, 0, 0, 150));
-        g.drawString(symbol, textX + 2, textY + 2);
-        
-        // Draw symbol
-        g.setColor(color);
-        g.drawString(symbol, textX, textY);
-        
-        g.setFont(originalFont);
-    }*/
+    
     
 }

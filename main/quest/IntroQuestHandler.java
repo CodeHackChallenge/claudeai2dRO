@@ -29,6 +29,8 @@ public class IntroQuestHandler {
         STAGE_2_COMPLETE,      // Sword equipped, stats unlocked
         STAGE_3_DIALOGUE,      // Second quest dialogue shown
         STAGE_3_COMPLETE,      // Rune received, blessing granted
+        STAGE_4_DIALOGUE,	   // unlock quest menu	
+        STAGE_4_COMPLETE,
         ALL_COMPLETE           // All intro quests finished
     }
     
@@ -136,13 +138,13 @@ public class IntroQuestHandler {
                     // Stage is now STAGE_2_COMPLETE, next click will show Stage 3
                     ui.showDialogue(
                         npc.getNpcName(),
-                        "I see you've equipped the sword. Well done. Come, speak with me again."
+                        "I see you've equipped the sword. It will help you in your journey. Try to use it them speak with me again."
                     );
                     return true;
                 } else {
                     showEquipSwordReminder(ui);
                     return true;
-                }
+                } 
                 
             case STAGE_2_COMPLETE:
             case STAGE_3_DIALOGUE:  // ★ HANDLE DECLINE - Stay on Stage 3
@@ -150,20 +152,23 @@ public class IntroQuestHandler {
                 return true;
                 
             case STAGE_3_COMPLETE:
+            	 
             case ALL_COMPLETE:
                 // Intro quests done, show generic dialogue
                 ui.showDialogue(
                     npc.getNpcName(),
                     "I have given you all the aid I can. May your journey be swift and safe."
                 );
-                return true;
+                //return true;
+                return false; //go straight to collect recipe for run crafting
                 
             default:
                 return false; // Let dialogue system handle
         }
     }
     
-    /**
+
+	/**
      * STAGE 1: First meeting with Fionne
      * Grants inventory and wooden sword
      */
@@ -172,6 +177,7 @@ public class IntroQuestHandler {
         
         // ★ Set stage IMMEDIATELY so declining keeps player in this stage
         currentStage = IntroStage.STAGE_1_DIALOGUE;
+        
         
         dialogueBox.showMessageWithAccept(
             "To return to the continent, you must craft a magical rune. For that, you'll need the proper recipes and materials. Take this. A gift from the Divine Elves.",
@@ -193,7 +199,7 @@ public class IntroQuestHandler {
                 dialogueBox.setVisible(false);
                 System.out.println("[INTRO QUEST] Player declined Stage 1 - will retry on next interaction");
             }
-        );
+        ); 
     }
     
     /**
@@ -208,7 +214,7 @@ public class IntroQuestHandler {
         ui.addItemToInventory(sword);
         
         // Add test gear items for demonstration
-        ui.addTestGearItems();
+       // ui.addTestGearItems();
         
         // Advance stage
         currentStage = IntroStage.STAGE_1_COMPLETE;
@@ -255,7 +261,9 @@ public class IntroQuestHandler {
         currentStage = IntroStage.STAGE_3_DIALOGUE;
         
         dialogueBox.showMessageWithAccept(
-            "To craft the rune, gather: Carved Wood, Clay, Carving Stone\nThese can be found by hunting the creatures roaming this island.\nBut be cautious. Some creatures will attack without hesitation.\nIf you fall, your journey ends here.",
+            //"To craft the rune, gather: Carved Wood, Clay, Carving Stone\nThese can be found by hunting the creatures roaming this island.\nBut be cautious. Some creatures will attack without hesitation.\nIf you fall, your journey ends here.",
+            "The wooden sword you equipped will grant you strength to protect yourself from evil elements \nIt is not the best weapon but its durability will be enough for your journey.",
+            
             () -> {
                 dialogueBox.showMessageWithAccept(
                     "Fionne raises her staff. A soft aura surrounds you.",
@@ -264,9 +272,16 @@ public class IntroQuestHandler {
                             "This enchantment will help you survive the first trials. And take this as well.",
                             () -> {
                                 dialogueBox.showMessageWithAccept(
-                                    "Item obtained: Rune of Return",
-                                    () -> completeStage3(ui),
+                                    "Item obtained: Rune of Return", 
+                                    () -> {
+                                    	dialogueBox.showMessageWithAccept(
+                                    	"Quest Unlocked",
+                                    	() -> completeStage3(ui),
+                                    	() -> dialogueBox.setVisible(false)
+                                    	);
+                                    },
                                     () -> dialogueBox.setVisible(false)
+                                    
                                 );
                             },
                             () -> dialogueBox.setVisible(false)
@@ -281,15 +296,24 @@ public class IntroQuestHandler {
                 System.out.println("[INTRO QUEST] Player declined Stage 3 - will retry on next interaction");
             }
         );
-    }
-    
+    }    
+    /*
+     * 							dialogueBox.showMessageWithAccept(
+                                    "Item obtained: Rune of Return", 
+                                    () -> completeStage3(ui),
+                                    () -> dialogueBox.setVisible(false)
+                                );
+     * 
+     * */
     /**
      * Complete Stage 3: Grant rune and blessing
      */
     private void completeStage3(UIManager ui) {
         // Add Rune of Return to inventory
         ui.addItemToInventory(ItemManager.createRuneOfReturn());
+        ui.unlockQuestButton("quest");
         
+        //Quest quest = new Quest("");
         // Grant Fionne's Blessing buff
         BuffManager buffManager = player.getComponent(BuffManager.class);
         if (buffManager != null) {
@@ -310,9 +334,48 @@ public class IntroQuestHandler {
         ui.getDialogueBox().setVisible(false);
         
         // Mark all intro quests complete
-        markAllComplete();
+        //markAllComplete(); //TODO: watch this!
     }
-    
+    /*
+     * Stage 4 unlock quest menu
+     * 
+     */ 
+    private void showStage4Dialogue(UIManager ui) {
+    	
+	UIDialogueBox dialogueBox = ui.getDialogueBox();
+	        
+	        // ★ Set stage IMMEDIATELY so declining keeps player in this stage
+	        currentStage = IntroStage.STAGE_4_DIALOGUE;
+	        /*
+	        dialogueBox.showMessageWithAccept(
+	            "To craft the rune, gather: Carved Wood, Clay, Carving Stone\nThese can be found by hunting the creatures roaming this island.\nBut be cautious. Some creatures will attack without hesitation.\nIf you fall, your journey ends here.",
+	            () -> {
+	                dialogueBox.showMessageWithAccept(
+	                    "Fionne raises her staff. A soft aura surrounds you.",
+	                    () -> {
+	                        dialogueBox.showMessageWithAccept(
+	                            "This enchantment will help you survive the first trials. And take this as well.",
+	                            () -> {
+	                                dialogueBox.showMessageWithAccept(
+	                                    "Item obtained: Rune of Return",
+	                                    () -> completeStage3(ui),
+	                                    () -> dialogueBox.setVisible(false)
+	                                );
+	                            },
+	                            () -> dialogueBox.setVisible(false)
+	                        );
+	                    },
+	                    () -> dialogueBox.setVisible(false)
+	                );
+	            },
+	            () -> {
+	                // ★ On decline, stay in STAGE_3_DIALOGUE (already set above)
+	                dialogueBox.setVisible(false);
+	                System.out.println("[INTRO QUEST] Player declined Stage 3 - will retry on next interaction");
+	            }
+	        );
+			*/
+	}
     /**
      * Mark all intro quests as complete
      */
@@ -367,12 +430,14 @@ public class IntroQuestHandler {
             case STAGE_3_COMPLETE:
             case ALL_COMPLETE:
                 // All done, hide indicator
-                indicator.hide();
+                //indicator.hide();
+                indicator.show(IndicatorType.AVAILABLE);
                 //System.out.println("[INTRO QUEST] Set indicator: Hidden (All Complete)");
                 break;
                 
             default:
-                indicator.hide();
+                //indicator.hide();
+            	indicator.show(IndicatorType.COMPLETE);
                 //System.out.println("[INTRO QUEST] Set indicator: Hidden (Default)");
                 break;
         }

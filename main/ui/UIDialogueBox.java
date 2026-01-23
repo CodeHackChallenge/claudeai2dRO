@@ -27,11 +27,13 @@ public class UIDialogueBox extends UIComponent {
     private UIButton acceptButton;
     private UIButton declineButton;
     private UIButton closeButton;
+     
     
     // Callbacks
     private Runnable onAccept;
     private Runnable onDecline;
     private Runnable onClose;
+     
     
     // Visual
     private Color backgroundColor;
@@ -65,7 +67,7 @@ public class UIDialogueBox extends UIComponent {
         int buttonWidth = 100;
         int buttonHeight = 36;
         int buttonY = y + height - buttonHeight - padding;
-        int centerX = x + width / 2;
+        int centerX = x + width / 2; 
         
         // Accept button (left of center)
         acceptButton = new UIButton(
@@ -121,11 +123,9 @@ public class UIDialogueBox extends UIComponent {
         // Show only close button
         acceptButton.setVisible(false);
         declineButton.setVisible(false);
-        closeButton.setVisible(true);
-        
+        closeButton.setVisible(true); 
         this.setVisible(true);
-    }
-    
+    } 
     /**
      * Show dialogue with quest offer
      */
@@ -442,7 +442,7 @@ public class UIDialogueBox extends UIComponent {
     
     public void setOnClose(Runnable callback) {
         this.onClose = callback;
-    }
+    } 
     
     // Getters
     public Quest getOfferedQuest() {

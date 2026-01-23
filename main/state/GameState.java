@@ -112,7 +112,7 @@ public class GameState {
         entities.add(fionne);
         System.out.println("Fionne NPC created at (13, 5)");
        
-        
+        /*
         float normalRespawn = 30f;
         float bossRespawn = 50f;
         
@@ -145,7 +145,7 @@ public class GameState {
         
         // ELITE goblin
         addSpawnPoint("Goblin", 14 * 64, 10 * 64, normalRespawn, 3, MobTier.ELITE);
-        /*
+       
         // NORMAL bunnies
         addSpawnPoint("Bunny", 20 * 64, 20 * 64, normalRespawn, 1, MobTier.NORMAL);
         addSpawnPoint("Bunny", 20 * 64, 21 * 64, normalRespawn, 2, MobTier.NORMAL);
@@ -160,12 +160,12 @@ public class GameState {
         addSpawnPoint("GoblinBoss", 13 * 64, 12 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("BunnyBoss", 22 * 64, 23 * 64, bossRespawn, 5, MobTier.MINIBOSS);
         addSpawnPoint("MinotaurBoss", 22 * 64, 21 * 64, bossRespawn, 7, MobTier.MINIBOSS);
-         */
+        
         // Initial spawn of all monsters
         for (SpawnPoint sp : spawnPoints) {
             spawnMonsterAtPoint(sp);
         }
-          
+          */ 
         //add boulder
         addBoulder(4 * 64 - 13,  3 * 64 - 18);
         // User-requested tree at tile (5,5)

@@ -82,7 +82,8 @@ public class EntityFactory {
 	    player.addComponent(new XPBar(40, 3, 54));
 	    
 	    // Collision and movement
-	    player.addComponent(new CollisionBox(-20, -40, 45, 95));
+	    //player.addComponent(new CollisionBox(-23, -32, 47, 64));
+	    player.addComponent(new CollisionBox(-16, -24, 32, 48));
 	    player.addComponent(new Path());
 	    player.addComponent(new TargetIndicator());
 	    
