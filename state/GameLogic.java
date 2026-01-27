@@ -54,6 +54,9 @@ public class GameLogic {
     private static final float STUCK_TIMEOUT = 0.5f; // Half second without movement = stuck
     private static final float MIN_MOVEMENT = 2f; // Minimum pixels to consider "moved"
     
+    //for intro quest collect recipies
+    private boolean isIntroQuestCollect = false;
+    
     private UIManager ui;
     
     public GameLogic(GameState state) {
@@ -1737,7 +1740,7 @@ public class GameLogic {
             totalQuantity += quantity;
             
             Item itemTemplate = drop.getDropTemplate().createItem();
-            
+            System.out.println("::::::::::.createItem()="+itemTemplate.getName());
             if (itemTemplate.isStackable()) {
                 boolean success = inventory.addItemStack(itemTemplate, quantity);
                 if (success) {
@@ -1770,7 +1773,7 @@ public class GameLogic {
             System.out.println("⚠ " + itemsFailed + " items lost (inventory full!)");
         }
     }
-
+    
     private void updateQuestProgress(Entity player, Entity monster, List<DroppedItem> drops, String activeQuestId) {
         QuestLog questLog = player.getComponent(QuestLog.class);
         if (questLog == null) return;
@@ -1791,26 +1794,29 @@ public class GameLogic {
                     }
                   
                 }
-                //collect
-                if(objectiveId.contains("collect")) {
-                	System.out.println("::::COLLECT QUEST>>>");
-                	for (DroppedItem drop : drops) { 
-                		GuaranteedDrop guaranteedDrop = 
-                				dropSystem.getZoneLootConfig().checkGuaranteedDrop(activeQuestId, monsterName);
-                		
-                		if (guaranteedDrop != null) { 
-                			if(drop.getItemName().equals(guaranteedDrop.dropItem.getItemName())) {
-                    			System.out.println("  • " + drop.getItemName());
-                    			System.out.println("found YOU!");
-                    			questLog.updateQuestProgress(objectiveId, 1);
-                    			break;
-                    		}
-                		} 
+                if(!isIntroQuestCollect) {
+            		//collect
+                    if(objectiveId.contains("collect")) {
+                    	System.out.println("::::COLLECT QUEST>>>");
+                    	for (DroppedItem drop : drops) { 
+                    		GuaranteedDrop guaranteedDrop = 
+                    				dropSystem.getZoneLootConfig().checkGuaranteedDrop(activeQuestId, monsterName);
+                    		
+                    		if (guaranteedDrop != null) { 
+                    			if(drop.getItemName().equals(guaranteedDrop.dropItem.getItemName())) {
+                        			System.out.println("  • " + drop.getItemName());
+                        			System.out.println("Quest Requirement Complete!");
+                        			questLog.updateQuestProgress(objectiveId, 1);
+                        			
+                        			isIntroQuestCollect = true;
+                        			break;
+                        		}
+                    		} 
+                        }
                     }
-                }
-                
-                
+        		 }//is 
             }//for
-        }//for
+        }//for 
+        
     }
 }

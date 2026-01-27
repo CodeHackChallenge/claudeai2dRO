@@ -45,7 +45,7 @@ public class EntityFactory {
 	    player.addComponent(new Movement(100f, 200f));
 	    
 	    // Base stats 
-	    Stats stats = new Stats(100, 10, 2, 0, 50);
+	    Stats stats = new Stats(1000, 1, 2, 0, 50);
 	    player.addComponent(stats);
 	    
 	    // Experience and leveling

@@ -578,29 +578,7 @@ public class GameState {
         System.out.println("Zone loot loaded: " + tier + " tier with " + 
                           config.getExtraDrops().size() + " extra drops, " +
                           config.getGuaranteedDrops().size() + " guaranteed drops");
-    }
-
-    /**
-     * Helper to convert string item creator reference to ItemCreator
-     */
-    private DropItem.ItemCreator getItemCreatorFromString(String creatorRef) {
-        // Parse "ItemManager::createWoodenTablet" format
-        switch (creatorRef) {
-            case "ItemManager::createWoodenTablet":
-                return ItemManager::createWoodenTablet;
-            case "ItemManager::createClay":
-                return ItemManager::createClay;
-            case "ItemManager::createCarvedWood":
-                return ItemManager::createCarvedWood;
-            case "ItemManager::createEssence":
-                return ItemManager::createEssence;
-            // Add more cases as needed
-            default:
-                System.out.println("⚠ Unknown item creator: " + creatorRef);
-                return ItemManager::createWoodenTablet; // Fallback
-        }
-    }
-    
+    } 
     public void spawnMonster(String type, float x, float y) {
         spawnMonster(type, x, y, 1, MobTier.NORMAL);
     }
@@ -741,5 +719,38 @@ public class GameState {
     // Add getter
     public ZoneLootConfig getZoneLootConfig() {
         return zoneLootConfig;
+    }
+    
+    /**
+     * Helper to convert string item creator reference to ItemCreator
+     */
+    private DropItem.ItemCreator getItemCreatorFromString(String creatorRef) {
+        // Parse "ItemManager::createWoodenTablet" format
+        switch (creatorRef) {
+            case "ItemManager::createWoodenTablet":
+                return ItemManager::createWoodenTablet;
+            case "ItemManager::createClay":
+                return ItemManager::createClay;
+            case "ItemManager::createCarvedWood":
+                return ItemManager::createCarvedWood;
+            case "ItemManager::createEssence":
+                return ItemManager::createEssence;
+            case "ItemManager::createAnimalClaws":
+                return ItemManager::createAnimalClaws;
+            case "ItemManager::createBrokenTooth":
+                return ItemManager::createBrokenTooth;
+            case "ItemManager::createRawFish":
+                return ItemManager::createRawFish;
+            case "ItemManager::createAnimalBone":
+                return ItemManager::createAnimalBone;    
+            case "ItemManager::createAnimalSkull":
+                return ItemManager::createAnimalSkull; 
+            case "ItemManager::createFruitBanana":
+                return ItemManager::createFruitBanana; 
+            // Add more cases as needed
+            default:
+                System.out.println("⚠ Unknown item creator: " + creatorRef);
+                return ItemManager::createWoodenTablet; // Fallback
+        }
     }
 }

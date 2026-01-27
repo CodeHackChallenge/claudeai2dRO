@@ -18,36 +18,43 @@ public class DropTable {
     private void initializeDrops() {
         // Common items - materials that enemies drop
         List<DropItem> commonItems = new ArrayList<>();
-        commonItems.add(new DropItem("Wooden Tablet", DropRarity.COMMON, 1, 5, 
-            ItemManager::createWoodenTablet));
-        commonItems.add(new DropItem("Clay", DropRarity.COMMON, 1, 8, 
-            ItemManager::createClay));
-        commonItems.add(new DropItem("Carving Stone", DropRarity.COMMON, 1, 3, 
-            ItemManager::createCarvingStone));
+        
+        commonItems.add(new DropItem("Fruit Banana", DropRarity.COMMON, 1, 2, 
+                ItemManager::createFruitBanana)); //make this a forest drop
+        
+        commonItems.add(new DropItem("Animal Skull", DropRarity.COMMON, 1, 2, 
+            ItemManager::createAnimalSkull));
+        commonItems.add(new DropItem("Raw Fish", DropRarity.COMMON, 1, 2, 
+            ItemManager::createRawFish));
+        commonItems.add(new DropItem("Broken Tooth", DropRarity.COMMON, 1, 2, 
+            ItemManager::createBrokenTooth));
+        commonItems.add(new DropItem("Animal Claws", DropRarity.COMMON, 1, 2, 
+            ItemManager::createAnimalClaws));
         commonItems.add(new DropItem("Essence", DropRarity.COMMON, 1, 4, 
             ItemManager::createEssence));
+        
         itemsByRarity.put(DropRarity.COMMON, commonItems);
         
         // Rare items - scrolls and special materials
         List<DropItem> rareItems = new ArrayList<>();
         // Note: Using Carved Wood as "Scroll" equivalent since your ItemManager has it
-        rareItems.add(new DropItem("Carved Wood", DropRarity.RARE, 1, 2, 
-            ItemManager::createCarvedWood));
+        rareItems.add(new DropItem("Verdant Shards", DropRarity.RARE, 1, 2, 
+            ItemManager::createVerdantShard));
         itemsByRarity.put(DropRarity.RARE, rareItems);
         
         // Epic items - rare materials
         List<DropItem> epicItems = new ArrayList<>();
-        epicItems.add(new DropItem("Verdant Shard", DropRarity.EPIC, 1, 3, 
+        epicItems.add(new DropItem("Scroll of Purity", DropRarity.EPIC, 1, 3, 
             ItemManager::createVerdantShard));
-        epicItems.add(new DropItem("Rune of Return", DropRarity.EPIC, 1, 1, 
-            ItemManager::createRuneOfReturn));
+        //epicItems.add(new DropItem("Rune of Return", DropRarity.EPIC, 1, 1, 
+         //   ItemManager::createRuneOfReturn));
         itemsByRarity.put(DropRarity.EPIC, epicItems);
         
         // Legendary items - powerful runes
         List<DropItem> legendaryItems = new ArrayList<>();
-        legendaryItems.add(new DropItem("Fire Rune", DropRarity.LEGENDARY, 1, 1, 
+        legendaryItems.add(new DropItem("Fire Rune", DropRarity.EPIC, 1, 1, 
             ItemManager::createFireRune));
-        itemsByRarity.put(DropRarity.LEGENDARY, legendaryItems);
+        itemsByRarity.put(DropRarity.EPIC, legendaryItems);
         
         // Mythic items (to be implemented later)
         itemsByRarity.put(DropRarity.MYTHIC, new ArrayList<>());
@@ -78,3 +85,13 @@ public class DropTable {
         itemsByRarity.get(item.getRarity()).add(item);
     }
 }
+
+/*commonItems.add(new DropItem("Wooden Tablet", DropRarity.COMMON, 1, 5, 
+ItemManager::createWoodenTablet));
+commonItems.add(new DropItem("Clay", DropRarity.COMMON, 1, 8, 
+ItemManager::createClay));
+commonItems.add(new DropItem("Carving Stone", DropRarity.COMMON, 1, 3, 
+ItemManager::createCarvingStone));
+commonItems.add(new DropItem("Essence", DropRarity.COMMON, 1, 4, 
+ItemManager::createEssence));
+*/

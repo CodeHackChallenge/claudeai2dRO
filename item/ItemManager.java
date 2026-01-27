@@ -131,10 +131,70 @@ public class ItemManager {
             false, false, true, true, 0
         );
     }
-    
+     
     public static Item createClay() {
         return new Item(
             "Clay",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createBrokenTooth() {
+        return new Item(
+            "Broken Tooth",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createAnimalClaws() {
+        return new Item(
+            "Animal Claws",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createFruitBanana() {
+        return new Item(
+            "Fruit Banana",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createAnimalSkull() {
+        return new Item(
+            "Animal Skull",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createRawFish() {
+        return new Item(
+            "Raw Fish",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.COMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createAnimalBone() {
+        return new Item(
+            "Animal Bone",
             Item.ItemType.MATERIAL,
             Item.Rarity.COMMON,
             0, 0, 0, 0, 999,
@@ -146,7 +206,7 @@ public class ItemManager {
         return new Item(
             "Carving Stone",
             Item.ItemType.MATERIAL,
-            Item.Rarity.COMMON,
+            Item.Rarity.UNCOMMON,
             0, 0, 0, 0, 999,
             false, false, true, true, 0
         );
@@ -157,7 +217,7 @@ public class ItemManager {
         return new Item(
             "Wooden Tablet",
             Item.ItemType.MATERIAL,
-            Item.Rarity.COMMON,
+            Item.Rarity.UNCOMMON,
             0, 0, 0, 0, 999,
             false, false, true, true, 0
         );
@@ -177,7 +237,17 @@ public class ItemManager {
         return new Item(
             "Verdant Shard",
             Item.ItemType.MATERIAL,
-            Item.Rarity.UNCOMMON,
+            Item.Rarity.RARE,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
+    public static Item createScrollOfPurity() {
+        return new Item(
+            "Scroll of Purity",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.EPIC,
             0, 0, 0, 0, 999,
             false, false, true, true, 0
         );
@@ -188,7 +258,7 @@ public class ItemManager {
         return new Item(
             "Fire Rune",
             Item.ItemType.MATERIAL,
-            Item.Rarity.UNCOMMON,
+            Item.Rarity.EPIC,
             0, 0, 0, 0, 999,
             false, false, true, true, 0
         );
@@ -198,7 +268,7 @@ public class ItemManager {
         return new Item(
             "Ice Rune",
             Item.ItemType.MATERIAL,
-            Item.Rarity.UNCOMMON,
+            Item.Rarity.EPIC,
             0, 0, 0, 0, 999,
             false, false, true, true, 0
         );
@@ -208,7 +278,7 @@ public class ItemManager {
         return new Item(
             "Lightning Rune",
             Item.ItemType.MATERIAL,
-            Item.Rarity.RARE,
+            Item.Rarity.EPIC,
             0, 0, 0, 0, 999,
             false, false, true, true, 0
         );
