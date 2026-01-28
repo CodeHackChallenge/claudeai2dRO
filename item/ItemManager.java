@@ -212,6 +212,17 @@ public class ItemManager {
         );
     }
     
+    //lucky drops
+    public static Item createLuckyPouch() {
+        return new Item(
+            "Lucky Pouch",
+            Item.ItemType.MATERIAL,
+            Item.Rarity.UNCOMMON,
+            0, 0, 0, 0, 999,
+            false, false, true, true, 0
+        );
+    }
+    
     // ★ NEW: Crafting materials for runes
     public static Item createWoodenTablet() {
         return new Item(

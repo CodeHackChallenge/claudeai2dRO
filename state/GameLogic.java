@@ -74,6 +74,12 @@ public class GameLogic {
     	
         state.incrementGameTime(delta);
         state.updatePortalCooldown(delta);  // ★ ADD THIS
+        state.updateTransition(delta);  // ★ NEW: Update transition
+        
+        // ★ NEW: Skip game updates during transition
+        if (state.isInputBlocked()) {
+            return;
+        }
         
         IntroQuestHandler introHandler = state.getIntroQuestHandler();
         if (introHandler != null) {
@@ -145,6 +151,9 @@ public class GameLogic {
         if (playerPos == null || playerBox == null) return;
         if (!state.isPortalReady()) return;
         
+        // ★ NEW: Don't check portals during transition
+        if (state.isInputBlocked()) return;
+        
         for (Entity entity : state.getEntities()) {
             if (entity.getType() != EntityType.PORTAL) continue;
             
@@ -161,8 +170,8 @@ public class GameLogic {
                 // ★ NEW: Disable camera lerp before teleport
                 disableCameraLerp();
                 
-                // Teleport player
-                state.changeMap(portal.targetMap, portal.targetX, portal.targetY);
+                // ★ NEW: Start transition instead of instant teleport
+                state.startPortalTransition(portal.targetMap, portal.targetX, portal.targetY);
                 state.setPortalCooldown();
                 
                 // Stop player movement

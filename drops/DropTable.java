@@ -32,8 +32,14 @@ public class DropTable {
             ItemManager::createAnimalClaws));
         commonItems.add(new DropItem("Essence", DropRarity.COMMON, 1, 4, 
             ItemManager::createEssence));
-        
+                
         itemsByRarity.put(DropRarity.COMMON, commonItems);
+        
+        //uncommon 
+        //List<DropItem> uncommonItems = new ArrayList<>();
+        //uncommonItems.add(new DropItem("Lucky Pouch", DropRarity.UNCOMMON, 1, 1, 
+             //   ItemManager::createLuckyPouch)); //make this map specific
+        //itemsByRarity.put(DropRarity.UNCOMMON, uncommonItems);
         
         // Rare items - scrolls and special materials
         List<DropItem> rareItems = new ArrayList<>();
@@ -44,8 +50,8 @@ public class DropTable {
         
         // Epic items - rare materials
         List<DropItem> epicItems = new ArrayList<>();
-        epicItems.add(new DropItem("Scroll of Purity", DropRarity.EPIC, 1, 3, 
-            ItemManager::createVerdantShard));
+        epicItems.add(new DropItem("Scroll of Purity", DropRarity.EPIC, 1, 2, 
+            ItemManager::createScrollOfPurity));
         //epicItems.add(new DropItem("Rune of Return", DropRarity.EPIC, 1, 1, 
          //   ItemManager::createRuneOfReturn));
         itemsByRarity.put(DropRarity.EPIC, epicItems);

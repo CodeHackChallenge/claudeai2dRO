@@ -47,6 +47,7 @@ public class ZoneLootConfig {
     
     private void initializeDefaultMultipliers() {
         rarityMultipliers.put(DropRarity.COMMON, 1.0);
+        rarityMultipliers.put(DropRarity.UNCOMMON, 1.0);
         rarityMultipliers.put(DropRarity.RARE, 1.0);
         rarityMultipliers.put(DropRarity.EPIC, 1.0);
         rarityMultipliers.put(DropRarity.LEGENDARY, 1.0);

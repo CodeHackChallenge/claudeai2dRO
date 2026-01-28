@@ -24,6 +24,7 @@ import dev.main.pathfinder.Pathfinder;
 import dev.main.quest.IntroQuestHandler;  // ★ NEW IMPORT
 import dev.main.stats.Stats;
 import dev.main.tile.TileMap;
+import dev.main.ui.TransitionEffect;
 import dev.main.ui.UIManager;
 import dev.main.util.DamageText;
 import dev.main.util.MapData;
@@ -57,7 +58,8 @@ public class GameState {
     private IntroQuestHandler introQuestHandler;
     
     private ZoneLootConfig zoneLootConfig;
-    
+    // ★ NEW: Transition effect
+    private TransitionEffect transitionEffect;
     
     private float gameTime;
     private float cameraX;
@@ -72,6 +74,9 @@ public class GameState {
         gameTime = 0f;
         cameraX = 0f;
         cameraY = 0f;
+        
+        // ★ NEW: Initialize transition effect
+        transitionEffect = new TransitionEffect();
         
         // ★ Load initial map
         loadMap("intro_map");
@@ -105,6 +110,21 @@ public class GameState {
         // Initialize dialogue system
         initializeDialogueSystem();
     }
+    // ★ NEW: Start portal transition
+    public void startPortalTransition(String targetMap, int targetX, int targetY) {
+        System.out.println("🌀 Starting portal transition to " + targetMap);
+        
+        transitionEffect.startPortalTransition(
+            // OnLoadPoint - called when screen is black
+            () -> {
+                changeMapImmediate(targetMap, targetX, targetY);
+            },
+            // OnComplete - called when fade-in finishes
+            () -> {
+                System.out.println("✓ Portal transition complete!");
+            }
+        );
+    }
     // ★ NEW: Load map by ID
     public void loadMap(String mapId) {
         this.currentMapId = mapId;
@@ -126,17 +146,13 @@ public class GameState {
         } 
         
     }
-    // ★ UPDATED: Change map with instant camera snap
-    public void changeMap(String newMapId, int targetTileX, int targetTileY) {
+    // ★ RENAMED: Old changeMap() is now changeMapImmediate()
+    private void changeMapImmediate(String newMapId, int targetTileX, int targetTileY) {
         System.out.println("Changing map: " + currentMapId + " → " + newMapId);
         
-        // Clear current map entities (except player)
         clearMapEntities();
-        
-        // Load new map
         loadMap(newMapId);
         
-        // Move player to spawn position
         Entity player = getPlayer();
         Position playerPos = player.getComponent(Position.class);
         if (playerPos != null) {
@@ -144,14 +160,26 @@ public class GameState {
             playerPos.y = targetTileY * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
         }
         
-        // ★ NEW: Snap camera immediately to new player position
         snapCameraToPlayer();
-        
-        // Re-initialize world for new map
         initializeWorld();
         
         System.out.println("Map change complete! Player at (" + targetTileX + ", " + targetTileY + ")");
     }
+    // ★ NEW: Update transition effect
+    public void updateTransition(float delta) {
+        if (transitionEffect != null) {
+            transitionEffect.update(delta);
+        }
+    }
+    // ★ NEW: Check if inputs should be blocked
+    public boolean isInputBlocked() {
+        return transitionEffect != null && transitionEffect.isActive();
+    }
+    // ★ NEW: Get transition effect for rendering
+    public TransitionEffect getTransitionEffect() {
+        return transitionEffect;
+    }
+    
     // ★ NEW: Instantly snap camera to player (no lerp)
     private void snapCameraToPlayer() {
         Entity player = getPlayer();
@@ -747,6 +775,13 @@ public class GameState {
                 return ItemManager::createAnimalSkull; 
             case "ItemManager::createFruitBanana":
                 return ItemManager::createFruitBanana; 
+            case "ItemManager::createLuckyPouch":  
+                return ItemManager::createLuckyPouch;    
+            case "ItemManager::createScrollOfPurity":  
+                return ItemManager::createScrollOfPurity; 
+            case "ItemManager::createFireRune":  
+                return ItemManager::createFireRune; 
+                
             // Add more cases as needed
             default:
                 System.out.println("⚠ Unknown item creator: " + creatorRef);

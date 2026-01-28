@@ -6,6 +6,7 @@ package dev.main.drops;
  */
 public enum DropRarity {
     COMMON(0.50),      // 50% drop chance
+    UNCOMMON(0.40),      // 40% drop chance
     RARE(0.30),        // 30% drop chance
     EPIC(0.15),        // 15% drop chance
     LEGENDARY(0.04),   // 4% drop chance

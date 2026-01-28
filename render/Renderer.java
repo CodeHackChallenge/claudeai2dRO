@@ -35,6 +35,7 @@ import dev.main.sprite.Sprite;
 import dev.main.state.GameState;
 import dev.main.stats.Stats;
 import dev.main.tile.TileMap;
+import dev.main.ui.TransitionEffect;
 import dev.main.util.Alert;
 import dev.main.util.DamageText;
 import dev.main.util.Dead;
@@ -88,6 +89,12 @@ public class Renderer {
         
         if (engine.isDebugMode()) {
             renderDebug(g, cameraX, cameraY);
+        }
+        
+        // ★ NEW: Render transition effect LAST (on top of everything)
+        TransitionEffect transition = gameState.getTransitionEffect();
+        if (transition != null && transition.isActive()) {
+            transition.render(g);
         }
     }
     
