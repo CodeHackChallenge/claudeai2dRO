@@ -113,7 +113,7 @@ public class Quest {
         for (QuestObjective obj : objectives) {
             if (obj.getId().equals(objectiveId)) {
                 obj.addProgress(amount);
-                
+                System.out.println("::::INSIDE Quest>obj.getID"+obj.getId());
                 if (obj.isComplete()) {
                     System.out.println("Objective complete: " + obj.getDescription());
                 }

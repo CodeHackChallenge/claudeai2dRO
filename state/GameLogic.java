@@ -37,7 +37,8 @@ import dev.main.ui.UIManager;
 import dev.main.ui.UIScrollableInventoryPanel;
 import dev.main.util.Alert;
 import dev.main.util.DamageText;
-import dev.main.util.Dead; 
+import dev.main.util.Dead;
+import dev.main.util.MapData;
 import dev.main.ui.UIGearSlot;
 
 public class GameLogic {
@@ -67,7 +68,9 @@ public class GameLogic {
         // ★ NEW: Set zone loot config if available
         if (state.getZoneLootConfig() != null) {
             dropSystem.setZoneLootConfig(state.getZoneLootConfig());
+            System.out.println("✓ Zone loot config set in DropSystem");
         }
+         
     } 
 
     public void update(float delta) {
@@ -1621,9 +1624,38 @@ public class GameLogic {
         System.out.println(monsterInfo + " has died!");
         
         // Get active quest ID if player has intro quest
+        //TODO: Continue
+        String questID = MapData.GuaranteedDropData.questId;
         String activeQuestId = null;
         QuestLog questLog = player.getComponent(QuestLog.class);
-        if (questLog != null) {
+        if (questLog != null && questID != null) {
+        	System.out.println("::::questLog="+questLog+" questID="+questID);
+        	//int index = 0;
+            // Check if player has intro_quest_01 active
+            for (Quest quest : questLog.getActiveQuests()) {
+            	
+            	 
+                for (QuestObjective objective : quest.getObjectives()) {
+                    String objectiveId = objective.getId();
+                    String objectiveDescription = objective.getDescription();  // "Carved Wood", "Clay", "Carving Stone"
+                    
+                    System.out.println("::::objectiveId=" + objectiveId + ", description=" + objectiveDescription);
+                
+               
+	            	//String questObjectiveId = quest.getObjectives().get(index).getId();
+	            	System.out.println("::::Looping objectiveId="+objectiveId+" questID="+questID);
+	                
+	                if (questID.equals(objectiveId)) {
+	                	
+	                	System.out.println("::::SAME: objectiveId="+objectiveId+"= questID="+questID);
+	                    activeQuestId = objectiveId;
+	                    break;
+	                }
+	                //index++;
+                }
+            }
+        }
+       /* if (questLog != null) {
         	//System.out.println("::::questLog>>>>>");
             // Check if player has intro_quest_01 active
             for (Quest quest : questLog.getActiveQuests()) {
@@ -1634,19 +1666,27 @@ public class GameLogic {
                 }
             }
         }
-        
+        */
         //int dropCapacity = calculateDropCapacity(monster);
        // List<DroppedItem> drops = dropSystem.generateDrops(dropCapacity);
         int dropCapacity = calculateDropCapacity(monster);
         //MonsterLevel monsterLevel = monster.getComponent(MonsterLevel.class); 
         int level = monsterLevel != null ? monsterLevel.level : 1;
         
-        //★ UPDATED: Pass monster level, type, and quest ID
+        // ★ Extract base monster type (remove level/tier info)
+        String baseMonsterType = monsterInfo;
+        int lvIndex = monsterInfo.indexOf(" Lv");
+        if (lvIndex > 0) {
+            baseMonsterType = monsterInfo.substring(0, lvIndex);
+        } 
+        System.out.println("🎯 Base monster type for drops: '" + baseMonsterType + "'");
+
+        // ★ UPDATED: Pass CLEAN monster type
         List<DroppedItem> drops = dropSystem.generateDrops(
-        	    dropCapacity, 
-        	    level, 
-        	    monsterInfo,
-        	    activeQuestId
+            dropCapacity,
+            level,
+            baseMonsterType,  // ← Just "Bunny", not "Bunny Lv1 TRASH"
+            activeQuestId
         );
         
         if (!drops.isEmpty()) {
@@ -1666,6 +1706,9 @@ public class GameLogic {
             System.out.println("  No drops...");
         }
         
+        // ★ Update quest progress AFTER drops are added
+        updateQuestProgress(player, monster, drops, activeQuestId);
+        
         //Entity player = state.getPlayer();
         int xpReward = calculateMonsterXP(monster);
         System.out.println("→ XP Reward: " + xpReward);
@@ -1676,7 +1719,7 @@ public class GameLogic {
             buffManager.onMonsterKill();
         }
        
-        updateQuestProgress(player, monster, drops, activeQuestId);
+        //updateQuestProgress(player, monster, drops, activeQuestId);
         
         if (state.getAutoAttackTarget() == monster) {
             state.clearAutoAttackTarget();
@@ -1782,50 +1825,72 @@ public class GameLogic {
             System.out.println("⚠ " + itemsFailed + " items lost (inventory full!)");
         }
     }
-    
+  
     private void updateQuestProgress(Entity player, Entity monster, List<DroppedItem> drops, String activeQuestId) {
         QuestLog questLog = player.getComponent(QuestLog.class);
         if (questLog == null) return;
+        
         System.out.println("::::updateQuestProgress()>>>>>");
         String monsterName = monster.getName();
-        
-        for (Quest quest : questLog.getActiveQuests()) {
+
+        for (Quest quest : questLog.getActiveQuests()) { //TODO: not going here
+        	
+        	System.out.println("::::quest>>>>>activeQuestId="+activeQuestId);
+        	System.out.println("::::quest.getId()="+quest.getId());
+        	
+            // Only process if this is the active quest we're tracking
+//            if (activeQuestId !=  null && !quest.getId().equals(activeQuestId)) {
+//                continue;
+//            }
+        	
+        	if(activeQuestId == null) continue;
+            
             for (QuestObjective objective : quest.getObjectives()) {
                 String objectiveId = objective.getId();
-               // System.out.println("::::objectiveId="+objectiveId);
-                //kill
+                String objectiveDescription = objective.getDescription();  // "Carved Wood", "Clay", "Carving Stone"
+                
+                System.out.println("::::objectiveId=" + objectiveId + ", description=" + objectiveDescription);
+                
+                // KILL objectives
                 if (objectiveId.contains("kill")) {
                     String targetMonster = objectiveId.replace("kill_", "").replace("s", "");
-                    
+
                     if (monsterName.toLowerCase().contains(targetMonster)) {
                         questLog.updateQuestProgress(objectiveId, 1);
                         System.out.println("Quest progress: " + quest.getName() + " - " + objective.getDescription());
                     }
-                  
                 }
-                if(!isIntroQuestCollect) {
-            		//collect
-                    if(objectiveId.contains("collect")) {
-                    	System.out.println("::::COLLECT QUEST>>>");
-                    	for (DroppedItem drop : drops) { 
-                    		GuaranteedDrop guaranteedDrop = 
-                    				dropSystem.getZoneLootConfig().checkGuaranteedDrop(activeQuestId, monsterName);
-                    		
-                    		if (guaranteedDrop != null) { 
-                    			if(drop.getItemName().equals(guaranteedDrop.dropItem.getItemName())) {
-                        			System.out.println("  • " + drop.getItemName());
-                        			System.out.println("Quest Requirement Complete!");
-                        			questLog.updateQuestProgress(objectiveId, 1);
-                        			
-                        			isIntroQuestCollect = true;
-                        			break;
-                        		}
-                    		} 
+                
+                // ★ COLLECT objectives - Match by item name
+                if (objectiveId.contains("collect")) {
+                    System.out.println("::::COLLECT QUEST>>>");
+                    
+                    // Check guaranteed drops for this quest
+                    for (DroppedItem drop : drops) {
+                        // Must be marked as guaranteed quest drop AND match the active quest
+                        if (drop.isGuaranteedQuestDrop() && 
+                            drop.getQuestId() != null && 
+                            drop.getQuestId().equals(activeQuestId)) {
+                            
+                            String dropItemName = drop.getItemName();
+                            
+                            // ★ KEY FIX: Match by checking if drop item name contains objective description
+                            // Example: "Recipe: Carved Wood".contains("Carved Wood") = true ✅
+                            if (dropItemName.contains(objectiveDescription)) {
+                                System.out.println("  ✓ Matched guaranteed quest item: '" + dropItemName + 
+                                                 "' to objective: '" + objectiveDescription + "'");
+                                questLog.updateQuestProgress(objectiveId, drop.getQuantity());
+                                System.out.println("Quest progress: " + quest.getName() + " - " + objective.getDescription());
+                                break;  // Only count once per objective
+                            }
                         }
                     }
-        		 }//is 
-            }//for
-        }//for 
-        
+                }
+            }
+        }
+    }
+    // Add this getter to GameLogic class
+    public DropSystem getDropSystem() {
+        return dropSystem;
     }
 }

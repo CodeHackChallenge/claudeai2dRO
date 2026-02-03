@@ -773,7 +773,7 @@ public class UIManager implements MouseWheelListener {
             questPanel.update(delta);
         }
     }
-    
+     
     public void render(Graphics2D g) {
         for (UIPanel panel : panels) {
             if (panel.isVisible()) {

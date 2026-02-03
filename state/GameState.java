@@ -32,7 +32,7 @@ import dev.main.util.MapData;
 import java.util.Iterator;
 
 public class GameState {
-	
+	 
 	// ★ ADD: Current map tracking
     private String currentMapId;  
     private TileMap map;
@@ -50,6 +50,8 @@ public class GameState {
     private Entity targetedEntity;
     private Entity autoAttackTarget;
     private Pathfinder pathfinder;
+    
+    private GameLogic gameLogic;
     
     // UI
     private UIManager uiManager;
@@ -79,7 +81,7 @@ public class GameState {
         transitionEffect = new TransitionEffect();
         
         // ★ Load initial map
-        loadMap("intro_map");
+        loadMap("mid_forest");
         /*
         // ★ OPTION 1: Load from JSON
         if(Engine.IDE == Engine.Eclipse) {
@@ -109,7 +111,8 @@ public class GameState {
         
         // Initialize dialogue system
         initializeDialogueSystem();
-    }
+    } 
+    
     // ★ NEW: Start portal transition
     public void startPortalTransition(String targetMap, int targetX, int targetY) {
         System.out.println("🌀 Starting portal transition to " + targetMap);
@@ -152,6 +155,13 @@ public class GameState {
         
         clearMapEntities();
         loadMap(newMapId);
+       
+     // ★ IMPORTANT: Reset zone loot config and update drop system
+        if (gameLogic != null && zoneLootConfig != null) {
+            zoneLootConfig.resetGuaranteedDrops();  // ← Clear claimed drops
+            gameLogic.getDropSystem().setZoneLootConfig(zoneLootConfig);
+            System.out.println("✓ Zone loot config reset and updated for new map");
+        }
         
         Entity player = getPlayer();
         Position playerPos = player.getComponent(Position.class);
@@ -159,7 +169,7 @@ public class GameState {
             playerPos.x = targetTileX * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
             playerPos.y = targetTileY * TileMap.TILE_SIZE + TileMap.TILE_SIZE / 2f;
         }
-        
+        //disable lerp
         snapCameraToPlayer();
         initializeWorld();
         
@@ -240,13 +250,20 @@ public class GameState {
      * Call this from Engine after creating GameLogic
      */
     public void setGameLogic(GameLogic gameLogic) {
+        this.gameLogic = gameLogic;  // ★ ADD THIS
         uiManager.setGameLogic(gameLogic);
+        
+        // ★ Also update zone loot config if it exists
+        if (zoneLootConfig != null) {
+            gameLogic.getDropSystem().setZoneLootConfig(zoneLootConfig);
+            System.out.println("✓ Zone loot config set in GameLogic from setGameLogic()");
+        }
     }
     
     private void initializeWorld() {
     	 // Only create player if it doesn't exist
         if (player == null) {
-            player = EntityFactory.createPlayer(8 * 64, 5 * 64);
+            player = EntityFactory.createPlayer(11 * 64, 3 * 64);
             entities.add(player);
         }
         
@@ -255,14 +272,16 @@ public class GameState {
         // ★ Load spawns from map data
         loadSpawnsFromMapData();
           
+        initializedMaps();
+        /*
      // Add NPCs (map-specific)
-        if ("intro_map".equals(currentMapId)) {
+        if ("mid_forest".equals(currentMapId)) {
             Entity fionne = EntityFactory.createFionne(14 * 64 - 32, 6 * 64 - 31);
             entities.add(fionne);
         } 
         
         // ★ OR keep manual spawns (your choice)
-        /*
+      
         float normalRespawn = 30f;
         float bossRespawn = 50f;
         
@@ -315,10 +334,10 @@ public class GameState {
         for (SpawnPoint sp : spawnPoints) {
             spawnMonsterAtPoint(sp);
         }
-          */ 
+           
         
         // Add environment decorations (map-specific)
-        if ("intro_map".equals(currentMapId)) {
+        if ("mid_forest".equals(currentMapId)) {
         	//add boulder
             addBoulder(4 * 64 - 13,  3 * 64 - 18);
             // User-requested tree at tile (5,5)
@@ -333,10 +352,76 @@ public class GameState {
             //fountain
             addFountain(15 * 64 - 6 , 4 * 64 - 10 );
         }
-        
-        
+        */
+      //disable lerp
+      snapCameraToPlayer();
     } 
-    // ★ NEW: Load portals from map JSON
+    private void initializedMaps() {
+    	
+    	switch(currentMapId) { 
+    		case "front_forest": initFrontForest(); break; 
+    		case "mid_forest": initMidForest(); break;
+    	} 
+        
+		
+	}
+    
+	private void initFrontForest() { 
+		addTree(3 * 64 - 30, 3 * 64 - 25, "left");
+		addTree(5 * 64 - 30, 6 * 64 - 25, "left");
+		addTree(8 * 64 - 30, 6 * 64 - 25, "left");
+		addTree(8 * 64 - 30, 11 * 64 - 25, "left");
+		addTree(6 * 64 - 30, 16 * 64 - 25, "left");
+		addTree(12 * 64 - 30, 16 * 64 - 25, "left"); 
+		addTree(16 * 64 - 30, 20 * 64 - 25, "left"); 
+		addTree(22 * 64 - 30, 22 * 64 - 25, "left"); 
+		addTree(28 * 64 - 30, 21 * 64 - 25, "left"); 
+		addTree(40 * 64 - 30, 19 * 64 - 25, "left"); 
+		addTree(46 * 64 - 30, 21 * 64 - 25, "left"); 
+		addTree(59* 64 - 30, 21 * 64 - 25, "left"); 
+		
+		addTree(17* 64 - 30, 4 * 64 - 25, "right"); 
+		addTree(20 * 64 - 30, 1 * 64 - 25, "right"); 
+		addTree(22 * 64 - 30, 0 * 64 - 25, "right"); 
+		addTree(22 * 64 - 30, 3 * 64 - 25, "right"); 
+		
+		addTree(21* 64 - 30, 7 * 64 - 25, "right");
+		addTree(22* 64 - 30, 5 * 64 - 25, "right");
+		
+		addTree(25* 64 - 30, 10 * 64 - 25, "right");
+		
+		addTree(29* 64 - 30, 3 * 64 - 25, "left");
+		addTree(31* 64 - 30, 7 * 64 - 25, "left");
+		addTree(29* 64 - 30, 10 * 64 - 25, "left");
+		addTree(27* 64 - 30, 12 * 64 - 25, "right");
+		
+		addTree(58* 64 - 30, 4 * 64 - 25, "right");
+		addTree(61* 64 - 30, 6 * 64 - 25, "right");
+		addTree(63* 64 - 30, 12 * 64 - 25, "right");
+		addTree(61* 64 - 30, 14 * 64 - 25, "right");
+		
+	}
+	private void initMidForest() {
+		//NPC
+		Entity fionne = EntityFactory.createFionne(14 * 64 - 32, 6 * 64 - 31);
+        entities.add(fionne);
+        // Add environment decorations (map-specific)
+        //add boulder
+        addBoulder(4 * 64 - 13,  3 * 64 - 18);
+        // User-requested tree at tile (5,5)
+        addTree(2 * 64 - 30, 1 * 64 - 25, "right");
+        addTree(1 * 64 - 32, 8 * 64 - 66, "right");
+        addTree(3 * 64 - 6 , 14 * 64 -10  , "right");
+        //
+        addTree(19 * 64 - 6 , 0 * 64 - 10 , "right");
+        addTree(20 * 64 - 6 , 6 * 64 - 10 , "right");
+        addTree(18 * 64 - 6 , 12 * 64 - 10 , "right");
+        addTree(13 * 64 - 6 , 13 * 64 - 10 , "right");
+        //fountain
+        addFountain(15 * 64 - 6 , 4 * 64 - 10 );
+		
+	}
+	// ★ NEW: Load portals from map JSON
     private void loadPortalsFromMapData() {
         MapData data = map.getMapData();
         if (data == null || data.portals == null) {
@@ -520,33 +605,35 @@ public class GameState {
         if (data != null) {
             System.out.println("MapId: " + data.mapId);
             System.out.println("ZoneLoot field: " + (data.zoneLoot != null ? "EXISTS" : "NULL"));
-            
+             
             if (data.zoneLoot != null) {
                 System.out.println("Loot Tier: " + data.zoneLoot.lootTier);
                 System.out.println("Rarity Multipliers: " + (data.zoneLoot.rarityMultipliers != null ? data.zoneLoot.rarityMultipliers.size() : "NULL"));
                 System.out.println("Extra Drops: " + (data.zoneLoot.extraDrops != null ? data.zoneLoot.extraDrops.size() : "NULL"));
                 System.out.println("Guaranteed Drops: " + (data.zoneLoot.guaranteedDrops != null ? data.zoneLoot.guaranteedDrops.size() : "NULL"));
+                System.out.println("Guaranteed Name: " + (data.zoneLoot.guaranteedDrops.get(0) != null ? (data.zoneLoot.guaranteedDrops.get(0).itemName) : "NULL"));
+                
+            
             }
         }
         System.out.println("════════════════════════════════════════");
         
         if (data == null || data.zoneLoot == null) {
             System.out.println("No zone loot data in map");
-            return;
-        }
-        
-        if (data == null || data.zoneLoot == null) {
-            System.out.println("No zone loot data in map");
-            // Use default drop system
+            this.zoneLootConfig = null;  // ← Clear old config
+            
+            // ★ Clear drop system config too
+            if (gameLogic != null) {
+                gameLogic.getDropSystem().setZoneLootConfig(null);
+            }
             return;
         }
         
         MapData.ZoneLootData zoneData = data.zoneLoot;
         
-        // Create zone loot config
+        // ★ Always create NEW config (don't reuse old one)
         ZoneLootConfig.LootTier tier = ZoneLootConfig.LootTier.valueOf(zoneData.lootTier);
-        ZoneLootConfig config = new ZoneLootConfig(tier);
-        
+        ZoneLootConfig config = new ZoneLootConfig(tier);  // Fresh config
         // Set rarity multipliers
         if (zoneData.rarityMultipliers != null) {
             for (Map.Entry<String, Double> entry : zoneData.rarityMultipliers.entrySet()) {
@@ -579,9 +666,9 @@ public class GameState {
         if (zoneData.guaranteedDrops != null) {
             for (MapData.GuaranteedDropData dropData : zoneData.guaranteedDrops) {
                 DropRarity rarity = DropRarity.valueOf(dropData.rarity);
-                
+              
                 DropItem.ItemCreator creator = getItemCreatorFromString(dropData.itemCreator);
-                
+               // System.out.println("*****DROPPITEM="+dropData.itemName);
                 DropItem dropItem = new DropItem(
                     dropData.itemName,
                     rarity,
@@ -591,22 +678,34 @@ public class GameState {
                 );
                 
                 config.addGuaranteedDrop(new ZoneLootConfig.GuaranteedDrop(
-                    dropData.questId,
-                    dropItem,
-                    dropData.quantity,
-                    dropData.dropOnFirstKill
-                ));
+                        dropData.questId,
+                        dropData.monsterType,  // ★ ADD THIS LINE
+                        dropItem,
+                        dropData.quantity,
+                        dropData.dropOnFirstKill
+                    ));
+                
+                System.out.println("  ✓ Loaded guaranteed drop: " + dropData.itemName + 
+                        " for quest " + dropData.questId + 
+                        " from monster " + dropData.monsterType);
             }
         }
         
-        // Set config in drop system (GameLogic has the drop system)
+        // Set config in drop system (GameLogic has the drop system) <<TODO: what do you mean???
         // You'll need to pass this to GameLogic
         this.zoneLootConfig = config;
+        
+     // ★ Update drop system with NEW config
+        if (gameLogic != null) {
+            gameLogic.getDropSystem().setZoneLootConfig(config);
+            System.out.println("✓ Fresh zone loot config set in DropSystem");
+        }
         
         System.out.println("Zone loot loaded: " + tier + " tier with " + 
                           config.getExtraDrops().size() + " extra drops, " +
                           config.getGuaranteedDrops().size() + " guaranteed drops");
     } 
+    
     public void spawnMonster(String type, float x, float y) {
         spawnMonster(type, x, y, 1, MobTier.NORMAL);
     }
@@ -758,12 +857,16 @@ public class GameState {
             case "ItemManager::createWoodenTablet":
                 return ItemManager::createWoodenTablet;
             case "ItemManager::createClay":
+            	System.out.println("RETURNING createClay");
                 return ItemManager::createClay;
-            case "ItemManager::createCarvedWood":
+            case "ItemManager::createCarvedWood": 
+            	System.out.println("RETURNING createCarvedWood");
                 return ItemManager::createCarvedWood;
             case "ItemManager::createEssence":
+            	System.out.println("RETURNING createEssence");
                 return ItemManager::createEssence;
             case "ItemManager::createAnimalClaws":
+            	System.out.println("RETURNING createAnimalClaws");
                 return ItemManager::createAnimalClaws;
             case "ItemManager::createBrokenTooth":
                 return ItemManager::createBrokenTooth;

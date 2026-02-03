@@ -208,6 +208,7 @@ public class JsonMapParser {
                     String objJson = json.substring(objStart + 1, i);
                     MapData.GuaranteedDropData drop = new MapData.GuaranteedDropData();
                     drop.questId = extractString(objJson, "questId");
+                    drop.monsterType = extractString(objJson, "monsterType");  // ← ADD THIS                    
                     drop.itemName = extractString(objJson, "itemName");
                     drop.rarity = extractString(objJson, "rarity");
                     drop.quantity = extractInt(objJson, "quantity");

@@ -41,14 +41,15 @@ public class MapData {
 	    public String comment;
 	}
 	//internal class
-	public static class GuaranteedDropData {
-	    public String questId;
+	public static class GuaranteedDropData { 
+	    public static String questId;
+	    public String monsterType;
 	    public String itemName;
 	    public String rarity;
 	    public int quantity;
 	    public String itemCreator;
 	    public boolean dropOnFirstKill;
-	    public String comment;
+	    public String comment; ;
 	}
 	//internal class	
 	 public static class Portal {
