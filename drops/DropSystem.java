@@ -45,14 +45,19 @@ public class DropSystem {
         boolean isLuckyDrop = random.nextDouble() < LUCKY_DROP_CHANCE;
         
         List<DroppedItem> drops = new ArrayList<>();
-        System.out.println(":::::::::inside generateDrops(): zoneLootConfig="+zoneLootConfig+" activeQuestId="+activeQuestId);
+        
         // ★ CHECK FOR GUARANTEED DROPS FIRST
         if (zoneLootConfig != null && activeQuestId != null) {
             ZoneLootConfig.GuaranteedDrop guaranteedDrop = 
                 zoneLootConfig.checkGuaranteedDrop(activeQuestId, monsterType);
-          //System.out.println(":::::::::guaranteedDrop: "+ guaranteedDrop.questId);
+            
             if (guaranteedDrop != null) {
-                drops.add(new DroppedItem(guaranteedDrop.dropItem, guaranteedDrop.quantity));
+                // ★ Create dropped item and mark it as guaranteed quest drop
+                DroppedItem questDrop = new DroppedItem(guaranteedDrop.dropItem, guaranteedDrop.quantity);
+                questDrop.setGuaranteedQuestDrop(true);  // Mark as quest drop
+                questDrop.setQuestId(activeQuestId);      // Tag with quest ID
+                drops.add(questDrop);
+                
                 System.out.println("✓ GUARANTEED DROP: " + guaranteedDrop.dropItem.getItemName() + 
                                  " x" + guaranteedDrop.quantity + " (Quest: " + activeQuestId + ")");
             }

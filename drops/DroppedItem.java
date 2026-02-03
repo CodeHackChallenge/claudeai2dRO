@@ -9,9 +9,15 @@ public class DroppedItem {
     private final DropItem dropTemplate;
     private final int quantity;
     
+    // ★ NEW FIELDS
+    private boolean isGuaranteedQuestDrop;
+    private String questId;
+    
     public DroppedItem(DropItem dropTemplate, int quantity) {
         this.dropTemplate = dropTemplate;
         this.quantity = quantity;
+        this.isGuaranteedQuestDrop = false;  // ★ NEW
+        this.questId = null;  // ★ NEW
     }
     
     public DropItem getDropTemplate() {
@@ -30,6 +36,36 @@ public class DroppedItem {
         return dropTemplate.getRarity();
     }
     
+    // ★ NEW METHODS - Add these
+    /**
+     * Mark this drop as a guaranteed quest drop
+     */
+    public void setGuaranteedQuestDrop(boolean isGuaranteed) {
+        this.isGuaranteedQuestDrop = isGuaranteed;
+    }
+    
+    /**
+     * Set which quest this guaranteed drop is for
+     */
+    public void setQuestId(String questId) {
+        this.questId = questId;
+    }
+    
+    /**
+     * Check if this is a guaranteed quest drop
+     */
+    public boolean isGuaranteedQuestDrop() {
+        return isGuaranteedQuestDrop;
+    }
+    
+    /**
+     * Get the quest ID this drop is for (if guaranteed)
+     */
+    public String getQuestId() {
+        return questId;
+    }
+    // ★ END NEW METHODS
+    
     /**
      * Create the actual Item instances for the player's inventory
      */
@@ -43,6 +79,24 @@ public class DroppedItem {
     
     @Override
     public String toString() {
-        return quantity + "x " + dropTemplate.getItemName() + " [" + dropTemplate.getRarity() + "]";
+        String base = quantity + "x " + dropTemplate.getItemName() + " [" + dropTemplate.getRarity() + "]";
+        // ★ UPDATED: Show if it's a quest drop
+        if (isGuaranteedQuestDrop) {
+            base += " 🎯 QUEST";
+        }
+        return base;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        DroppedItem other = (DroppedItem) obj;
+        return dropTemplate.equals(other.dropTemplate);
+    }
+    
+    @Override
+    public int hashCode() {
+        return dropTemplate.hashCode();
     }
 }

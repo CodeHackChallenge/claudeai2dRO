@@ -100,15 +100,20 @@ public class ZoneLootConfig {
      */
     public GuaranteedDrop checkGuaranteedDrop(String questId, String monsterType) {
         for (GuaranteedDrop drop : guaranteedDrops) {
-            String dropKey = drop.questId + ":" + monsterType;
-           
-            // Check if this drop matches and hasn't been claimed
-            if (drop.questId.equals(questId) && !claimedGuaranteedDrops.contains(dropKey)) {
-                if (drop.dropOnFirstKill) {
-                    // Mark as claimed
-                    claimedGuaranteedDrops.add(dropKey);
+            // Match both quest ID AND monster type
+            if (drop.questId.equals(questId) && drop.monsterType.equals(monsterType)) {
+                String dropKey = drop.questId + ":" + drop.monsterType;
+                
+                // Check if already claimed
+                if (!claimedGuaranteedDrops.contains(dropKey)) {
+                    if (drop.dropOnFirstKill) {
+                        claimedGuaranteedDrops.add(dropKey);
+                        System.out.println("✓ Claimed guaranteed drop: " + dropKey);
+                    }
+                    return drop;
+                } else {
+                    System.out.println("✗ Already claimed: " + dropKey);
                 }
-                return drop;
             }
         }
         return null;
@@ -139,15 +144,18 @@ public class ZoneLootConfig {
      */
     public static class GuaranteedDrop {
         public final String questId;
+        public final String monsterType;  // ← ADD THIS
         public final DropItem dropItem;
         public final int quantity;
         public final boolean dropOnFirstKill;
         
-        public GuaranteedDrop(String questId, DropItem dropItem, int quantity, boolean dropOnFirstKill) {
-            this.questId = questId;
-            this.dropItem = dropItem;
-            this.quantity = quantity;
-            this.dropOnFirstKill = dropOnFirstKill;
+        public GuaranteedDrop(String questId, String monsterType, DropItem dropItem, 
+                int quantity, boolean dropOnFirstKill) {
+			this.questId = questId;
+			this.monsterType = monsterType;  // ← ADD THIS
+			this.dropItem = dropItem;
+			this.quantity = quantity;
+			this.dropOnFirstKill = dropOnFirstKill;
         }
     }
 }

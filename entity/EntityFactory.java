@@ -275,10 +275,7 @@ public class EntityFactory {
         	
         else if(Engine.IDE == Engine.VSCode) {
         	npc.addComponent(new Sprite("resources/sprites/npc_left_" + npcId + ".png", 64, 64, 0f, Sprite.CHAR_SINGLE)); 
-        }
-        	
-   
-        
+        } 
           
         // NPCs don't move
         // No Movement component needed
@@ -342,19 +339,19 @@ public class EntityFactory {
         collectItemsForCrafting.questType(Quest.QUEST_MAIN);
         // Crafting
         collectItemsForCrafting.addObjective(new QuestObjective( 
-            "collect_recipes", 
+            "collect_carved_wood", 
             "Carved Wood",
             1
         ));
         // Crafting
         collectItemsForCrafting.addObjective(new QuestObjective( 
-            "collect_recipes", 
+            "collect_clay", 
             "Clay",
             1
         ));
         // Crafting
         collectItemsForCrafting.addObjective(new QuestObjective( 
-            "collect_recipes", 
+            "collect_carving_stone", 
             "Carving Stone",
             1
         ));
